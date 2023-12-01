@@ -1,49 +1,26 @@
 with open("d1.txt", "rt") as f:
     infile = f.read().strip().split("\n")
 
-def g(x: str):
-    start = ""
-    end = ""
-    found = False
+def part1(x: str):
+    start = end = ""
     for i in x:
         if i.isdigit():
-            if not found:
-                start = i
-                found = True
+            if not start:
+                start = end = i
             else:
                 end = i
-    if end == "":
-        end = start
-    return int(start+end)
+    return int(start + end)
 
-m = {"one":"1","two":"2","three":"3","four":"4","five":"5","six": "6","seven":"7","eight":"8","nine":"9"}
-def starter(x:str):
-    for i in range(len(x)):
-        for j in m:
-            if j in x[:i]:
-                return m[j]
-        if x[i].isdigit():
-            return x[i]
+def part2(x: str, rev=False) -> str:
+    x = x[::-1] if rev else x
+    for i, c in enumerate(x):
+        for j, s in enumerate(("one","two","three","four","five","six","seven","eight","nine"), 1):
+            s_prim = s[::-1] if rev else s
+            if s_prim in x[:i]:
+                return str(j)
+        if c.isdigit():
+            return c
     return ""
 
-def ender(x: str):
-    x = x[::-1]
-    for i in range(len(x)):
-        for j in m:
-            if j[::-1] in x[:i]:
-                return m[j]
-        if x[i].isdigit():
-            return x[i]
-    return ""
-
-import time
-def tot(x: str):
-    return int(starter(x) + ender(x))
-
-total = sum(map(g, infile))
-def xx():
-    start = time.time()
-    print(sum(map(tot, infile)))
-    print(time.time() - start)
-
-
+print("part1:", sum(map(part1, infile)))
+print("part2:", sum(map(lambda x: int(part2(x) + part2(x, True)), infile)))
