@@ -21,7 +21,5 @@ with open("d2.txt", "rt") as f:
     print(_sum)
 
 # Nicer solution to part 2
-from operator import countOf
-
 with open("d2.txt", "rt") as f:
-    print(sum(max(v[:countOf(c, "b")]) * max(v[countOf(c, "b"):countOf(c, "b") + countOf(c, "g")]) * max(v[countOf(c, "b") + countOf(c, "g"):]) for x in f.read().strip().split("\n") for c,v in [list(zip(*sorted((j[0], int(k)) for k, j in (i.strip().split(" ") for g in (d.split(",") for d in x.split(":").pop().split(";")) for i in g))))]))
+    print(sum(max(v[:c.index("g")]) * max(v[c.index("g"):c.index("r")]) * max(v[c.index("r"):]) for x in f.read().strip().split("\n") for c,v in [list(zip(*sorted((j[0], int(k)) for k, j in (i.strip().split(" ") for g in (d.split(",") for d in x.split(":").pop().split(";")) for i in g))))]))
