@@ -33,14 +33,14 @@ def count_it(mat: tuple[tuple[int, ...], ...]) -> int:
     return total
 
 
-trans_it = lambda x: tuple(zip(*x))
 flip_it = lambda x: tuple(r[::-1] for r in x)
 spin_it = lambda x: trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(x))))))))
+trans_it = lambda x: tuple(zip(*x))
 
 
-def generate_it(mat: tuple[tuple[int, ...], ...], index=0):
+def generate_it(mat: tuple[tuple[int, ...], ...]):
     all_results: set[int] = set()
-    cycling, longest_cycle, converged = {}, 0, False
+    converged, index, cycling = False, 0, {}
     while True:
         index += 1
         mat = spin_it(mat)
@@ -48,13 +48,11 @@ def generate_it(mat: tuple[tuple[int, ...], ...], index=0):
         if result not in all_results:
             all_results.add(result)
             cycling.clear()
-            longest_cycle = 0
         elif result not in cycling:
-            longest_cycle += 1
             cycling[result] = index
         else:
             converged = True
-        yield converged, index, longest_cycle, cycling
+        yield converged, index, cycling
 
 
 with open("in/d14.txt") as f:
@@ -63,13 +61,13 @@ with open("in/d14.txt") as f:
 print("Part 1:", count_it(rock_it(raw_mat)))
 
 next_it = generate_it(raw_mat)
-converged, index, cycle_len, result = next(next_it)
+converged, index, result = next(next_it)
 while not converged:
-    converged, index, cycle_len, result = next(next_it)
+    converged, index, result = next(next_it)
 result = {v: k for k, v in result.items()}
-for _ in range(cycle_len):
+for _ in range(len(result)):
     index -= 1
-    if (1_000_000_000 - index) % cycle_len == 0:
+    if (1_000_000_000 - index) % len(result) == 0:
         print("Part 2:", result[index])
         break
 print("Finished in:", round(time_it() - start_it, 4), "secs")
