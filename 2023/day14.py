@@ -61,7 +61,7 @@ def generate_it(mat: tuple[tuple[int, ...], ...], index=0):
         yield converged, index, longest_cycle, cycling
 
 
-with open("d14.txt") as f:
+with open("in/d14.txt") as f:
     raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x) for x in f.read().splitlines())
 
 print("Part 1:", count_it(rock_it(raw_mat)))
