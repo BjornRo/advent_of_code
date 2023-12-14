@@ -55,6 +55,7 @@ def generate_it(mat: tuple[tuple[int, ...], ...]):
             cycling[result] = index
         elif false_positive:
             false_positive = False
+            cycling.clear()
         else:
             converged = True
         yield converged, index, cycling
