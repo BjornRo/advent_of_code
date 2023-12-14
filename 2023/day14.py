@@ -41,15 +41,20 @@ trans_it = lambda x: tuple(zip(*x))
 def generate_it(mat: tuple[tuple[int, ...], ...]):
     all_results: set[int] = set()
     converged, index, cycling = False, 0, {}
+    false_positive = True
     while True:
         index += 1
         mat = spin_it(mat)
         result = count_it(flip_it(mat))
         if result not in all_results:
+            false_positive = True
             all_results.add(result)
             cycling.clear()
         elif result not in cycling:
+            false_positive = True
             cycling[result] = index
+        elif false_positive:
+            false_positive = False
         else:
             converged = True
         yield converged, index, cycling
