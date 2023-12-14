@@ -1,6 +1,6 @@
-import time
+from time import time as time_it
 
-start = time.time()
+start_it = time_it()
 
 
 def rock_it(mat: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...], ...]:
@@ -72,4 +72,4 @@ for _ in range(cycle_len):
     if (1_000_000_000 - index) % cycle_len == 0:
         print("Part 2:", result[index])
         break
-print("Finished in:", round(time.time() - start, 4), "secs")
+print("Finished in:", round(time_it() - start_it, 4), "secs")
