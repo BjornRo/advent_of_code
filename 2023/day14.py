@@ -35,16 +35,12 @@ def count_it(mat: tuple[tuple[int, ...], ...]) -> int:
 
 trans_it = lambda x: tuple(zip(*x))
 flip_it = lambda x: tuple(r[::-1] for r in x)
-
-
-def spin_it(mat: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...], ...]:
-    return trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(mat))))))))
+spin_it = lambda x: trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(x))))))))
 
 
 def generate_it(mat: tuple[tuple[int, ...], ...], index=0):
     all_results: set[int] = set()
-    cycling, longest_cycle = {}, 0
-    converged = False
+    cycling, longest_cycle, converged = {}, 0, False
     while True:
         index += 1
         mat = spin_it(mat)
@@ -62,7 +58,7 @@ def generate_it(mat: tuple[tuple[int, ...], ...], index=0):
 
 
 with open("in/d14.txt") as f:
-    raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x) for x in f.read().splitlines())
+    raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
 
 print("Part 1:", count_it(rock_it(raw_mat)))
 
