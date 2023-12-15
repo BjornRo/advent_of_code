@@ -5,7 +5,7 @@ def up_in_smoke(ashes: bytes, ash_value=0) -> int:
     return up_in_smoke(ashes[1:], (ashes[0] + ash_value) * 17 % 256) if ashes else ash_value
 
 
-def hash_trip(edibles: list[bytes]):
+def hash_trip(edibles: list[bytes]) -> int:
     the_last_hash = hot_box(hot_box)
     for trip in edibles:
         if trip.endswith(b"-"):
