@@ -42,7 +42,7 @@ def recycle_it(mat: tuple[tuple[int, ...], ...]) -> int:
         index += 1
         mat = trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(mat))))))))
         if mat in cycling and (1_000_000_000 - index) % (index - cycling[mat]) == 0:
-            return count_it(tuple(row[::-1] for row in mat))
+            return count_it(row[::-1] for row in mat)  # type: ignore - Generators are ok
         cycling[mat] = index
 
 
