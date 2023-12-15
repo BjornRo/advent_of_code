@@ -38,42 +38,20 @@ spin_it = lambda x: trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(
 trans_it = lambda x: tuple(zip(*x))
 
 
-def generate_it(mat: tuple[tuple[int, ...], ...]):
-    all_results: set[int] = set()
-    converged, index, cycling = False, 0, {}
-    false_positive = True
+def recycle_it(mat: tuple[tuple[int, ...], ...]):
+    index, cycling = 0, {}
     while True:
         index += 1
         mat = spin_it(mat)
         result = count_it(flip_it(mat))
-        if result not in all_results:
-            false_positive = True
-            all_results.add(result)
-            cycling.clear()
-        elif result not in cycling:
-            false_positive = True
-            cycling[result] = index
-        elif false_positive:
-            false_positive = False
-            cycling.clear()
-        else:
-            converged = True
-        yield converged, index, cycling
+        if mat in cycling and (1_000_000_000 - index) % (index - cycling[mat]) == 0:
+            return result
+        cycling[mat] = index
 
 
-with open("in/d14.txt") as f:
+with open("in/14.in") as f:
     raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
 
 print("Part 1:", count_it(rock_it(raw_mat)))
-
-next_it = generate_it(raw_mat)
-converged, index, result = next(next_it)
-while not converged:
-    converged, index, result = next(next_it)
-result = {v: k for k, v in result.items()}
-for _ in range(len(result)):
-    index -= 1
-    if (1_000_000_000 - index) % len(result) == 0:
-        print("Part 2:", result[index])
-        break
+print("Part 2:", recycle_it(raw_mat))
 print("Finished in:", round(time_it() - start_it, 4), "secs")
