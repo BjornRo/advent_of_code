@@ -14,12 +14,12 @@ def rock_it(matrix: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...], ...]:
                 continue
             if not c:
                 stack.extend(waiting_rocks)
-                waiting_rocks.clear()
+                waiting_rocks *= 0
             stack.append(c)
         stack.extend(waiting_rocks)
         new_matrix.append(tuple(stack))
-        stack.clear()
-        waiting_rocks.clear()
+        stack *= 0
+        waiting_rocks *= 0
     return tuple(new_matrix)
 
 
