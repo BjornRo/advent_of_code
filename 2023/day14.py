@@ -33,8 +33,6 @@ def count_it(mat: tuple[tuple[int, ...], ...]) -> int:
     return total
 
 
-flip_it = lambda x: tuple(r[::-1] for r in x)
-spin_it = lambda x: trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(x))))))))
 trans_it = lambda x: tuple(zip(*x))
 
 
@@ -42,11 +40,13 @@ def recycle_it(mat: tuple[tuple[int, ...], ...]):
     index, cycling = 0, {}
     while True:
         index += 1
-        mat = spin_it(mat)
+        mat = trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(mat))))))))
         if mat in cycling and (1_000_000_000 - index) % (index - cycling[mat]) == 0:
-            return count_it(flip_it(mat))
+            return count_it(tuple(row[::-1] for row in mat))
         cycling[mat] = index
 
+
+# choco install python.pypy
 
 with open("in/d14.txt") as f:
     raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
