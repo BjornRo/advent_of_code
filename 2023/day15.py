@@ -27,8 +27,8 @@ def hash_trip(edibles: list[bytes]):
     return to_the_moon
 
 
-with open("in/d15.txt") as f:
-    dealer = [x.encode() for x in f.read().strip().split(",")]
+with open("in/d15.txt", "rb") as f:
+    dealer = f.readline().rstrip().split(b",")
 
 
 print("Part 1:", sum(map(up_in_smoke, dealer)))
