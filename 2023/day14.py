@@ -46,8 +46,6 @@ def recycle_it(mat: tuple[tuple[int, ...], ...]):
         cycling[mat] = index
 
 
-# choco install python.pypy
-
 with open("in/d14.txt") as f:
     raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
 
