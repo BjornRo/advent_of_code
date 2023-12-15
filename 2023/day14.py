@@ -43,13 +43,12 @@ def recycle_it(mat: tuple[tuple[int, ...], ...]):
     while True:
         index += 1
         mat = spin_it(mat)
-        result = count_it(flip_it(mat))
         if mat in cycling and (1_000_000_000 - index) % (index - cycling[mat]) == 0:
-            return result
+            return count_it(flip_it(mat))
         cycling[mat] = index
 
 
-with open("in/14.in") as f:
+with open("in/d14.txt") as f:
     raw_mat = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
 
 print("Part 1:", count_it(rock_it(raw_mat)))
