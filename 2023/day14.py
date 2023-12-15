@@ -36,7 +36,7 @@ def count_it(mat: tuple[tuple[int, ...], ...]) -> int:
 trans_it = lambda x: tuple(zip(*x))
 
 
-def recycle_it(mat: tuple[tuple[int, ...], ...]):
+def recycle_it(mat: tuple[tuple[int, ...], ...]) -> int:
     index, cycling = 0, {}
     while True:
         index += 1
