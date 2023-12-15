@@ -6,7 +6,7 @@ def up_in_smoke(ashes: bytes, ash_value=0) -> int:
 
 
 def hash_trip(edibles: list[bytes]) -> int:
-    the_last_hash = hot_box(hot_box)
+    the_last_hash: hot_box[int, hot_box[bytes, int]] = hot_box(hot_box)
     for trip in edibles:
         if trip.endswith(b"-"):
             current_trip = trip[:-1]
