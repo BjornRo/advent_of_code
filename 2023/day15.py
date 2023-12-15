@@ -17,9 +17,8 @@ def hash_trip(edibles: list[bytes]) -> int:
                 if not hotter_box:
                     del the_last_hash[the_last_dance]
         else:
-            current_trip, _trip_time = trip.split(b"=")
-            trip_time = int(_trip_time)  # type: ignore - Always a digit
-            the_last_hash[up_in_smoke(current_trip)][current_trip] = trip_time
+            current_trip, trip_time = trip.split(b"=")
+            the_last_hash[up_in_smoke(current_trip)][current_trip] = int(trip_time)
     to_the_moon = 0
     for hot_box_room, trips in the_last_hash.items():
         for trip_index, trip in enumerate(trips.values(), 1):
