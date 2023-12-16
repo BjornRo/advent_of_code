@@ -6,7 +6,7 @@ def up_in_smoke(ashes: bytes, ash_value=0) -> int:
 
 
 def hash_trip(edibles: list[bytes]) -> int:
-    the_last_hash = hot_box(hot_box)
+    the_last_hash: hot_box[int, hot_box[bytes, int]] = hot_box(hot_box)
     for trip in edibles:
         if trip.endswith(b"-"):
             current_trip = trip[:-1]
@@ -14,12 +14,11 @@ def hash_trip(edibles: list[bytes]) -> int:
             if hotter_box := the_last_hash[the_last_dance]:
                 if hotter_box.get(current_trip) is not None:
                     del hotter_box[current_trip]
-                if not hotter_box:
-                    del the_last_hash[the_last_dance]
+                    if not hotter_box:
+                        del the_last_hash[the_last_dance]
         else:
-            current_trip, _trip_time = trip.split(b"=")
-            trip_time = int(_trip_time)  # type: ignore - Always a digit
-            the_last_hash[up_in_smoke(current_trip)][current_trip] = trip_time
+            current_trip, trip_time = trip.split(b"=")
+            the_last_hash[up_in_smoke(current_trip)][current_trip] = int(trip_time)
     to_the_moon = 0
     for hot_box_room, trips in the_last_hash.items():
         for trip_index, trip in enumerate(trips.values(), 1):
