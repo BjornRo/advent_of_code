@@ -147,3 +147,6 @@ print(finished_value)
 
 # for r in [x[1:-1] for x in raw_mat[1:-1]]:
 #     print(r)
+
+
+# 893
