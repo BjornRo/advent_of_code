@@ -149,4 +149,6 @@ print(finished_value)
 #     print(r)
 
 
-# 893
+# 893 too low
+# 897 too high
+# 894 correct

@@ -1,9 +1,8 @@
 from collections import defaultdict
-from copy import deepcopy
 from enum import IntEnum, auto
 from typing import Literal
 
-with open("in/f17.txt") as f:
+with open("in/d17.txt") as f:
     p = [0]  # padding
     raw_mat = tuple(zip(*(p + list(y) + p for y in zip(*(p + [int(c) for c in x.rstrip()] + p for x in f)))))
 
@@ -33,17 +32,13 @@ finished_value: int | float = float("inf")
 visited = set()
 opposite = {Dir.UP: Dir.DOWN, Dir.DOWN: Dir.UP, Dir.LEFT: Dir.RIGHT, Dir.RIGHT: Dir.LEFT}
 end_point = (MAX_ROW, MAX_COL)
-current_states: dict[State, tuple[PathSum, Path]] = {((1, 1, Dir.RIGHT, 1)): (0, [])} # ((1, 1, Dir.DOWN, 1)): (0, [])
+current_states: dict[State, tuple[PathSum, Path]] = {((1, 1, Dir.RIGHT, 1)): (0, []), ((1, 1, Dir.DOWN, 1)): (0, [])}
 next_states: dict[State, tuple[PathSum, Path]] = {}
 all_paths = []
 while current_states:
     for ((row, col, dir, steps)), (path_sum, path) in current_states.items():
         for i in Dir:
             if i == opposite[dir]:
-                continue
-            _steps = steps + 1
-            if dir != i and _steps <= 3:
-                # print(steps, dir)
                 continue
             _row, _col = row, col
             match i:
@@ -57,9 +52,11 @@ while current_states:
                     _col += 1
             index_value = raw_mat[_row][_col]
             rowcol = (_row, _col)
+
             if index_value:
                 if dir == i:
-                    if _steps >= 10:
+                    _steps = steps + 1
+                    if _steps >= 3:
                         continue
                 else:
                     _steps = 0
@@ -68,13 +65,6 @@ while current_states:
                 #     print(repr(dir), repr(i), path_sum, index_value, rowcol)
                 #     breakpoint()
                 if new_path_sum <= finished_value:
-                    # print()
-                    # zeros = [list(x) for x in deepcopy(raw_mat)]
-                    # for xrow, xcol in path:
-                    #     zeros[xrow][xcol] = int(dir)
-                    # for r in [dx[1:-1] for dx in zeros[1:-1]]:
-                    #     print(r)
-                    # breakpoint()
                     if rowcol == end_point:
                         finished_value = min(path_sum + index_value, finished_value)
                         all_paths.append(path + [rowcol])
@@ -91,16 +81,16 @@ while current_states:
 print(finished_value)
 
 
+# from copy import deepcopy
+
+# print(len(all_paths))
+# total = 0
+# zeros = [list(x) for x in deepcopy(raw_mat)]
+# for row, col in all_paths[-1]:
+#     total += zeros[row][col]
+#     zeros[row][col] = 0
+# print(total)
 
 
-print(len(all_paths))
-total = 0
-zeros = [list(x) for x in deepcopy(raw_mat)]
-for row, col in all_paths[-1]:
-    total += zeros[row][col]
-    zeros[row][col] = 0
-print(total)
-
-
-for r in [x[1:-1] for x in zeros[1:-1]]:
-    print(r)
+# for r in [x[1:-1] for x in zeros[1:-1]]:
+#     print(r)
