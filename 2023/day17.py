@@ -2,7 +2,7 @@ from collections import defaultdict
 from enum import IntEnum, auto
 from typing import Literal
 
-with open("in/d17.txt") as f:
+with open("in/e17.txt") as f:
     p = [0]  # padding
     raw_mat = tuple(zip(*(p + list(y) + p for y in zip(*(p + [int(c) for c in x.rstrip()] + p for x in f)))))
 
@@ -53,10 +53,7 @@ while current_states:
                     _col += 1
             index_value = raw_mat[_row][_col]
             rowcol = (_row, _col)
-            if rowcol == end_point:
-                finished_value = min(path_sum + index_value, finished_value)
-                all_paths.append(path + [rowcol])
-                continue
+
             if index_value:
                 if dir == i:
                     _steps = steps + 1
@@ -66,6 +63,10 @@ while current_states:
                     _steps = 0
                     if dir is None:
                         _steps = 1
+                if rowcol == end_point:
+                    finished_value = min(path_sum + index_value, finished_value)
+                    all_paths.append(path + [rowcol])
+                    continue
                 new_path_sum = path_sum + index_value
                 # if path == [(1, 2), (1, 3), (2, 3), (2, 4), (2, 5), (2, 6), (1, 6)]:
                 #     print(repr(dir), repr(i), path_sum, index_value, rowcol)
@@ -86,9 +87,15 @@ print(finished_value)
 from copy import deepcopy
 
 print(len(all_paths))
+total = 0
 zeros = [list(x) for x in deepcopy(raw_mat)]
-for row, col in all_paths[-1]:
+for row, col in all_paths[-2]:
+    total += zeros[row][col]
     zeros[row][col] = 0
+print(total)
 
-for r in zeros:
+
+for r in [x[1:-1] for x in zeros[1:-1]]:
+
     print(r)
+
