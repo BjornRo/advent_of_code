@@ -1,6 +1,6 @@
+plan: list[tuple[str, int, str]]
 with open("in/d18.txt") as f:
     plan = [(dir, int(steps), color[1:-1]) for dir, steps, color in (x.strip().split() for x in f if x.strip())]
-
 
 path: list[tuple[int, int]] = []
 row = col = 0
@@ -53,9 +53,8 @@ print("Part 1:", sum(c for r in find_interior(path) for c in r))
 Part 2
 """
 
-polygons = []
-total = 0
-row = col = 0
+polygons: list[tuple[int, int]] = []
+total = row = col = 0
 for dir, steps in ((int(color[-1]), int(color[1:-1], 16)) for _, _, color in plan):
     match dir:
         case 0:
