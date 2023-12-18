@@ -44,8 +44,7 @@ def lawn_shapes(lawn: list[str], ditch_row: int, ditch_col: int, dir: Dir, start
                         else:
                             mapping = {Dir.RIGHT: Dir.DOWN, Dir.DOWN: Dir.RIGHT, Dir.UP: Dir.LEFT, Dir.LEFT: Dir.UP}
                         new_dir = mapping[dir]
-                        next_patch = lawn_mover(new_dir, (row, col), ditch_col, ditch_row)
-                        if next_patch != 0:
+                        if (next_patch := lawn_mover(new_dir, (row, col), ditch_col, ditch_row)) != 0:
                             basket.append((new_dir, next_patch))
                         continue
                     case "-" | "|" as pole:
@@ -55,8 +54,7 @@ def lawn_shapes(lawn: list[str], ditch_row: int, ditch_col: int, dir: Dir, start
                                 if (next_patch := lawn_mover(d, (row, col), ditch_col, ditch_row)) != 0:
                                     basket.append((d, next_patch))
                             continue
-            next_patch = lawn_mover(dir, (row, col), ditch_col, ditch_row)
-            if next_patch != 0:
+            if (next_patch := lawn_mover(dir, (row, col), ditch_col, ditch_row)) != 0:
                 basket.append((dir, next_patch))
                 skip = False
     return sum(sum(bool(x) for x in r) for r in drunk_lawn)
