@@ -23,16 +23,16 @@ current_states: dict[State, PathSum] = {((1, 1, Dir.RIGHT, 1)): 0, ((1, 1, Dir.D
 next_states: dict[State, PathSum] = {}
 
 while current_states:
-    for (row, col, dir, steps), path_sum in current_states.items():
-        if (row, col) == END:
+    for (I, Ii, II, I_), path_sum in current_states.items():
+        if (I, Ii) == END:
             finished_value = min(path_sum, finished_value)
             continue
         if path_sum >= finished_value:
             continue
         for i in Dir:
-            if i == {Dir.UP: Dir.DOWN, Dir.DOWN: Dir.UP, Dir.LEFT: Dir.RIGHT, Dir.RIGHT: Dir.LEFT}[dir]:
+            if i == {Dir.UP: Dir.DOWN, Dir.DOWN: Dir.UP, Dir.LEFT: Dir.RIGHT, Dir.RIGHT: Dir.LEFT}[II]:
                 continue
-            _row, _col = row, col
+            _row, _col = I, Ii
             match i:
                 case Dir.UP:
                     _row -= 1
@@ -43,10 +43,10 @@ while current_states:
                 case Dir.RIGHT:
                     _col += 1
             if index_value := raw_mat[_row][_col]:
-                if i == dir:
-                    if steps >= 3:
+                if i == II:
+                    if I_ >= 3:
                         continue
-                    _steps = steps + 1
+                    _steps = I_ + 1
                 else:
                     _steps = 1
                 existing_sum = next_states.get((_row, _col, i, _steps))
