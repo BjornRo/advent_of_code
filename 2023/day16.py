@@ -44,17 +44,17 @@ def lawn_shapes(lawn: list[str], ditch_row: int, ditch_col: int, dir: Dir, start
                         else:
                             mapping = {Dir.RIGHT: Dir.DOWN, Dir.DOWN: Dir.RIGHT, Dir.UP: Dir.LEFT, Dir.LEFT: Dir.UP}
                         new_dir = mapping[dir]
-                        if (next_patch := lawn_mover(new_dir, (row, col), ditch_col, ditch_row)) != 0:
+                        if next_patch := lawn_mover(new_dir, (row, col), ditch_col, ditch_row):
                             basket.append((new_dir, next_patch))
                         continue
                     case "-" | "|" as pole:
                         dirs = (Dir.LEFT, Dir.RIGHT) if pole == "-" else (Dir.UP, Dir.DOWN)
                         if dir not in dirs:
                             for d in dirs:
-                                if (next_patch := lawn_mover(d, (row, col), ditch_col, ditch_row)) != 0:
+                                if next_patch := lawn_mover(d, (row, col), ditch_col, ditch_row):
                                     basket.append((d, next_patch))
                             continue
-            if (next_patch := lawn_mover(dir, (row, col), ditch_col, ditch_row)) != 0:
+            if next_patch := lawn_mover(dir, (row, col), ditch_col, ditch_row):
                 basket.append((dir, next_patch))
                 skip = False
     return sum(bool(c) for r in drunk_lawn for c in r)
