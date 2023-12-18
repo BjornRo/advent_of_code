@@ -57,7 +57,7 @@ def lawn_shapes(lawn: list[str], ditch_row: int, ditch_col: int, dir: Dir, start
             if (next_patch := lawn_mover(dir, (row, col), ditch_col, ditch_row)) != 0:
                 basket.append((dir, next_patch))
                 skip = False
-    return sum(sum(bool(x) for x in r) for r in drunk_lawn)
+    return sum(bool(c) for r in drunk_lawn for c in r)
 
 
 def lawn_starter(row: int, col: int) -> set[tuple[Dir, CoordsROWCOL]]:
