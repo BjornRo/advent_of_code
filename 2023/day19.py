@@ -79,6 +79,8 @@ def branch_flattener(key: str, value: list[list[str]]):
 qkq{x<1416:A,crn}
 crn{x>2662:A,R}
 """
+
+
 def djudgemental(subject: str, wf_index=0) -> int:
     try:
         if_true, if_false = workflows[subject][wf_index : 2 + wf_index]
@@ -91,19 +93,16 @@ def djudgemental(subject: str, wf_index=0) -> int:
         case [_, _, _, "R"], ["R"]:
             return 0
         case [_, ">", value, "A"], ["R"]:
-            # value = 4000>3998 -> 4000-value
             return 4000 - int(value)
         case [_, "<", value, "A"], ["R"]:
-            # value = 1<2 -> value-1
             return int(value) - 1
         case [_, ">", value, "R"], ["A"]:
-            # value = 4000>4000 -> always false -> value
             return int(value)
         case [_, "<", value, "R"], ["A"]:
-            # value = 4000<4000 -> 1 combination
             return 4000 - int(value) + 1
-        # Base cases done
-        case [_, ">", value, "A"], _:  # m>2662:A
+        # Recursion pairs #
+        ###################
+        case [_, ">", value, "A"], _:  # xxx{x>2662:A , x>2662:R , R}
             # value = 4000>3999 -> 4000-value
             distinct = 4000 - int(value)
             if len(if_false) == 4:
@@ -115,7 +114,6 @@ def djudgemental(subject: str, wf_index=0) -> int:
             if len(if_false) == 4:
                 return distinct * djudgemental(subject, wf_index + 1)
             return distinct * djudgemental(if_false[0], 0)
-        # Other
         case [_, ">", value, "R"], _:  # m>2662:A
             # 2 > 2 -> If value is 2, then two solution exists.
             distinct = int(value)
@@ -128,7 +126,8 @@ def djudgemental(subject: str, wf_index=0) -> int:
             if len(if_false) == 4:
                 return distinct * djudgemental(subject, wf_index + 1)
             return distinct * djudgemental(if_false[0], 0)
-        # Other
+        # Recursion pairs #
+        ###################
         case [_, ">", value, new_subject], ["A"]:
             # 4000>3999
             distinct = int(value)
@@ -141,8 +140,11 @@ def djudgemental(subject: str, wf_index=0) -> int:
             distinct = 4000 - int(value)
             return distinct * djudgemental(new_subject, 0)
         case [_, "<", value, new_subject], ["R"]:  # m>2662:A
+            #
             distinct = int(value) - 1
             return distinct * djudgemental(new_subject, 0)
+        # Recursion pairs #
+        ###################
         case [_, _, value, new_subject], _:  # m>2662:A
             print(if_true, if_false)
             if len(if_false) == 4:
@@ -151,12 +153,10 @@ def djudgemental(subject: str, wf_index=0) -> int:
     print(if_true, if_false)
     assert False
 
+
 # 167409079868000
 djudgemental("qkq", 0)
 
-4000 - 3999
-
-1338
 # Subject: crn
 # crn{x>2662:A,R}
 # crn{x>2662:A,A}
