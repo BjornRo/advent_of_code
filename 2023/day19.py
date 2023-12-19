@@ -126,3 +126,6 @@ def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
             return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
     print(if_true, if_false)
     assert False
+
+
+print("Part 2:", judger("in", {"x": [1, 4000], "m": [1, 4000], "a": [1, 4000], "s": [1, 4000]}, 0))
