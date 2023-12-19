@@ -7,9 +7,9 @@ with open("in/d19.txt") as f:
     _workflows, _ratings = (x.split("\n") for x in f.read().split("\n\n"))
 
 workflows: dict[str, list[list[str]]] = {
-    m[:x]: [[w for w in svenska.match(x).groups() if w] for x in m[x:][1:-1].split(",")]  # type: ignore
+    m[:t]: [[w for w in svenska.match(x).groups() if w] for x in m[t:][1:-1].split(",")]  # type: ignore
     for m in _workflows
-    if (x := m.index("{"))
+    if (t := m.index("{"))
 }
 ratings = [{m[0]: int(m[1]) for m in (i.split("=") for i in r[1:-1].split(",") if i)} for r in _ratings if r]
 
