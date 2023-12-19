@@ -29,50 +29,36 @@ def judgemental(rating: dict[str, int], subject: str) -> int:
     return 0
 
 
-print(sum(judgemental(r, "in") for r in ratings))
+print("Part 1:", sum(judgemental(r, "in") for r in ratings))
+
 
 # Part 2
-
-
-def rtv(maxminlist: list[int]) -> int:
-    return maxminlist[1] - maxminlist[0] + 1
-
-
 def calc_branch(xmas_maxmin: dict[str, list[int]]) -> int:
-    total = 1
-    for x in map(rtv, xmas_maxmin.values()):
-        total *= x
-    return total
+    rtv = lambda maxminlist: maxminlist[1] - maxminlist[0] + 1
+    I, Ii, II, I_ = map(rtv, xmas_maxmin.values())
+    return I * Ii * II * I_
 
 
-def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
-    left_minmax = dc(xmas_minmax)
-    right_minmax = dc(xmas_minmax)
-    try:
-        if_true, if_false = workflows[subject][wf_index : 2 + wf_index]
-    except:
-        print(subject)
-        assert False
+def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0) -> int:
+    left_minmax, right_minmax = dc(xmas_minmax), dc(xmas_minmax)
+
+    if_true, if_false = workflows[subject][wf_index : 2 + wf_index]
     match if_true, if_false:
-        case [_, _, _, "R"], ["R"]:  # OK
+        case [_, _, _, "R"], ["R"]:
             return 0
-        case [_, _, _, "A"], ["A"]:  # OK
+        case [_, _, _, "A"], ["A"]:
             return calc_branch(left_minmax)
-        case [xmas, ">", value, "A"], ["R"]:  # OK
+        case [xmas, ">", value, "A"], ["R"]:
             left_minmax[xmas][0] = int(value) + 1
             return calc_branch(left_minmax)
-        case [xmas, "<", value, "A"], ["R"]:  # OK
+        case [xmas, "<", value, "A"], ["R"]:
             left_minmax[xmas][1] = int(value) - 1
             return calc_branch(left_minmax)
-        case [xmas, ">", value, "R"], ["A"]:  # OK
-            right_minmax[xmas][1] = int(value)
+        case [xmas, ltgt, value, "R"], ["A"]:
+            right_minmax[xmas][ltgt == ">"] = int(value)
             return calc_branch(right_minmax)
-        case [xmas, "<", value, "R"], ["A"]:
-            right_minmax[xmas][0] = int(value)
-            return calc_branch(right_minmax)
-        # Recursion pairs #
         ###################
-        case [xmas, ">", value, "A"], _:  # OK
+        case [xmas, ">", value, "A"], _:
             left_minmax[xmas][0] = int(value) + 1
             right_minmax[xmas][1] = int(value)
             if len(if_false) == 4:
@@ -94,7 +80,6 @@ def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
             if len(if_false) == 4:
                 return judger(subject, right_minmax, wf_index + 1)
             return judger(if_false[0], right_minmax, 0)
-        # Recursion pairs #
         ###################
         case [xmas, ">", value, new_subject], ["A"]:
             left_minmax[xmas][0] = int(value) + 1
@@ -110,7 +95,6 @@ def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
         case [xmas, "<", value, new_subject], ["R"]:
             left_minmax[xmas][1] = int(value) - 1
             return judger(new_subject, left_minmax, 0)
-        # Recursion pairs #
         ###################
         case [xmas, "<", value, new_subject], _:
             left_minmax[xmas][1] = int(value) - 1
@@ -124,8 +108,7 @@ def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
             if len(if_false) == 4:
                 return judger(new_subject, left_minmax, 0) + judger(subject, right_minmax, wf_index + 1)
             return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
-    print(if_true, if_false)
-    assert False
+    return 0
 
 
 print("Part 2:", judger("in", {"x": [1, 4000], "m": [1, 4000], "a": [1, 4000], "s": [1, 4000]}, 0))
