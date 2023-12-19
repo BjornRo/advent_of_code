@@ -1,8 +1,9 @@
 import re
+from copy import deepcopy as dc
 
 svenska = re.compile(r"^([a-z])([><])(\d+):([a-zA-Z]+)|([a-zA-Z]+)")
 
-with open("in/e19.txt") as f:
+with open("in/d19.txt") as f:
     _workflows, _ratings = (x.split("\n") for x in f.read().split("\n\n"))
 
 workflows: dict[str, list[list[str]]] = {
@@ -32,141 +33,96 @@ print(sum(judgemental(r, "in") for r in ratings))
 
 # Part 2
 
-"""
-px{a<2006:qkq,m>2090:A,rfg}
-pv{a>1716:R,A}
-lnx{m>1548:A,A}
-rfg{s<537:gd,x>2440:R,A}
-qs{s>3448:A,lnx}
-qkq{x<1416:A,crn}
-crn{x>2662:A,R}
-in{s<1351:px,qqz}
-qqz{s>2770:qs,m<1801:hdj,R}
-gd{a>3333:R,R}
-hdj{m>838:A,pv}
 
-{x=787,m=2655,a=1222,s=2876}
-{x=1679,m=44,a=2067,s=496}
-{x=2036,m=264,a=79,s=2244}
-{x=2461,m=1339,a=466,s=291}
-{x=2127,m=1623,a=2188,s=1013}
-"""
-
-keys = list(workflows)
-wf = workflows[keys[0]]
-# [['a', '<', '2006', 'qkq'], ['m', '>', '2090', 'A'], ['rfg']]
-
-from collections import defaultdict
-from copy import deepcopy
-
-nworkflows = deepcopy(workflows)
-for k, v in nworkflows.items():
-    pass
+def rtv(maxminlist: list[int]) -> int:
+    return maxminlist[1] - maxminlist[0] + 1
 
 
-def branch_flattener(key: str, value: list[list[str]]):
-    for i, item in enumerate(value):
-        # ['rfg'] item
-        match item:
-            case ["A", "R"]:
-                continue
-            case [subject]:
-                value
-        break
+def calc_branch(xmas_maxmin: dict[str, list[int]]) -> int:
+    total = 1
+    for x in map(rtv, xmas_maxmin.values()):
+        total *= x
+    return total
 
 
-"""
-qkq{x<1416:A,crn}
-crn{x>2662:A,R}
-"""
-
-
-def djudgemental(subject: str, wf_index=0) -> int:
+def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0):
+    left_minmax = dc(xmas_minmax)
+    right_minmax = dc(xmas_minmax)
     try:
         if_true, if_false = workflows[subject][wf_index : 2 + wf_index]
     except:
         print(subject)
         assert False
     match if_true, if_false:
-        case [_, _, _, "A"], ["A"]:
-            return 4000
-        case [_, _, _, "R"], ["R"]:
+        case [_, _, _, "R"], ["R"]:  # OK
             return 0
-        case [_, ">", value, "A"], ["R"]:
-            return 4000 - int(value)
-        case [_, "<", value, "A"], ["R"]:
-            return int(value) - 1
-        case [_, ">", value, "R"], ["A"]:
-            return int(value)
-        case [_, "<", value, "R"], ["A"]:
-            return 4000 - int(value) + 1
+        case [_, _, _, "A"], ["A"]:  # OK
+            return calc_branch(left_minmax)
+        case [xmas, ">", value, "A"], ["R"]:  # OK
+            left_minmax[xmas][0] = int(value) + 1
+            return calc_branch(left_minmax)
+        case [xmas, "<", value, "A"], ["R"]:  # OK
+            left_minmax[xmas][1] = int(value) - 1
+            return calc_branch(left_minmax)
+        case [xmas, ">", value, "R"], ["A"]:  # OK
+            right_minmax[xmas][1] = int(value)
+            return calc_branch(right_minmax)
+        case [xmas, "<", value, "R"], ["A"]:
+            right_minmax[xmas][0] = int(value)
+            return calc_branch(right_minmax)
         # Recursion pairs #
         ###################
-        case [_, ">", value, "A"], _:  # xxx{x>2662:A , x>2662:R , R}
-            # value = 4000>3999 -> 4000-value
-            distinct = 4000 - int(value)
+        case [xmas, ">", value, "A"], _:  # OK
+            left_minmax[xmas][0] = int(value) + 1
+            right_minmax[xmas][1] = int(value)
             if len(if_false) == 4:
-                return distinct * djudgemental(subject, wf_index + 1)
-            return distinct * djudgemental(if_false[0], 0)
-        case [_, "<", value, "A"], _:  # m>2662:A
-            # value = 1<2 -> value-1
-            distinct = int(value) - 1
+                return calc_branch(left_minmax) + judger(subject, right_minmax, wf_index + 1)
+            return calc_branch(left_minmax) + judger(if_false[0], right_minmax, 0)
+        case [xmas, "<", value, "A"], _:  # OK
+            left_minmax[xmas][1] = int(value) - 1
+            right_minmax[xmas][0] = int(value)
             if len(if_false) == 4:
-                return distinct * djudgemental(subject, wf_index + 1)
-            return distinct * djudgemental(if_false[0], 0)
-        case [_, ">", value, "R"], _:  # m>2662:A
-            # 2 > 2 -> If value is 2, then two solution exists.
-            distinct = int(value)
+                return calc_branch(left_minmax) + judger(subject, right_minmax, wf_index + 1)
+            return calc_branch(left_minmax) + judger(if_false[0], right_minmax, 0)
+        case [xmas, ">", value, "R"], _:
+            right_minmax[xmas][1] = int(value)
             if len(if_false) == 4:
-                return distinct * djudgemental(subject, wf_index + 1)
-            return distinct * djudgemental(if_false[0], 0)
-        case [_, "<", value, "R"], _:
-            # 3999 < 4000
-            distinct = int(value) - 1
+                return judger(subject, right_minmax, wf_index + 1)
+            return judger(if_false[0], right_minmax, 0)
+        case [xmas, "<", value, "R"], _:
+            right_minmax[xmas][0] = int(value)
             if len(if_false) == 4:
-                return distinct * djudgemental(subject, wf_index + 1)
-            return distinct * djudgemental(if_false[0], 0)
+                return judger(subject, right_minmax, wf_index + 1)
+            return judger(if_false[0], right_minmax, 0)
         # Recursion pairs #
         ###################
-        case [_, ">", value, new_subject], ["A"]:
-            # 4000>3999
-            distinct = int(value)
-            return distinct * djudgemental(new_subject, 0)
-        case [_, "<", value, new_subject], ["A"]:  # m>2662:A
-            distinct = 4000 - int(value) + 1
-            return distinct * djudgemental(new_subject, 0)
-        case [_, ">", value, new_subject], ["R"]:
-            # 4000 > 4000
-            distinct = 4000 - int(value)
-            return distinct * djudgemental(new_subject, 0)
-        case [_, "<", value, new_subject], ["R"]:  # m>2662:A
-            #
-            distinct = int(value) - 1
-            return distinct * djudgemental(new_subject, 0)
+        case [xmas, ">", value, new_subject], ["A"]:
+            left_minmax[xmas][0] = int(value) + 1
+            right_minmax[xmas][1] = int(value)
+            return judger(new_subject, left_minmax, 0) + calc_branch(right_minmax)
+        case [xmas, "<", value, new_subject], ["A"]:
+            left_minmax[xmas][1] = int(value) - 1
+            right_minmax[xmas][0] = int(value)
+            return judger(new_subject, left_minmax, 0) + calc_branch(right_minmax)
+        case [xmas, ">", value, new_subject], ["R"]:
+            left_minmax[xmas][0] = int(value) + 1
+            return judger(new_subject, left_minmax, 0)
+        case [xmas, "<", value, new_subject], ["R"]:
+            left_minmax[xmas][1] = int(value) - 1
+            return judger(new_subject, left_minmax, 0)
         # Recursion pairs #
         ###################
-        case [_, _, value, new_subject], _:  # m>2662:A
-            print(if_true, if_false)
+        case [xmas, "<", value, new_subject], _:
+            left_minmax[xmas][1] = int(value) - 1
+            right_minmax[xmas][0] = int(value)
             if len(if_false) == 4:
-                return djudgemental(new_subject, 0) * djudgemental(subject, wf_index + 1)
-            return djudgemental(new_subject, 0) * djudgemental(if_false[0], 0)
+                return judger(new_subject, left_minmax, 0) + judger(subject, right_minmax, wf_index + 1)
+            return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
+        case [xmas, ">", value, new_subject], _:
+            left_minmax[xmas][0] = int(value) + 1
+            right_minmax[xmas][1] = int(value)
+            if len(if_false) == 4:
+                return judger(new_subject, left_minmax, 0) + judger(subject, right_minmax, wf_index + 1)
+            return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
     print(if_true, if_false)
     assert False
-
-
-# 167409079868000
-djudgemental("qkq", 0)
-
-# Subject: crn
-# crn{x>2662:A,R}
-# crn{x>2662:A,A}
-
-# crn{x>2662:R,m>2662:A,R}
-# crn{x>2662:qs,m>2662:A,R}
-
-# crn{x>2662:A,m>2662:A,R}
-
-# crn{x>2662:A,foo}
-# foo{x>1:R,A}
-
-# print(sum(djudgemental(r, "in") for r in ratings))
