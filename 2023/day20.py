@@ -59,7 +59,6 @@ def tmi(presses: int) -> int:
                 low_high_count[modules[cmd].state] += 1
                 if next_cmd in onlycast and modules[next_cmd].recv(cmd, modules[cmd].state):
                     queue.append(next_cmd)
-
     return low_high_count[0] * low_high_count[1]
 
 
