@@ -70,28 +70,28 @@ def tmi(presses: int) -> int:
 
 def bmi() -> int:
     k = [c for c, (_, i) in onlycast.items() if "rx" in i][0]
-    modules, queue, press, cycles = floppyness(), deque(), 0, [0] * sum([k in c for _, (_, c) in onlycast.items()])
-    if (c := modules[k]) and isinstance(c, Conjunct) and (d := c.inputs):
-        while press := press + 1:
+    h, e, l, p = floppyness(), deque(), 0, [0] * sum([k in c for _, (_, c) in onlycast.items()])
+    if (c := h[k]) and isinstance(c, Conjunct) and (d := c.inputs):
+        while l := l + 1:
             for cmd in broadcaster:
-                queue.append(cmd)
-                modules[cmd].recv("", False)
-            while queue and (cmd := queue.popleft()):
+                e.append(cmd)
+                h[cmd].recv("", False)
+            while e and (cmd := e.popleft()):
                 for next_cmd in onlycast[cmd][1]:
                     if next_cmd in onlycast:
                         if next_cmd == k and any(d.values()):
                             for i, v in enumerate(d.values()):
-                                if v and not cycles[i]:
-                                    cycles[i] = press
-                                    if all(cycles):
-                                        return lcm(*cycles)
-                        match modules[next_cmd]:
+                                if v and not p[i]:
+                                    p[i] = l
+                                    if all(p):
+                                        return lcm(*p)
+                        match h[next_cmd]:
                             case FlipFlop() as r:
-                                if r.recv(cmd, modules[cmd].state):
-                                    queue.append(next_cmd)
+                                if r.recv(cmd, h[cmd].state):
+                                    e.append(next_cmd)
                             case Conjunct() as r:
-                                r.recv(cmd, modules[cmd].state)
-                                queue.append(next_cmd)
+                                r.recv(cmd, h[cmd].state)
+                                e.append(next_cmd)
     assert False
 
 
