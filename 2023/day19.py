@@ -2,7 +2,7 @@ import re
 
 with open("in/d19.txt") as f:
     _workflows, _ratings = (x.split("\n") for x in f.read().split("\n\n"))
-svenska = re.compile(r"^([a-z])([><])(\d+):([a-zA-Z]+)|([a-zA-Z]+)")
+svenska = re.compile(r"([a-z])([><])(\d+):([a-zA-Z]+)|([a-zA-Z]+)")
 workflows: dict[str, list[list[str]]] = {
     m[:t]: [[w for w in svenska.match(x).groups() if w] for x in m[t:][1:-1].split(",")]  # type: ignore
     for m in _workflows
