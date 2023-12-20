@@ -1,10 +1,9 @@
 from collections import deque
 from dataclasses import dataclass, field
+from math import lcm
 
-Priority = int
 Name = Prefix = str
-
-onlycast: dict[str, tuple[Prefix, list[Name]]]
+onlycast: dict[Name, tuple[Prefix, list[Name]]]
 with open("in/d20.txt") as f:
     onlycast = {k[1:]: (k[0], [e.strip() for e in v.split(",")]) for k, v in (x.strip().split(" -> ") for x in f)}
     broadcaster = onlycast.pop("roadcaster")[1]
@@ -27,54 +26,74 @@ class Conjunct:
 class FlipFlop:
     state: bool = False
 
-    def recv(self, _cmd: Name, new_state: bool) -> bool:
+    def recv(self, _: Name, new_state: bool) -> bool:
         if not new_state:
             self.state = not self.state
             return True
         return False
 
 
-# 8 low pulses and 4 high pulses are sent.
-def tmi(presses: int):
+def floppyness() -> dict[Name, FlipFlop | Conjunct]:
     modules: dict[Name, FlipFlop | Conjunct] = {}
     to_inverters: list[tuple[Name, Name]] = []
     for cmd, (pfx, cmds) in onlycast.items():
-        match pfx:
-            case "%":
-                modules[cmd] = FlipFlop()
-            case "&":
-                modules[cmd] = Conjunct()
+        modules[cmd] = FlipFlop() if pfx == "%" else Conjunct()
         for next_cmd in cmds:
             if next_cmd in onlycast and onlycast[next_cmd][0] == "&":
                 to_inverters.append((next_cmd, cmd))
     for conj, cmd in to_inverters:
-        modules[conj].inputs[cmd] = False  # type:ignore
-    # End init
+        if (c := modules[conj]) and isinstance(c, Conjunct):
+            c.inputs[cmd] = False
+    return modules
 
-    queue: deque[Name] = deque()
-    low_high_count = [0, 0]
 
+def tmi(presses: int) -> int:
+    modules, queue, low_high_count = floppyness(), deque(), [0, 0]
     for _ in range(presses):
-        low_high_count[0] += 1
+        low_high_count[0] += 1 + len(broadcaster)
         for cmd in broadcaster:
             queue.append(cmd)
             modules[cmd].recv("", False)
-            low_high_count[0] += 1
-        while queue:
-            cmd = queue.popleft()
-            send = modules[cmd]
+        while queue and (cmd := queue.popleft()):
             for next_cmd in onlycast[cmd][1]:
-                low_high_count[send.state] += 1
+                low_high_count[modules[cmd].state] += 1
                 if next_cmd in onlycast:
-                    recv = modules[next_cmd]
-                    match recv:
-                        case FlipFlop():
-                            if recv.recv(cmd, send.state):
+                    match modules[next_cmd]:
+                        case FlipFlop() as r:
+                            if r.recv(cmd, modules[cmd].state):
                                 queue.append(next_cmd)
-                        case Conjunct():
-                            recv.recv(cmd, send.state)
+                        case Conjunct() as r:
+                            r.recv(cmd, modules[cmd].state)
                             queue.append(next_cmd)
-    print(low_high_count)
+    return low_high_count[0] * low_high_count[1]
 
 
-tmi(1000)
+def bmi() -> int:
+    k = [c for c, (_, i) in onlycast.items() if "rx" in i][0]
+    modules, queue, press, cycles = floppyness(), deque(), 0, [0] * sum([k in c for _, (_, c) in onlycast.items()])
+    if (c := modules[k]) and isinstance(c, Conjunct) and (d := c.inputs):
+        while press := press + 1:
+            for cmd in broadcaster:
+                queue.append(cmd)
+                modules[cmd].recv("", False)
+            while queue and (cmd := queue.popleft()):
+                for next_cmd in onlycast[cmd][1]:
+                    if next_cmd in onlycast:
+                        if next_cmd == k and any(d.values()):
+                            for i, v in enumerate(d.values()):
+                                if v and not cycles[i]:
+                                    cycles[i] = press
+                                    if all(cycles):
+                                        return lcm(*cycles)
+                        match modules[next_cmd]:
+                            case FlipFlop() as r:
+                                if r.recv(cmd, modules[cmd].state):
+                                    queue.append(next_cmd)
+                            case Conjunct() as r:
+                                r.recv(cmd, modules[cmd].state)
+                                queue.append(next_cmd)
+    assert False
+
+
+print("Part 1:", tmi(1000))
+print("Part 2:", bmi())
