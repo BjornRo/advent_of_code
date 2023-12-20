@@ -53,7 +53,7 @@ def judger(subject: list[list[str]], xmas_minmax: dict[str, list[int]]) -> int:
         case [xmas, "<", value, "A"]:
             return calc_branch(p(xmas, 1, value, -1)) + judger(subject[1:], p(xmas, 0, value, 0))
         case [xmas, ltgt, value, "R"]:
-            return judger(subject[1:], p(xmas, 1 if ltgt == ">" else 0, value, 0))
+            return judger(subject[1:], p(xmas, ltgt == ">", value, 0))
         case [xmas, ">", value, new_subject]:
             return judger(workflows[new_subject], p(xmas, 0, value, 1)) + judger(subject[1:], p(xmas, 1, value, 0))
         case [xmas, "<", value, new_subject]:
