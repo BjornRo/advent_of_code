@@ -1,11 +1,8 @@
 import re
-from copy import deepcopy as dc
-
-svenska = re.compile(r"^([a-z])([><])(\d+):([a-zA-Z]+)|([a-zA-Z]+)")
 
 with open("in/d19.txt") as f:
     _workflows, _ratings = (x.split("\n") for x in f.read().split("\n\n"))
-
+svenska = re.compile(r"^([a-z])([><])(\d+):([a-zA-Z]+)|([a-zA-Z]+)")
 workflows: dict[str, list[list[str]]] = {
     m[:t]: [[w for w in svenska.match(x).groups() if w] for x in m[t:][1:-1].split(",")]  # type: ignore
     for m in _workflows
@@ -34,81 +31,34 @@ print("Part 1:", sum(judgemental(r, "in") for r in ratings))
 
 # Part 2
 def calc_branch(xmas_maxmin: dict[str, list[int]]) -> int:
-    rtv = lambda maxminlist: maxminlist[1] - maxminlist[0] + 1
-    I, Ii, II, I_ = map(rtv, xmas_maxmin.values())
+    I, Ii, II, I_ = map(lambda x: x[1] - x[0] + 1, xmas_maxmin.values())
     return I * Ii * II * I_
 
 
-def judger(subject: str, xmas_minmax: dict[str, list[int]], wf_index=0) -> int:
-    left_minmax, right_minmax = dc(xmas_minmax), dc(xmas_minmax)
+def upd_dict_cpy(xmas_dict: dict[str, list[int]], key: str, index: int, value: str, offset: int):
+    new_dict = {k: v.copy() for k, v in xmas_dict.items()}
+    new_dict[key][index] = int(value) + offset
+    return new_dict
 
-    if_true, if_false = workflows[subject][wf_index : 2 + wf_index]
-    match if_true, if_false:
-        case [_, _, _, "R"], ["R"]:
+
+def judger(subject: list[list[str]], xmas_minmax: dict[str, list[int]]) -> int:
+    p = lambda k, i, v, o: upd_dict_cpy(xmas_minmax, k, i, v, o)
+    match subject[0]:
+        case ["A"]:
+            return calc_branch(xmas_minmax)
+        case ["R"]:
             return 0
-        case [_, _, _, "A"], ["A"]:
-            return calc_branch(left_minmax)
-        case [xmas, ">", value, "A"], ["R"]:
-            left_minmax[xmas][0] = int(value) + 1
-            return calc_branch(left_minmax)
-        case [xmas, "<", value, "A"], ["R"]:
-            left_minmax[xmas][1] = int(value) - 1
-            return calc_branch(left_minmax)
-        case [xmas, ltgt, value, "R"], ["A"]:
-            right_minmax[xmas][ltgt == ">"] = int(value)
-            return calc_branch(right_minmax)
-        ###################
-        case [xmas, ">", value, "A"], _:
-            left_minmax[xmas][0] = int(value) + 1
-            right_minmax[xmas][1] = int(value)
-            if len(if_false) == 4:
-                return calc_branch(left_minmax) + judger(subject, right_minmax, wf_index + 1)
-            return calc_branch(left_minmax) + judger(if_false[0], right_minmax, 0)
-        case [xmas, "<", value, "A"], _:  # OK
-            left_minmax[xmas][1] = int(value) - 1
-            right_minmax[xmas][0] = int(value)
-            if len(if_false) == 4:
-                return calc_branch(left_minmax) + judger(subject, right_minmax, wf_index + 1)
-            return calc_branch(left_minmax) + judger(if_false[0], right_minmax, 0)
-        case [xmas, ">", value, "R"], _:
-            right_minmax[xmas][1] = int(value)
-            if len(if_false) == 4:
-                return judger(subject, right_minmax, wf_index + 1)
-            return judger(if_false[0], right_minmax, 0)
-        case [xmas, "<", value, "R"], _:
-            right_minmax[xmas][0] = int(value)
-            if len(if_false) == 4:
-                return judger(subject, right_minmax, wf_index + 1)
-            return judger(if_false[0], right_minmax, 0)
-        ###################
-        case [xmas, ">", value, new_subject], ["A"]:
-            left_minmax[xmas][0] = int(value) + 1
-            right_minmax[xmas][1] = int(value)
-            return judger(new_subject, left_minmax, 0) + calc_branch(right_minmax)
-        case [xmas, "<", value, new_subject], ["A"]:
-            left_minmax[xmas][1] = int(value) - 1
-            right_minmax[xmas][0] = int(value)
-            return judger(new_subject, left_minmax, 0) + calc_branch(right_minmax)
-        case [xmas, ">", value, new_subject], ["R"]:
-            left_minmax[xmas][0] = int(value) + 1
-            return judger(new_subject, left_minmax, 0)
-        case [xmas, "<", value, new_subject], ["R"]:
-            left_minmax[xmas][1] = int(value) - 1
-            return judger(new_subject, left_minmax, 0)
-        ###################
-        case [xmas, "<", value, new_subject], _:
-            left_minmax[xmas][1] = int(value) - 1
-            right_minmax[xmas][0] = int(value)
-            if len(if_false) == 4:
-                return judger(new_subject, left_minmax, 0) + judger(subject, right_minmax, wf_index + 1)
-            return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
-        case [xmas, ">", value, new_subject], _:
-            left_minmax[xmas][0] = int(value) + 1
-            right_minmax[xmas][1] = int(value)
-            if len(if_false) == 4:
-                return judger(new_subject, left_minmax, 0) + judger(subject, right_minmax, wf_index + 1)
-            return judger(new_subject, left_minmax, 0) + judger(if_false[0], right_minmax, 0)
-    return 0
+        case [xmas, ">", value, "A"]:
+            return calc_branch(p(xmas, 0, value, 1)) + judger(subject[1:], p(xmas, 1, value, 0))
+        case [xmas, "<", value, "A"]:
+            return calc_branch(p(xmas, 1, value, -1)) + judger(subject[1:], p(xmas, 0, value, 0))
+        case [xmas, ltgt, value, "R"]:
+            return judger(subject[1:], p(xmas, 1 if ltgt == ">" else 0, value, 0))
+        case [xmas, ">", value, new_subject]:
+            return judger(workflows[new_subject], p(xmas, 0, value, 1)) + judger(subject[1:], p(xmas, 1, value, 0))
+        case [xmas, "<", value, new_subject]:
+            return judger(workflows[new_subject], p(xmas, 1, value, -1)) + judger(subject[1:], p(xmas, 0, value, 0))
+    return judger(workflows[subject[0][0]], xmas_minmax)
 
 
-print("Part 2:", judger("in", {"x": [1, 4000], "m": [1, 4000], "a": [1, 4000], "s": [1, 4000]}, 0))
+print("Part 2:", judger(workflows["in"], {k: [1, 4000] for k in "xmas"}))
