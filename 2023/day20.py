@@ -57,14 +57,9 @@ def tmi(presses: int) -> int:
         while queue and (cmd := queue.popleft()):
             for next_cmd in onlycast[cmd][1]:
                 low_high_count[modules[cmd].state] += 1
-                if next_cmd in onlycast:
-                    match modules[next_cmd]:
-                        case FlipFlop() as r:
-                            if r.recv(cmd, modules[cmd].state):
-                                queue.append(next_cmd)
-                        case Conjunct() as r:
-                            r.recv(cmd, modules[cmd].state)
-                            queue.append(next_cmd)
+                if next_cmd in onlycast and modules[next_cmd].recv(cmd, modules[cmd].state):
+                    queue.append(next_cmd)
+
     return low_high_count[0] * low_high_count[1]
 
 
@@ -79,19 +74,14 @@ def bmi() -> int:
             while e and (cmd := e.popleft()):
                 for next_cmd in onlycast[cmd][1]:
                     if next_cmd in onlycast:
+                        if h[next_cmd].recv(cmd, h[cmd].state):
+                            e.append(next_cmd)
                         if next_cmd == k and any(d.values()):
                             for i, v in enumerate(d.values()):
                                 if v and not p[i]:
                                     p[i] = l
                                     if all(p):
                                         return lcm(*p)
-                        match h[next_cmd]:
-                            case FlipFlop() as r:
-                                if r.recv(cmd, h[cmd].state):
-                                    e.append(next_cmd)
-                            case Conjunct() as r:
-                                r.recv(cmd, h[cmd].state)
-                                e.append(next_cmd)
     assert False
 
 
