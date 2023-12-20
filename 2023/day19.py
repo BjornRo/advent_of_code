@@ -35,9 +35,9 @@ def calc_branch(xmas_maxmin: dict[str, list[int]]) -> int:
     return I * Ii * II * I_
 
 
-def upd_dict_cpy(xmas_dict: dict[str, list[int]], key: str, index: int, value: str, offset: int):
+def upd_dict_cpy(xmas_dict: dict[str, list[int]], key: str, index: int, val: str, offset: int) -> dict[str, list[int]]:
     new_dict = {k: v.copy() for k, v in xmas_dict.items()}
-    new_dict[key][index] = int(value) + offset
+    new_dict[key][index] = int(val) + offset
     return new_dict
 
 
