@@ -20,13 +20,13 @@ for i in range(ROW):
         new_mat[i * SCALE : (i + 1) * SCALE, j * SCALE : (j + 1) * SCALE] = shapes[mat[i][j]]
 
 def find_nodes(graph: np.ndarray, start_node: tuple[int, int]) -> np.ndarray:
-    (_r, _c), visited, queue = (x - 1 for x in graph.shape), np.zeros_like(graph, dtype=bool), [start_node]
-    while queue:
-        x, y = queue.pop()
+    (_r, _c), visited, stack = (x - 1 for x in graph.shape), np.zeros_like(graph, dtype=bool), [start_node]
+    while stack:
+        x, y = stack.pop()
         for new_node in ((min(x + 1, _r), y), (max(x - 1, 0), y), (x, min(y + 1, _c)), (x, max(y - 1, 0))):
             if graph[*new_node] and not visited[*new_node]:
                 visited[*new_node] = True
-                queue.append(new_node)
+                stack.append(new_node)
     return visited
 
 downsampler = lambda p, h: h(p.reshape((ROW, SCALE, COL, SCALE)).mean(axis=(1, 3))).astype(bool)

@@ -1,5 +1,5 @@
 from enum import IntEnum, auto
-from queue import PriorityQueue
+from heapq import heappop, heappush
 
 with open("in/d17.txt") as f:
     p = [0]  # padding
@@ -20,13 +20,13 @@ State = tuple[Row, Col, Dir, Steps]
 
 def crucial(max_steps: int, part2: bool):
     visited = set()
-    queue: PriorityQueue[tuple[PathSum, State]] = PriorityQueue()
+    queue: list[tuple[PathSum, State]] = []
     start: list[State] = [(1, 1, Dir.RIGHT, 1), (1, 1, Dir.DOWN, 1)]
     for s in start:
-        queue.put((0, s))
+        heappush(queue, (0, s))
 
-    while not queue.empty():
-        path_sum, (row, col, dir, steps) = queue.get()
+    while queue:
+        path_sum, (row, col, dir, steps) = heappop(queue)
 
         if (row, col) == END:
             if part2 and steps < 4:
@@ -58,7 +58,7 @@ def crucial(max_steps: int, part2: bool):
                     _steps = steps + 1
                 elif part2 and i != dir and steps < 4:
                     continue
-                queue.put((path_sum + index_value, (_row, _col, i, _steps)))
+                heappush(queue, (path_sum + index_value, (_row, _col, i, _steps)))
 
 
 print("Part 1:", crucial(max_steps=3, part2=False))

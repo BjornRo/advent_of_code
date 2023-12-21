@@ -25,25 +25,25 @@ def find_interior(coordinates: list[tuple[int, int]]):
     zeros = [[0 for _ in range(MAX_COLS + C_OFFSET)] for _ in range(MAX_ROWS + R_OFFSET)]
     for _row, _col in coordinates:
         zeros[_row + R_OFFSET][_col + C_OFFSET] = 1
-    queue: list[tuple[int, int]] = []
+    stack: list[tuple[int, int]] = []
     for i, row in enumerate(zeros):
         if not sum(row) % 2:
             j = row.index(1) + 1
             if not zeros[i][j]:
                 zeros[i][j] = 1
-                queue.append((i, j))
+                stack.append((i, j))
                 break
-        if queue:
+        if stack:
             break
-    visited = {queue[0]}
-    while queue:
-        x, y = queue.pop()
+    visited = {stack[0]}
+    while stack:
+        x, y = stack.pop()
         for row, col in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
             if (row, col) in visited or zeros[row][col]:  # If matrix == 1, continue
                 continue
             zeros[row][col] = 1
             visited.add((row, col))
-            queue.append((row, col))
+            stack.append((row, col))
     return zeros
 
 
