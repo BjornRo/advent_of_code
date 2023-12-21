@@ -44,7 +44,7 @@ def tmi(part1: int) -> int:
     for conj, cmd in to_inverters:
         if (c := m[conj]) and isinstance(c, Conjunct):
             c.inputs[cmd] = False
-    k = [c for c, (_, i) in onlycast.items() if "rx" in i][0]
+    k = next(c for c, (_, i) in onlycast.items() if "rx" in i)
     h, e, l, p = [0, 0], deque(), 0, [0] * sum([k in c for _, (_, c) in onlycast.items()])
     if (c := m[k]) and isinstance(c, Conjunct) and (d := c.inputs):
         while l := l + 1:
