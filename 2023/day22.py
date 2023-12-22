@@ -95,19 +95,24 @@ brick_previous = dict(brick_supports_previous)
 #     print(b)
 
 
-def benga(idx: int, removed: int, prev_supports: dict):
+def benga(idx: int, removed: int, prev_supports: dict, next_supports: dict):
     if idx == len(settled_stack):
         return removed
     max_val = 0
     supports = brick_next[idx]
     if all(len(prev_supports[j]) >= 2 for j in supports) or not brick_next[idx]:
         _prev_supports = deepcopy(prev_supports)
+        _next_supports:dict[int, set] = deepcopy(next_supports)
+        for e in _prev_supports[idx]:
+            _next_supports[e].remove(idx)
         if idx in prev_supports:
             _prev_supports.pop(idx)
-        max_val = max(benga(idx + 1, removed + 1, _prev_supports), max_val)
+        print("popped", idx)
+        max_val = max(benga(idx + 1, removed + 1, _prev_supports, _next_supports), max_val)
     else:
-        max_val = max(benga(idx + 1, removed, prev_supports), max_val)
+        print("_opped", idx)
+        max_val = max(benga(idx + 1, removed, prev_supports, next_supports), max_val)
     return max_val
 
 
-print(benga(0, 0, brick_previous))
+print(benga(0, 0, brick_previous, brick_next))
