@@ -2,13 +2,13 @@ import re
 import sys
 from collections import defaultdict
 from copy import deepcopy
-from itertools import batched
+from functools import cache
 
 sys.setrecursionlimit(4000)
 
 with open("in/d22.txt") as f:
     fa = re.compile(r"(\d+),(\d+),(\d+)~(\d+),(\d+),(\d+)")
-    bricks = tuple(tuple(batched((int(d) for d in fa.match(x).groups()), 3)) for x in f)  # type:ignore
+    bricks = tuple((x[:3], x[3:]) for x in (tuple(int(d) for d in fa.match(x).groups()) for x in f))  # type:ignore
 
 
 """
@@ -18,6 +18,7 @@ X ARE COLS
 
 1059 too high
 1058 too high
+389 too low
 """
 
 # 3 for test, 10 for real
@@ -95,24 +96,18 @@ brick_previous = dict(brick_supports_previous)
 #     print(b)
 
 
-def benga(idx: int, removed: int, prev_supports: dict, next_supports: dict):
+# @cache
+def benga(idx: int, removed: int):
     if idx == len(settled_stack):
         return removed
-    max_val = 0
-    supports = brick_next[idx]
-    if all(len(prev_supports[j]) >= 2 for j in supports) or not brick_next[idx]:
-        _prev_supports = deepcopy(prev_supports)
-        _next_supports:dict[int, set] = deepcopy(next_supports)
-        for e in _prev_supports[idx]:
-            _next_supports[e].remove(idx)
-        if idx in prev_supports:
-            _prev_supports.pop(idx)
-        print("popped", idx)
-        max_val = max(benga(idx + 1, removed + 1, _prev_supports, _next_supports), max_val)
+    # breakpoint()
+    if len(brick_next[idx]) == 1:
+        return benga(list(brick_next[idx])[0], removed + 1)
+    elif not brick_next[idx]:
+        return benga(idx + 1, removed + 1)
     else:
-        print("_opped", idx)
-        max_val = max(benga(idx + 1, removed, prev_supports, next_supports), max_val)
-    return max_val
+        xx = [benga(j, removed + 1) for j in brick_next[idx]]
+        return max(xx)
 
 
-print(benga(0, 0, brick_previous, brick_next))
+print(benga(0, 0))
