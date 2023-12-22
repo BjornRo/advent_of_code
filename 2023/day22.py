@@ -6,7 +6,7 @@ from itertools import batched
 
 sys.setrecursionlimit(4000)
 
-with open("in/e22.txt") as f:
+with open("in/d22.txt") as f:
     fa = re.compile(r"(\d+),(\d+),(\d+)~(\d+),(\d+),(\d+)")
     bricks = tuple(tuple(batched((int(d) for d in fa.match(x).groups()), 3)) for x in f)  # type:ignore
 
@@ -17,6 +17,7 @@ X ARE COLS
 -- ZERO INDEXING --
 
 1059 too high
+1058 too high
 """
 
 # 3 for test, 10 for real
@@ -64,6 +65,7 @@ for z, b_height, brick in new_bricks:
             if brick[y][x]:
                 cum_height[y][x] = cum_z + b_height
     settled_stack.append((cum_z, b_height, brick))
+
 
 brick_supports_next: dict[int, set[int]] = {}
 ci = 0
