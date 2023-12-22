@@ -1,6 +1,10 @@
 import re
+import sys
 from collections import defaultdict
+from copy import deepcopy
 from itertools import batched
+
+sys.setrecursionlimit(4000)
 
 with open("in/e22.txt") as f:
     fa = re.compile(r"(\d+),(\d+),(\d+)~(\d+),(\d+),(\d+)")
@@ -11,6 +15,8 @@ with open("in/e22.txt") as f:
 Y ARE ROWS
 X ARE COLS
 -- ZERO INDEXING --
+
+1059 too high
 """
 
 # 3 for test, 10 for real
@@ -41,7 +47,7 @@ def lowest_z(cum_height: list[list[int]], brick: list[list[int]]) -> int:
     z = 0
     for y in range(MAX_GRID):
         for x in range(MAX_GRID):
-            if _b_height := brick[y][x]:
+            if brick[y][x]:
                 if _c_height := cum_height[y][x]:
                     z = max(_c_height, z)
     return z
@@ -58,55 +64,48 @@ for z, b_height, brick in new_bricks:
             if brick[y][x]:
                 cum_height[y][x] = cum_z + b_height
     settled_stack.append((cum_z, b_height, brick))
-    # for cz, b in settled_stack:
-    #     print(cz)
-    #     for e in b:
-    #         print(e)
-    # print()
-    # for b in cum_height:
-    #     print(b)
-    # breakpoint()
 
-index_to_overlap: defaultdict[int, set[int]] = defaultdict(set)
+brick_supports_next: dict[int, set[int]] = {}
 ci = 0
 for ci, (cz1, b_height1, b1) in enumerate(settled_stack):
+    brick_supports_next[ci] = set()
     cz1 += b_height1
     # Find next overlapping pieces to current pieces
-    for ci2, (cz2, b_height2, b2) in enumerate(settled_stack[ci+1:], ci+1):
+    for ci2, (cz2, b_height2, b2) in enumerate(settled_stack[ci + 1 :], ci + 1):
         if cz1 == cz2:
             if overlaps_xy(b1, b2):
-                index_to_overlap[ci].add(ci2)
+                brick_supports_next[ci].add(ci2)
         elif cz1 < cz2:
             break
-    print(index_to_overlap)
-index_to_overlap[ci] = set()
 
-
-for cz, bh, b in reversed(settled_stack):
-    print(cz, bh)
-    for e in b:
-        print(e)
+brick_supports_previous: defaultdict[int, set[int]] = defaultdict(set)
+for idx, s in brick_supports_next.items():
+    for i in s:
+        brick_supports_previous[i].add(idx)
+brick_next = brick_supports_next
+brick_previous = dict(brick_supports_previous)
+# for cz, bh, b in reversed(settled_stack):
+#     print(cz, bh)
+#     for e in b:
+#         print(e)
 
 # for b in cum_height:
 #     print(b)
 
 
-RemovedBricks = int
-BrickIndex = int
-SupportsBricks = tuple[BrickIndex, ...]
-State = tuple[BrickIndex, SupportsBricks]
+def benga(idx: int, removed: int, prev_supports: dict):
+    if idx == len(settled_stack):
+        return removed
+    max_val = 0
+    supports = brick_next[idx]
+    if all(len(prev_supports[j]) >= 2 for j in supports) or not brick_next[idx]:
+        _prev_supports = deepcopy(prev_supports)
+        if idx in prev_supports:
+            _prev_supports.pop(idx)
+        max_val = max(benga(idx + 1, removed + 1, _prev_supports), max_val)
+    else:
+        max_val = max(benga(idx + 1, removed, prev_supports), max_val)
+    return max_val
 
 
-def benga(tower: list[tuple[int, int, list[list[int]]]], overlap_mapping: defaultdict[int, set[int]]):
-    ci = 0
-    for ci, (cz1, b_height1, b1) in enumerate(tower):
-        # find pieces on current index
-        overlaps = len(overlap_mapping[ci])
-        for ci2, (cz2, b_height2, b2) in enumerate(tower[ci+1:], ci+1):
-            if cz1 != cz2:
-                break
-            if overlap_mapping[ci]:
-                pass
-
-
-benga(settled_stack, index_to_overlap)
+print(benga(0, 0, brick_previous))
