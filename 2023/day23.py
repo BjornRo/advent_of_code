@@ -9,7 +9,7 @@ Node2D = tuple[Row, Col]
 Frontier = tuple[Node2D, Steps]
 
 
-def find_nodes(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
+def bfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
     current_epoch: dict[Frontier, Visited] = {(start, 0): {start, oob}}
     next_epoch: dict[Frontier, Visited] = current_epoch.copy()  # Just as a starter. Does not matter
     while next_epoch:
@@ -29,7 +29,7 @@ def find_nodes(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, 
     return max_steps
 
 
-print("Part 1:", find_nodes(chart, *seo))
+print("Part 1:", bfs(chart, *seo))
 
 """ Part 2 """
 
