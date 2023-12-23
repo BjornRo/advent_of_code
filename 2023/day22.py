@@ -50,6 +50,6 @@ def check_deleted(bricks: tuple[Brick, ...] | list[Brick], pseudo_pop_id: int, c
     return total if count else 1
 
 
-settled_stack = settle(tuple(sorted(line_to_2d(b, id) for id, b in enumerate(bricks))))
-print("Part 1:", sum(check_deleted(settled_stack, i, False) for i in range(len(bricks))))
-print("Part 2:", sum(check_deleted(settled_stack, i, True) for i in range(len(bricks))))
+settled_stack, b_len = settle(tuple(sorted(line_to_2d(b, id) for id, b in enumerate(bricks)))), len(bricks)
+print("Part 1:", sum(check_deleted(settled_stack, i, False) for i in range(b_len)))
+print("Part 2:", sum(check_deleted(settled_stack, i, True) for i in range(b_len)))
