@@ -1,6 +1,6 @@
 with open("in/d22.txt") as f:
     bricks = tuple(tuple(map(int, x.replace("~", ",").split(","))) for x in f)
-ZPos, Id, ZBrick, GRID = int, int, int, next(max(*a, *b, *d, *e) + 1 for a, b, _, d, e, _ in [tuple(zip(*(bricks)))])
+ZPos, ZBrick, Id, GRID = int, int, int, next(max(*a, *b, *d, *e) + 1 for a, b, _, d, e, _ in [tuple(zip(*(bricks)))])
 Brick = tuple[ZPos, ZBrick, Id, list[list[int]]]
 
 
