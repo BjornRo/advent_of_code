@@ -5,8 +5,7 @@ Brick = tuple[ZPos, ZBrick, Id, list[list[int]]]
 
 
 def line_to_2d(line: tuple[int, ...], id: int) -> Brick:
-    brick = [[0] * GRID for _ in range(GRID)]
-    x1, y1, z1, x2, y2, z2 = line
+    (x1, y1, z1, x2, y2, z2), brick = line, [[0] * GRID for _ in range(GRID)]
     brick_height = z2 - z1 + 1
     for y in range(y1, y2 + 1):
         for x in range(x1, x2 + 1):
