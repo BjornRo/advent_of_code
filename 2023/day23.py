@@ -57,7 +57,7 @@ def find_paths(chart: tuple[tuple[bool, ...], ...], start: Node2D, end: Node2D, 
             if not (gkey in graph or gkey[::-1] in graph):  # while another waits at intersect+1.
                 graph[gkey] = len(curr_path - {oob}) - 1  # From intersection to intersection
             if (row, col) in visited_crossings:  # No need to revisit a crossing
-                intersection *= 0  # Clear sicne we continue
+                intersection *= 0  # Clear since we continue
                 continue
             visited_crossings.add((row, col))
             start_path = (row, col)  # Start now from this new intersection
