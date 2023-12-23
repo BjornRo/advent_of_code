@@ -47,16 +47,16 @@ def check_deleted(bricks: tuple[Brick, ...] | list[Brick], pseudo_pop_id: int, c
             cum_z = lowest_z(cum_height, brick)
             if zpos != cum_z:
                 if not count:
-                    return 1
+                    return 0
                 total += 1
             for y in range(MAX_GRID):
                 for x in range(MAX_GRID):
                     if brick[y][x]:
                         cum_height[y][x] = cum_z + b_height
-    return total
+    return total if count else 1
 
 
 settled_stack = settle(tuple(sorted(line_to_2d(b, id) for id, b in enumerate(bricks))))
 
-print("Part 1:", sum(not check_deleted(settled_stack, i, False) for i in range(len(bricks))))
+print("Part 1:", sum(check_deleted(settled_stack, i, False) for i in range(len(bricks))))
 print("Part 2:", sum(check_deleted(settled_stack, i, True) for i in range(len(bricks))))
