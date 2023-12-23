@@ -1,5 +1,7 @@
+import time
 from collections import defaultdict
 
+start_time = time.time()
 with open("in/d23.txt") as f:
     chart: tuple[str, ...] = tuple(x.strip() for x in f)
 
@@ -30,14 +32,14 @@ def bfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_ste
 
 
 print("Part 1:", bfs(chart, *seo))
-
+print("  Finished in:", round(time.time() - start_time, 4), "secs")
 """ Part 2 """
 
 CurrentPos, CurrPath, StartPathPos = Node2D, set, Node2D
 Graph, State = dict[tuple[Node2D, Node2D], Steps], tuple[CurrentPos, CurrPath, StartPathPos]
 
 
-def find_paths(chart: tuple[tuple[bool, ...], ...], start: Node2D, end: Node2D, oob: Node2D):
+def find_paths_bfs(chart: tuple[tuple[bool, ...], ...], start: Node2D, end: Node2D, oob: Node2D):
     graph: Graph = {}
     next_state: list[State] = [(start, {start, oob}, start)]
     visited_crossings: set[Node2D] = set()
@@ -95,4 +97,5 @@ def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_
 
 
 plan = tuple(tuple(c != "#" for c in x) for x in chart)
-print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in sorted(find_paths(plan, *seo).items())]), *seo[:2]))
+print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in sorted(find_paths_bfs(plan, *seo).items())]), *seo[:2]))
+print("  Total time for p1,p2:", round(time.time() - start_time, 4), "secs")
