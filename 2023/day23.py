@@ -67,6 +67,14 @@ def adjacency_list(edge_list: list[tuple[Node2D, Node2D, Steps]]) -> dict[Node2D
     graph: defaultdict[Node2D, dict[Node2D, int]] = defaultdict(dict)
     for node1, node2, weight in edge_list:
         graph[node1][node2], graph[node2][node1] = weight, weight
+    for v in graph.values():  # Optimization
+        x = tuple(v.values())
+        if len(v) == 4:
+            m, c = min(x), tuple(v.items())
+            for kk, vv in c:
+                if vv == m:
+                    v.pop(kk)
+                    break # End optimization
     return dict(graph)
 
 
@@ -74,13 +82,11 @@ def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_
     next_state: list[tuple[Row, Col, Steps, Visited]] = [(*start, max_steps, [start])]
     while next_state:
         row, col, weight, visited = next_state.pop()
-        x = tuple(graph[(row, col)].values())
-        nmin, nlen = min(x), len(x) == 4
         for next_node, next_weight in graph[(row, col)].items():
             if next_node == end:
                 max_steps = max(weight + next_weight, max_steps)
                 continue
-            if next_node not in visited and not (nlen and nmin == next_weight):
+            if next_node not in visited:
                 next_state.append((*next_node, weight + next_weight, [next_node, *visited]))
     return max_steps
 
@@ -89,10 +95,9 @@ def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, vis
     if start == end:
         return max_steps
     visited.add(start)
-    steps, x = 0, tuple(graph[start].values())
-    nmin, nlen = min(x), len(x) == 4
+    steps = 0
     for next_node, next_weight in graph[start].items():
-        if next_node not in visited and not (nlen and nmin == next_weight):
+        if next_node not in visited:
             steps = max(dfs2(graph, next_node, end, visited, max_steps + next_weight), steps)
     visited.remove(start)
     return steps
