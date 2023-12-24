@@ -10,7 +10,7 @@ Row, Col, Steps = int, int, int
 Node2D = tuple[Row, Col]
 
 
-def dfs1(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
+def dfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
     stack = [(start, max_steps, [start, oob])]
     while stack:
         (row, col), steps, visited = stack.pop()
@@ -78,7 +78,7 @@ def adjacency_list(edge_list: list[tuple[Node2D, Node2D, Steps]]) -> dict[Node2D
     return dict(graph)
 
 
-def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_steps=0):
+def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_steps=0):
     next_state: list[tuple[Row, Col, Steps, Visited]] = [(*start, max_steps, [start])]
     while next_state:
         row, col, weight, visited = next_state.pop()
@@ -91,7 +91,7 @@ def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_
     return max_steps
 
 
-def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=set(), max_steps=0):
+def dfs3(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=set(), max_steps=0):
     if start == end:
         return max_steps
     visited.add(start)
