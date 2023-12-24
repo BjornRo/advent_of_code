@@ -78,7 +78,7 @@ def adjacency_list(edge_list: list[tuple[Node2D, Node2D, Steps]]) -> dict[Node2D
     return dict(graph)
 
 
-def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_steps=0):
+def dfs2_imp(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_steps=0):
     next_state: list[tuple[Row, Col, Steps, Visited]] = [(*start, max_steps, [start])]
     while next_state:
         row, col, weight, visited = next_state.pop()
@@ -91,17 +91,17 @@ def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max
     return max_steps
 
 
-def dfs3(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=set(), max_steps=0):
+def dfs2_rec(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=set(), max_steps=0):
     if start == end:
         return max_steps
     visited.add(start)
     steps = 0
     for next_node, next_weight in graph[start].items():
         if next_node not in visited:
-            steps = max(dfs2(graph, next_node, end, visited, max_steps + next_weight), steps)
+            steps = max(dfs2_rec(graph, next_node, end, visited, max_steps + next_weight), steps)
     visited.remove(start)
     return steps
 
 
-print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in find_paths_dfs(chart, *seo).items()]), *seo[:2]))
+print("Part 2:", dfs2_imp(adjacency_list([(*a, w) for a, w in find_paths_dfs(chart, *seo).items()]), *seo[:2]))
 print("  Total time for p1,p2:", round(time.time() - start_time, 4), "secs")
