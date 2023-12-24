@@ -68,8 +68,8 @@ def adjacency_list(edges: list[tuple[Node2D, Node2D, Steps]], end: Node2D) -> di
     for node1, node2, weight in edges:
         graph[node1][node2], graph[node2][node1] = weight, weight
     prev_end, weight = next(iter(graph[end].items())) # Optimization
-    graph[prev_end] = {end: weight} # Last intersection always leads to the end
-    for v in graph.values(): # If 4 paths, remove lowest weight.
+    graph[prev_end] = {end: weight} # 1. Last intersection always leads to the end
+    for v in graph.values(): # 2. If 4 paths, remove lowest weight.
         x = tuple(v.values())
         if len(v) == 4:
             m, c = min(x), tuple(v.items())
