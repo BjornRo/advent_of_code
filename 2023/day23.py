@@ -24,7 +24,7 @@ def dfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_ste
     return max_steps
 
 
-print("Part 1:", dfs1(chart, *seo))
+print("Part 1:", dfs(chart, *seo))
 print("  Finished in:", round(time.time() - start_time, 4), "secs")
 
 """ Part 2 """
