@@ -74,23 +74,27 @@ def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_
     next_state: list[tuple[Row, Col, Steps, Visited]] = [(*start, max_steps, [start])]
     while next_state:
         row, col, weight, visited = next_state.pop()
+        x = tuple(graph[(row, col)].values())
+        nmin, nlen = min(x), len(x) == 4
         for next_node, next_weight in graph[(row, col)].items():
             if next_node == end:
                 max_steps = max(weight + next_weight, max_steps)
                 continue
-            if next_node not in visited:
+            if next_node not in visited and not (nlen and nmin == next_weight):
                 next_state.append((*next_node, weight + next_weight, [next_node, *visited]))
     return max_steps
 
 
-def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=(), max_steps=0):
+def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=set(), max_steps=0):
     if start == end:
         return max_steps
-    visited = (start, *visited)
-    steps = 0
+    visited.add(start)
+    steps, x = 0, tuple(graph[start].values())
+    nmin, nlen = min(x), len(x) == 4
     for next_node, next_weight in graph[start].items():
-        if next_node not in visited:
+        if next_node not in visited and not (nlen and nmin == next_weight):
             steps = max(dfs2(graph, next_node, end, visited, max_steps + next_weight), steps)
+    visited.remove(start)
     return steps
 
 
