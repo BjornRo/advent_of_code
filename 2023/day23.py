@@ -74,7 +74,7 @@ def adjacency_list(edge_list: list[tuple[Node2D, Node2D, Steps]]) -> dict[Node2D
             for kk, vv in c:
                 if vv == m:
                     v.pop(kk)
-                    break # End optimization
+                    break  # End optimization
     return dict(graph)
 
 
@@ -103,5 +103,5 @@ def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, vis
     return steps
 
 
-print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in sorted(find_paths_dfs(chart, *seo).items())]), *seo[:2]))
+print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in find_paths_dfs(chart, *seo).items()]), *seo[:2]))
 print("  Total time for p1,p2:", round(time.time() - start_time, 4), "secs")
