@@ -1,5 +1,13 @@
 import math
 
+# def is_parallel(a: Isboll, b: Isboll, ignore_z=True, precision=10) -> bool:
+#     da, db = (a[1][:2], b[1][:2]) if ignore_z else (a[1], b[1])
+#     dot = dot_prod(da, db)
+#     len_a = vec_len(da)
+#     len_b = vec_len(db)
+#     return round(abs(dot / (len_a * len_b)), precision) == 1.0
+
+
 with open("in/d24.txt") as f:
     _g = (map(int, x.replace("@", ",").split(",")) for x in f)
     ishall: tuple["Isboll", ...] = tuple(((x, y, z), (dx, dy, dz)) for x, y, z, dx, dy, dz in _g)
@@ -12,15 +20,7 @@ TEST_MAX_XY = 400_000_000_000_000
 
 cross_prod_vec3 = lambda u, v: (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
 dot_prod = lambda u, v: sum(ui * vi for ui, vi in zip(u, v))
-vec_len = lambda u: math.sqrt(sum(map(lambda x: x * x, u)))
-
-
-# def is_parallel(a: Isboll, b: Isboll, ignore_z=True, precision=10) -> bool:
-#     da, db = (a[1][:2], b[1][:2]) if ignore_z else (a[1], b[1])
-#     dot = dot_prod(da, db)
-#     len_a = vec_len(da)
-#     len_b = vec_len(db)
-#     return round(abs(dot / (len_a * len_b)), precision) == 1.0
+vec_len = lambda u: math.sqrt(sum(map(lambda x: math.exp(x), u)))
 
 
 def cross_position(a: Isboll, b: Isboll, ignore_z=True) -> tuple[float, ...]:
@@ -44,8 +44,7 @@ def intersects(a: Isboll, b: Isboll, ignore_z=True) -> bool:
     pos_b, db = (b[0][:2], b[1][:2]) if ignore_z else b
 
     if ignore_z:
-        det = db[0] * da[1] - db[1] * da[0]
-        if det != 0:
+        if (det := db[0] * da[1] - db[1] * da[0]) != 0:  # Linear dependent vectors equals zero.
             dx = pos_b[0] - pos_a[0]
             dy = pos_b[1] - pos_a[1]
             u = (dy * db[0] - dx * db[1]) / det
