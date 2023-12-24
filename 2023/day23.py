@@ -83,5 +83,16 @@ def dfs(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_
     return max_steps
 
 
+def dfs2(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, visited=(), max_steps=0):
+    if start == end:
+        return max_steps
+    visited = (start, *visited)
+    steps = 0
+    for next_node, next_weight in graph[start].items():
+        if next_node not in visited:
+            steps = max(dfs2(graph, next_node, end, visited, max_steps + next_weight), steps)
+    return steps
+
+
 print("Part 2:", dfs(adjacency_list([(*a, w) for a, w in sorted(find_paths_dfs(chart, *seo).items())]), *seo[:2]))
 print("  Total time for p1,p2:", round(time.time() - start_time, 4), "secs")
