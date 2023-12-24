@@ -63,11 +63,13 @@ def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node
     return graph
 
 
-def adjacency_list(edge_list: list[tuple[Node2D, Node2D, Steps]]) -> dict[Node2D, dict[Node2D, int]]:
+def adjacency_list(edges: list[tuple[Node2D, Node2D, Steps]], end: Node2D) -> dict[Node2D, dict[Node2D, int]]:
     graph: defaultdict[Node2D, dict[Node2D, int]] = defaultdict(dict)
-    for node1, node2, weight in edge_list:
+    for node1, node2, weight in edges:
         graph[node1][node2], graph[node2][node1] = weight, weight
-    for v in graph.values():  # Optimization
+    prev_end, weight = next(iter(graph[end].items())) # Optimization
+    graph[prev_end] = {end: weight} # Last intersection always leads to the end
+    for v in graph.values(): # If 4 paths, remove lowest weight.
         x = tuple(v.values())
         if len(v) == 4:
             m, c = min(x), tuple(v.items())
@@ -103,5 +105,5 @@ def dfs2_rec(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D,
     return steps
 
 
-print("Part 2:", dfs2_imp(adjacency_list([(*a, w) for a, w in find_paths_dfs(chart, *seo).items()]), *seo[:2]))
+print("Part 2:", dfs2_imp(adjacency_list([(*a, w) for a, w in find_paths_dfs(chart, *seo).items()], seo[1]), *seo[:2]))
 print("  Total time for p1,p2:", round(time.time() - start_time, 4), "secs")
