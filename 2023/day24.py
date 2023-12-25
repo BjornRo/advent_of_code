@@ -68,26 +68,5 @@ def add_vec2(u: list[int], v: list[int]):
 # )
 isrink = [(a[:2], b[:2]) for (a, b), _ in sorted(((x, sum(map(abs, x[1]))) for x in ishall), key=lambda i: i[1])]
 
-line_a = isrink[0]
-line_b = isrink[1]
-line_c = isrink[2]
-line_d = isrink[3]
-line_e = isrink[4]
-pos_a, da = isrink[0]
-pos_b, db = isrink[1]
-pos_c, dc = isrink[2]
-pos_d, dd = isrink[3]
-pos_e, de = isrink[4]
-point_a = pos_a.copy()
-s = 160_000
-print(s)
-for i in range(s, s * 2):
-    add_vec2(point_a, da)
-    point_b = pos_b.copy()
-    for j in range(100000):
-        add_vec2(point_b, db)
-        dir_ab = sub_vec(point_a, point_b)
-        dir_ba = sub_vec(point_b, point_a)
-        if all(intersect(point_a, dir_ab, *x) or intersect(point_a, dir_ba, *x) for x in isrink[2:]):
-            print(i, j, (point_a, dir_ab))
-            pass
+# Linear combination of all vectors. U1+du1*t == U2+du2*t ==...
+# Nice to solve, forgot all but the most basic stuff from linalg.

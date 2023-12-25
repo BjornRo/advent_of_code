@@ -67,9 +67,9 @@ def adjacency_list(edges: list[tuple[Node2D, Node2D, Steps]], end: Node2D) -> di
     graph: defaultdict[Node2D, dict[Node2D, int]] = defaultdict(dict)
     for node1, node2, weight in edges:
         graph[node1][node2], graph[node2][node1] = weight, weight
-    prev_end, weight = next(iter(graph[end].items())) # Optimization
-    graph[prev_end] = {end: weight} # 1. Last intersection always leads to the end
-    for v in graph.values(): # 2. If 4 paths, remove lowest weight.
+    prev_end, weight = next(iter(graph[end].items()))  # Optimization
+    graph[prev_end] = {end: weight}  # 1. Last intersection always leads to the end
+    for v in graph.values():  # 2. If 4 paths, remove lowest weight.
         x = tuple(v.values())
         if len(v) == 4:
             m, c = min(x), tuple(v.items())
@@ -81,15 +81,15 @@ def adjacency_list(edges: list[tuple[Node2D, Node2D, Steps]], end: Node2D) -> di
 
 
 def dfs2_imp(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D, max_steps=0):
-    next_state: list[tuple[Row, Col, Steps, Visited]] = [(*start, max_steps, [start])]
+    next_state: list[tuple[Node2D, Steps, Visited]] = [(start, max_steps, [start])]
     while next_state:
-        row, col, weight, visited = next_state.pop()
-        for next_node, next_weight in graph[(row, col)].items():
+        rowcol, weight, visited = next_state.pop()
+        for next_node, next_weight in graph[rowcol].items():
             if next_node == end:
                 max_steps = max(weight + next_weight, max_steps)
                 continue
             if next_node not in visited:
-                next_state.append((*next_node, weight + next_weight, [next_node, *visited]))
+                next_state.append((next_node, weight + next_weight, [next_node, *visited]))
     return max_steps
 
 
