@@ -63,3 +63,28 @@ def intersects(a: Isboll, b: Isboll, vec2=True) -> bool:
         pos_aa = add_vec(pos_a, da)
         pos_bb = add_vec(pos_b, db)
         stack = (pos_a, pos_aa, pos_b, pos_bb)
+
+
+def intersect(pos_a: list[int], da: list[int], pos_b: list[int], db: list[int]) -> bool:
+    if (det := db[0] * da[1] - db[1] * da[0]) == 0:
+        return False
+    dx = pos_b[0] - pos_a[0]
+    dy = pos_b[1] - pos_a[1]
+    u = dy * db[0] - dx * db[1] / det
+    v = dy * da[0] - dx * da[1] / det
+    return u >= 0 and v >= 0
+
+
+sub_vec = lambda u, v: [vi - ui for vi, ui in zip(v, u)]
+
+
+# add_vec = lambda u, v: tuple(ui + vi for ui, vi in zip(u, v))
+def add_vec2(u: list[int], v: list[int]):
+    for i in range(2):
+        u[i] += v[i]
+
+
+# sorted(((x, sum(map(abs, x[1]))) for x in ishall), key=lambda i: i[1])
+# isrink = tuple(
+#     Line(a[:2], b[:2]) for (a, b), _ in sorted(((x, sum(map(abs, x[1]))) for x in ishall), key=lambda i: i[1])
+# )
