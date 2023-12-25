@@ -19,3 +19,4 @@ for k, v in conduct.items():
         G.add_edge(k, n)
 
 a, b = list(map(len, nx.connected_components(G)))
+print("Part 1:", a * b)
