@@ -33,9 +33,8 @@ def solver(spring: str, records: tuple[int, ...], counter=0):
 
 p1 = p2 = 0
 with open("in/d12.txt") as f:
-    for s, r in (
-        (s.replace("..", ".").replace("..", "."), tuple(map(int, r.split(",")))) for s, r in (x.split() for x in f)
-    ):
+    for s, r in ((s, tuple(map(int, r.split(",")))) for s, r in (x.split() for x in f)):
+        s = s.replace("..", ".").replace("..", ".")
         cache.clear()
         p1 += solver(s, r)
         cache.clear()
