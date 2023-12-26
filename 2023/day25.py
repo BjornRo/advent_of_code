@@ -8,3 +8,6 @@ with open("in/d25.txt") as f:
 
 G.remove_edges_from(nx.minimum_edge_cut(G))
 print("Part 1:", eval("*".join(map(str, map(len, nx.connected_components(G))))))
+
+# My original idea was to count number of crosses over an edge using vanilla python dfs/bfs. Failed due to
+# not interpreting the graph as a undirected graph. The most passes should "obviously" be the 3 cuts.
