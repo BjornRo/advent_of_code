@@ -1,17 +1,13 @@
-from collections import defaultdict, deque
+def dfs():  # Does not work on test input :-). Gives same result as networkx below
+    from collections import defaultdict, deque
 
-# Does not work on test input :), Gives same result as networkx below
-graph, count_crossings = defaultdict(list), defaultdict(int)
-with open("in/d25.txt") as f:
-    for e1, v in (x.rstrip().split(": ") for x in f):
-        for e2 in v.split():
-            graph[e1].append(e2)
-            graph[e2].append(e1)
-
-
-def dfs():  # Mutates graph, so it cannot be re-used after.
-    visited, queue = set(), deque()
-    for ignore in (False, True):
+    graph, count_crossings, visited, queue = defaultdict(list), defaultdict(int), set(), deque()
+    with open("in/d25.txt") as f:
+        for e1, v in (x.rstrip().split(": ") for x in f):
+            for e2 in v.split():
+                graph[e1].append(e2)
+                graph[e2].append(e1)
+    for stop in (False, True):
         for k in graph:
             visited.add(k)
             queue.append(k)
@@ -21,9 +17,9 @@ def dfs():  # Mutates graph, so it cannot be re-used after.
                     if next_node not in visited:
                         visited.add(next_node)
                         queue.append(next_node)
-                        if not ignore:
+                        if not stop:
                             count_crossings[tuple(sorted((node, next_node)))] += 1
-            if ignore:
+            if stop:
                 return (len(graph) - len(visited)) * len(visited)
             visited.clear()
         for (e1, e2), _ in sorted(count_crossings.items(), key=lambda x: x[1])[-3:]:
