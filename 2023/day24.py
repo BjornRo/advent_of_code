@@ -1,4 +1,4 @@
-with open("in/d24.txt") as f:
+with open("in/e24.txt") as f:
     _g = (map(int, x.replace("@", ",").split(",")) for x in f)
     ishall: list[tuple[list[int], list[int]]] = list(([x, y, z], [dx, dy, dz]) for x, y, z, dx, dy, dz in _g)
 
@@ -27,26 +27,22 @@ def part1(isbollar: list[tuple[list[int], list[int]]], test_min: int, test_max: 
     )
 
 
-print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
+# print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
 
 """ Part 2 """
 
 
-def det_mat3(mat: list[list[int]] | tuple[tuple[int, ...], ...] | tuple[list[int], ...], v=0):
-    for i in range(3):  # Rule of sarrus
-        j, k = (i + 1) % 3, (i + 2) % 3
-        v += mat[0][i] * mat[1][j] * mat[2][k] - mat[2][i] * mat[1][j] * mat[0][k]
-    return v
+def determinant3(mat: list[list[int]] | tuple[tuple[int, ...], ...] | tuple[list[int], ...]):
+    (a, b, c), (d, e, f), (g, h, i) = mat  # Rule of Sarrus. Paranthesis below for readability
+    return (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (b * d * i) - (a * f * h)
 
 
 mat3: list[tuple[list[int], list[int]]] = []
 for posdir in ishall:  # Find 3 independent vectors, super naive
     if len(mat3) == 3:
-        if det_mat3(list(zip(*mat3))[1]) != 0:
+        if determinant3(list(zip(*mat3))[1]) != 0:
             break
         mat3.clear()
     mat3.append(posdir)
-
-
-# Linear combination of all vectors. U1+du1*t == U2+du2*t ==...
-# Nice to solve, forgot all but the most basic stuff from linalg.
+mat3 = [ishall[0], ishall[1], ishall[3]]
+Mp, Md = list(zip(*mat3))
