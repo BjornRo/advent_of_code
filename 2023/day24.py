@@ -19,12 +19,7 @@ def part1(isbollar: list[tuple[Vec3, Vec3]], test_min: int, test_max: int, v=0) 
     return v
 
 
-import time
-
-start = time.time()
-
 print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
-print(time.time() - start)
 """ Part 2 """
 
 
