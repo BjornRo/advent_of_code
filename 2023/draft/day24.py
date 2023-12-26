@@ -7,6 +7,8 @@ Isboll = tuple[Xyz, Delta]
 #     len_b = vec_len(db)
 #     return round(abs(dot / (len_a * len_b)), precision) == 1.0
 
+Vec3 = list[int] | tuple[int, ...] | tuple[int, int, int]
+
 
 def cross_position(a: Isboll, b: Isboll, vec2=True) -> tuple[float, ...]:
     # Assumes non parallel and for vec3, is coplanar
@@ -63,6 +65,14 @@ def intersects(a: Isboll, b: Isboll, vec2=True) -> bool:
         pos_aa = add_vec(pos_a, da)
         pos_bb = add_vec(pos_b, db)
         stack = (pos_a, pos_aa, pos_b, pos_bb)
+
+
+def cross_position(a: tuple[Vec3, Vec3], b: tuple[Vec3, Vec3]) -> tuple[float, ...]:
+    pa1, da, pb1, db = a[0][:2], a[1], b[0][:2], b[1]  # Zip will take the shortest
+    pa2, pb2 = (pi + di for pi, di in zip(pa1, da)), (pi + di for pi, di in zip(pb1, db))
+    ha, hb, hc, hd = ((*x, 1) for x in (pa1, pa2, pb1, pb2))
+    x, y, z = cross_vec3(cross_vec3(ha, hb), cross_vec3(hc, hd))
+    return x / z, y / z
 
 
 def intersect(pos_a: list[int], da: list[int], pos_b: list[int], db: list[int]) -> bool:

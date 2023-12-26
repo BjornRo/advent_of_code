@@ -1,43 +1,53 @@
-with open("in/e24.txt") as f:
+Vec3 = list[int] | tuple[int, ...] | tuple[int, int, int]
+with open("in/d24.txt") as f:
     _g = (map(int, x.replace("@", ",").split(",")) for x in f)
-    ishall: list[tuple[list[int], list[int]]] = list(([x, y, z], [dx, dy, dz]) for x, y, z, dx, dy, dz in _g)
+    ishall: list[tuple[Vec3, Vec3]] = list(([x, y, z], [dx, dy, dz]) for x, y, z, dx, dy, dz in _g)
 
 
-def part1(isbollar: list[tuple[list[int], list[int]]], test_min: int, test_max: int) -> int:
-    def intersects(a: tuple[list[int], list[int]], b: tuple[list[int], list[int]]) -> bool:
-        (pos_a, da), (pos_b, db) = a, b  # Linear dependent vectors equals zero.
-        if (det := da[1] * db[0] - da[0] * db[1]) == 0:
-            return False
-        dx, dy = pos_b[0] - pos_a[0], pos_b[1] - pos_a[1]
-        return (dy * db[0] - dx * db[1]) / det >= 0 and (dy * da[0] - dx * da[1]) / det >= 0
-
-    def cross_position(a: tuple[list[int], list[int]], b: tuple[list[int], list[int]]) -> tuple[float, ...]:
-        cross_prod_vec3 = lambda u, v: (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
-        pos_a1, da, pos_b1, db = a[0][:2], a[1][:2], b[0][:2], b[1][:2]
-        pos_a2, pos_b2 = tuple(pi + di for pi, di in zip(pos_a1, da)), tuple(pi + di for pi, di in zip(pos_b1, db))
-        homo = tuple((*x, 1) for x in (pos_a1, pos_a2, pos_b1, pos_b2))
-        x, y, z = cross_prod_vec3(cross_prod_vec3(homo[0], homo[1]), cross_prod_vec3(homo[2], homo[3]))
-        return x / z, y / z
+def part1(isbollar: list[tuple[Vec3, Vec3]], test_min: int, test_max: int) -> int:
+    def crosses(a: tuple[Vec3, Vec3], b: tuple[Vec3, Vec3]) -> None | tuple[float, float]:
+        ((pa1, pa2, _), (da1, da2, _)), ((pb1, pb2, _), (db1, db2, _)) = a, b
+        if det := da2 * db1 - da1 * db2:  # Linear dependent vectors equals zero.
+            dx, dy = pb1 - pa1, pb2 - pa2
+            if (u := (dy * db1 - dx * db2) / det) >= 0 and (dy * da1 - dx * da2) / det >= 0:
+                return (pa1 + da1 * u, pa2 + da2 * u)
+        return None
 
     return sum(
         test_min <= p[0] <= test_max and test_min <= p[1] <= test_max
         for i, a in enumerate(isbollar)
         for b in isbollar[i + 1 :]
-        if intersects(a, b) and (p := cross_position(a, b))
+        if (p := crosses(a, b))
     )
 
 
-# print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
+import time
 
+start = time.time()
+
+print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
+print(time.time() - start)
 """ Part 2 """
 
 
-def determinant3(mat: list[list[int]] | tuple[tuple[int, ...], ...] | tuple[list[int], ...]):
+def determinant3(mat: list[Vec3] | tuple[Vec3, ...] | tuple[Vec3, Vec3, Vec3]) -> int:
     (a, b, c), (d, e, f), (g, h, i) = mat  # Rule of Sarrus. Paranthesis below for readability
     return (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (b * d * i) - (a * f * h)
 
 
-mat3: list[tuple[list[int], list[int]]] = []
+def cross_vec3(a: Vec3, b: Vec3) -> Vec3:
+    (a1, a2, a3), (b1, b2, b3) = a, b
+    return a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1
+
+
+# import numpy as np
+
+a = [1, 3, 4]
+b = [2, 7, -5]
+cross_vec3(a, b)
+
+
+mat3: list[tuple[Vec3, Vec3]] = []
 for posdir in ishall:  # Find 3 independent vectors, super naive
     if len(mat3) == 3:
         if determinant3(list(zip(*mat3))[1]) != 0:
