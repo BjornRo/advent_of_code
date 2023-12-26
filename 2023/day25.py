@@ -24,7 +24,6 @@ def dfs(ignore=False):  # Mutates graph, so it cannot be re-used after.
                         count_crossings[tuple(sorted((node, next_node)))] += 1
         if ignore:
             return (len(graph) - len(visited)) * len(visited)
-        queue *= 0
         visited.clear()
     for (e1, e2), _ in sorted(count_crossings.items(), key=lambda x: x[1])[-3:]:
         graph[e1].remove(e2)
