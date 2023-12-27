@@ -36,7 +36,7 @@ def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node
     graph: Graph = {}
     next_state: list[State] = [(start, [start, oob], start)]
     visited_crossings: set[Node2D] = set()
-    intersection: list[tuple[int, int]] = []
+    intersection: list[Node2D] = []
     while next_state:
         intersection *= 0
         (row, col), curr_path, start_path = next_state.pop()
