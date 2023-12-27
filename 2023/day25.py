@@ -1,12 +1,12 @@
 def dfs():  # Does not work on test input :-). Gives same result as networkx below
     from collections import defaultdict, deque
 
-    graph, count_crossings, visited, queue = defaultdict(list), defaultdict(int), set(), deque()
+    graph, count_crossings, visited, queue = defaultdict(set), defaultdict(int), set(), deque()
     with open("in/d25.txt") as f:
         for e1, v in (x.rstrip().split(": ") for x in f):
             for e2 in v.split():
-                graph[e1].append(e2)
-                graph[e2].append(e1)
+                graph[e1].add(e2)
+                graph[e2].add(e1)
     for stop in (False, True):
         for k in graph:
             visited.add(k)
