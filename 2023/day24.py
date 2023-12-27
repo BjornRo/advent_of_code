@@ -28,7 +28,7 @@ import z3
 solver = z3.Solver()
 a, b, c, d1, d2, d3 = map(z3.Int, ("a", "b", "c", "d1", "d2", "d3"))
 for i, ((pa, pb, pc), (da, db, dc)) in enumerate(ishall):
-    t = z3.Int(f"{i}")
+    t = z3.Int(str(i))
     solver.add(a + d1 * t == pa + da * t)
     solver.add(b + d2 * t == pb + db * t)
     solver.add(c + d3 * t == pc + dc * t)

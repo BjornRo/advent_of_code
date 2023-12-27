@@ -61,8 +61,7 @@ def lawn_shapes(lawn: list[str], ditch_row: int, ditch_col: int, dir: Dir, start
 
 
 def lawn_starter(row: int, col: int) -> set[tuple[Dir, CoordsROWCOL]]:
-    drunk_coords = set()
-    _col = col - 1
+    _col, drunk_coords = col - 1, set()
     for i in range(col):
         drunk_coords.add((Dir.DOWN, (0, i)))
         if i != 0:

@@ -70,8 +70,7 @@ for dir, steps in ((int(color[-1]), int(color[1:-1], 16)) for _, _, color in pla
 
 
 def surveyors(vertices: list[tuple[int, int]], initial_area=0) -> float:
-    n = len(vertices)
-    area = 0.0
+    n, area = len(vertices), 0.0
     for i in range(n):
         j = (i + 1) % n
         area += vertices[i][0] * vertices[j][1] - vertices[j][0] * vertices[i][1]

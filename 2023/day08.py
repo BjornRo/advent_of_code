@@ -1,6 +1,6 @@
 from math import lcm
 
-with open("d8.txt", "rt") as f:
+with open("in/d8.txt", "rt") as f:
     strat = tuple(x != "L" for x in f.readline().strip())
     maps = {
         k.strip(): tuple("".join(c for c in s if c.isalpha() or c.isdigit()) for s in v.strip().split(","))

@@ -10,7 +10,7 @@ def line_to_2d(line: tuple[int, ...], id: int) -> Brick:
     for y in range(y1, y2 + 1):
         for x in range(x1, x2 + 1):
             brick[y][x] = brick_height
-    return (z1 - 1, brick_height, id, brick)
+    return z1 - 1, brick_height, id, brick
 
 
 def lowest_z(cum_height: list[list[int]], brick: list[list[int]], z=0) -> int:
