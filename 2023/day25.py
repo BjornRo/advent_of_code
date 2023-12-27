@@ -1,4 +1,4 @@
-def dfs():  # Does not work on test input :-). Gives same result as networkx below
+def bfs():  # Does not work on test input :-). Gives same result as networkx below
     from collections import defaultdict, deque
 
     graph, count_crossings, visited, queue = defaultdict(set), defaultdict(int), set(), deque()
@@ -27,7 +27,7 @@ def dfs():  # Does not work on test input :-). Gives same result as networkx bel
             graph[e2].remove(e1)
 
 
-print("Part 1:", dfs())
+print("Part 1:", bfs())
 
 
 # import networkx as nx
