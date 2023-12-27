@@ -39,23 +39,19 @@ def beyond_infinity(graph: tuple[tuple[int, ...], ...], start: Key, ssteps: int)
     return gardens
 
 
-def gardens_in_dim(gardens: dict[tuple[DimRow, DimCol], int], dim_row: int, dim_col: int) -> int:
-    return gardens[(dim_row, dim_col)]
-
-
 partial_inf = lambda steps: beyond_infinity(chart, (66, 66, 0, 0), steps)
-print("Part 1:", gardens_in_dim(partial_inf(64), 0, 0))
+print("Part 1:", partial_inf(64)[(0, 0)])
 
 
 grid_size = len(chart) - 2  # 131
 n_grids = (26501365 - 65) // grid_size  # 202300
 gardens = partial_inf(65 + grid_size * 2)
 
-evens = gardens_in_dim(gardens, 0, 0) * (n_grids - 1) ** 2
-odds = gardens_in_dim(gardens, 1, 0) * n_grids**2
-corners = sum(gardens_in_dim(gardens, r, c) for r, c in ((-2, 0), (0, 2), (2, 0), (0, -2)))
-even_border = sum((n_grids - 1) * gardens_in_dim(gardens, r, c) for r, c in ((-1, 1), (1, 1), (1, -1), (-1, -1)))
-odd_border = sum(n_grids * gardens_in_dim(gardens, r, c) for r, c in ((-2, 1), (1, 2), (1, -2), (-2, -1)))
+evens = gardens[(0, 0)] * (n_grids - 1) ** 2
+odds = gardens[(1, 0)] * n_grids**2
+corners = sum(gardens[(r, c)] for r, c in ((-2, 0), (0, 2), (2, 0), (0, -2)))
+even_border = sum((n_grids - 1) * gardens[(r, c)] for r, c in ((-1, 1), (1, 1), (1, -1), (-1, -1)))
+odd_border = sum(n_grids * gardens[(r, c)] for r, c in ((-2, 1), (1, 2), (1, -2), (-2, -1)))
 print("Part 2:", evens + odds + corners + even_border + odd_border)
 
 """
