@@ -35,7 +35,7 @@ for I in range(0, SROW, SCALE):
             for I_ in range(SCALE):
                 empty_mat[I + II][Ii + I_] = shapes[mat[I // SCALE][Ii // SCALE]][II][I_]
 
-counter = lambda matrix: sum(matrix[i + 1][j + 1] for i in range(0, SROW, SCALE) for j in range(0, SCOL, SCALE))
+counter = lambda matrix: sum(matrix[i][j] for i in range(1, SROW, SCALE) for j in range(1, SCOL, SCALE))
 strike = find_nodes(empty_mat, start_node=find_start(empty_mat, 2), wall=0)
 print("Part 1:", counter(strike) // 2)
 print("Part 2:", counter(find_nodes(strike, start_node=find_start(strike, 1, 1), wall=1)))
