@@ -7,7 +7,7 @@ def bfs():  # Does not work on test input :-). Gives same result as networkx bel
             for e2 in v.split():
                 graph[e1].add(e2)
                 graph[e2].add(e1)
-    for stop in (False, True):
+    for stop in False, True:
         for k in graph:
             visited.add(k)
             queue.append(k)
