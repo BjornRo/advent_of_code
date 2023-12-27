@@ -38,6 +38,7 @@ def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node
     visited_crossings: set[Node2D] = set()
     intersection: list[tuple[int, int]] = []
     while next_state:
+        intersection *= 0
         (row, col), curr_path, start_path = next_state.pop()
         if (row, col) == end:
             graph[(start_path, (row, col))] = len([x for x in curr_path if x != oob]) - 1
@@ -51,15 +52,11 @@ def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node
             if not (gkey in graph or gkey[::-1] in graph):  # while another waits at intersect+1.
                 graph[gkey] = len([x for x in curr_path if x != oob]) - 1  # From intersection to intersection
             if (row, col) in visited_crossings:  # No need to revisit a crossing
-                intersection *= 0  # Clear since we continue
                 continue
             visited_crossings.add((row, col))
             start_path = (row, col)  # Start now from this new intersection
-        while intersection and (nrowcol := intersection.pop()):
-            if at_intersect:  # currpos_node, currpath_set, startpath_node
-                next_state.append((nrowcol, [nrowcol, start_path], start_path))
-            else:  # Else continue journey with the frontier
-                next_state.append((nrowcol, [nrowcol, *curr_path], start_path))
+        for nrowcol in intersection:
+            next_state.append((nrowcol, [nrowcol, *([start_path] if at_intersect else curr_path)], start_path))
     return graph
 
 
