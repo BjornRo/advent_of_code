@@ -22,5 +22,5 @@ def part2(x: str, rev=False) -> str:
             return c
     return ""
 
-print("part1:", sum(map(part1, infile)))
-print("part2:", sum(map(lambda x: int(part2(x) + part2(x, True)), infile)))
+print("Part 1:", sum(map(part1, infile)))
+print("Part 2:", sum(map(lambda x: int(part2(x) + part2(x, True)), infile)))

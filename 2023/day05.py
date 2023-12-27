@@ -46,5 +46,5 @@ if __name__ == "__main__":
     tasks = (range(i, i + j + 1) for i, j in sorted(new_tasks, key=lambda x: x[1], reverse=True))
 
     with Pool(processes=6) as p:
-        print("Final result part 2:", min(p.map(g, list(enumerate(tasks, 1)))))
+        print("Part 2:", min(p.map(g, list(enumerate(tasks, 1)))))
     print("Total time elapsed:", round(time.time() - start, 4), "sec")
