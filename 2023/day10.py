@@ -28,7 +28,7 @@ def find_start(matrix: list[list[bool]] | list[list[int]], targ_val: int, offset
     return next(iter((i + offset, j + offset) for i, r in enumerate(matrix) for j, c in enumerate(r) if c == targ_val))
 
 
-def counter(matrix: list[list[bool]], func=lambda x: -(-x // 1)) -> int:  # Happy accident, only need to pick middle :)
+def counter(matrix: list[list[bool]], func) -> int:  # Happy accident, only need to pick middle :)
     return sum(func(matrix[i + 1][j + 1]) for i in range(0, SROW, SCALE) for j in range(0, SCOL, SCALE))
 
 
@@ -39,6 +39,6 @@ for I in range(0, SROW, SCALE):
             for I_ in range(SCALE):
                 empty_mat[I + II][Ii + I_] = shapes[mat[I // SCALE][Ii // SCALE]][II][I_]
 
-path = find_nodes(empty_mat, start_node=find_start(empty_mat, 2))
-print("Part 1:", counter(path) // 2)
+path = find_nodes(empty_mat, start_node=find_start(empty_mat, 2), wall=0)
+print("Part 1:", counter(path, lambda x: -(-x // 1)) // 2)
 print("Part 2:", counter(find_nodes(path, start_node=find_start(path, 1, 1), wall=1), lambda x: x // 1))
