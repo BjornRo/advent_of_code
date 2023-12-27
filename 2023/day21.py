@@ -1,96 +1,116 @@
+from collections import deque
+
 with open("in/d21.txt") as f:
     _p = [-1]  # padding
     _g = zip(*(_p + [1 if c == "." else 2 if c == "S" else 0 for c in x.strip()] + _p for x in f))
     chart: tuple[tuple[int, ...], ...] = tuple(zip(*(_p + list(y) + _p for y in _g)))
 
-
-def find_nodes(graph: tuple[tuple[int, ...], ...] | list[list[int]], steps: int):
-    start = next(((i, j) for i, r in enumerate(graph) for j, s in enumerate(r) if s == 2))
-    visited = {start: 0}
-    current_epoch = [start]  # Since each epoch only moves certain steps
-    next_epoch = []  # stack/queue does not matter for this type of bfs.
-    for s in range(1, steps + 1):
-        while current_epoch:
-            x, y = current_epoch.pop()
-            for new_xy in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
-                if graph[new_xy[0]][new_xy[1]] >= 1 and new_xy not in visited:
-                    visited[new_xy] = s
-                    next_epoch.append(new_xy)
-        current_epoch *= 0
-        current_epoch.extend(next_epoch)
-        next_epoch *= 0
-    return visited
+Row, Col, DimRow, DimCol = [int] * 4
+Key = tuple[Row, Col, DimRow, DimCol]
 
 
-def expand_chart(graph):
-    start_row, start_col = next(((i, j) for i, r in enumerate(graph[1:-1]) for j, s in enumerate(r[1:-1]) if s == 2))
-    start_row += len(graph[1:-1])
-    start_col += len(graph[1:-1][0][1:-1])
-    pad = [0]
-    exp_chart = [pad + [int(c >= 1) for c in r[1:-1] * 3] + pad for r in graph[1:-1] * 3]
-    exp_chart = [pad * len(exp_chart[0])] + exp_chart + [pad * len(exp_chart[0])]
-    exp_chart[start_row + 1][start_col + 1] = 2
-    return exp_chart
+def beyond_infinity(graph: tuple[tuple[int, ...], ...], start: Key, ssteps: int) -> set[Key]:
+    max_grid, less_max_grid = len(graph) - 1, len(graph) - 2
+    queue, visited = deque([(*start, ssteps)]), {start}
+    gardens: set[Key] = set()
+    while queue:
+        row, col, dimr, dimc, steps = queue.popleft()
+        if steps % 2 == 0:
+            gardens.add((row, col, dimr, dimc))
+        if not steps:
+            continue
+        for nrow, ncol in (row + 1, col), (row - 1, col), (row, col + 1), (row, col - 1):
+            if tile := graph[nrow][ncol]:
+                dimrr, dimcc = dimr, dimc
+                if tile == -1:  # New dimension to explore
+                    if nrow == 0:
+                        nrow = less_max_grid
+                        dimrr -= 1
+                    elif nrow == max_grid:
+                        nrow = 1
+                        dimrr += 1
+                    elif ncol == 0:
+                        ncol = less_max_grid
+                        dimcc -= 1
+                    elif ncol == max_grid:
+                        ncol = 1
+                        dimcc += 1
+                if (k := (nrow, ncol, dimrr, dimcc)) not in visited:
+                    visited.add(k)
+                    queue.append((*k, steps - 1))
+    return gardens
 
 
-def find_nodex(graph: tuple[tuple[int, ...], ...] | list[list[int]], steps: int):
-    start = next(((i, j) for i, r in enumerate(graph) for j, s in enumerate(r) if s == 2))
-    mrow, mcol = len(graph) - 1, len(graph[0]) - 1
-    visited = {(start, *[0] * 2): 0}
-    current_epoch = [(start, 0, 0)]
-    next_epoch = []
-    for s in range(1, steps + 1):
-        while current_epoch:
-            (x, y), dimx, dimy = current_epoch.pop()
-            for new_xy in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
-                if not graph[new_xy[0]][new_xy[1]]:
-                    continue  # wall
-                dimxx, dimyy = dimx, dimy
-                if graph[new_xy[0]][new_xy[1]] == -1:
-                    xx, yy = new_xy
-                    if xx == 0:
-                        xx = mrow - 1
-                        dimxx -= 1
-                    elif xx == mrow:
-                        xx = 1
-                        dimxx += 1
-                    elif yy == 0:
-                        yy = mcol - 1
-                        dimyy -= 1
-                    elif yy == mcol:
-                        yy = 1
-                        dimyy += 1
-                    new_xy = (xx, yy)
-                if (new_xy, dimxx, dimyy) not in visited:
-                    visited[(new_xy, dimxx, dimyy)] = s
-                    next_epoch.append((new_xy, dimxx, dimyy))
-        current_epoch *= 0
-        current_epoch.extend(next_epoch)
-        next_epoch *= 0
-    return visited
+partial_inf = lambda steps: beyond_infinity(chart, (66, 66, 0, 0), steps)
+print("Part 1:", len(partial_inf(64)))
 
 
-e = lambda steps: sum(1 for y in find_nodes(chart, steps).values() if y % 2 == 0)
+def gardens_in_dim(gardens: set[Key], dim_row: int, dim_col: int) -> int:
+    return sum(1 for (_, _, dr, dc) in gardens if dr == dim_row and dc == dim_col)
 
-print("Part 1:", e(64))
 
+grid_size = len(chart) - 2  # 131
+n_grids = (26501365 - 65) // grid_size  # 202300
+gardens = partial_inf(65 + grid_size * 2)
 
-# def fn(graph: tuple[tuple[int, ...], ...] | list[list[int]]):
-#     start: Coords = next(((i, j) for i, r in enumerate(graph) for j, s in enumerate(r) if s == 2))
-#     visited = {start: 0}
-#     current_epoch = Queue([start])
-#     next_epoch = Queue([])
-#     s = 0
-#     while True:
-#         s += 1
-#         while current_epoch.q:
-#             x, y = current_epoch.pop()
-#             for new_xy in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
-#                 if graph[new_xy[0]][new_xy[1]] >= 1 and new_xy not in visited:
-#                     visited[new_xy] = s
-#                     next_epoch.push(new_xy)
-#         current_epoch.replace(next_epoch.q)
-#         next_epoch.q *= 0
-#         if not current_epoch.q:
-#             break
-#     return visited
+evens = (gardens_in_dim(gardens, 0, 0)) * (n_grids - 1) ** 2
+odds = (gardens_in_dim(gardens, 1, 0)) * n_grids**2
+corners = sum(gardens_in_dim(gardens, r, c) for r, c in ((-2, 0), (0, 2), (2, 0), (0, -2)))
+even_border = sum((n_grids - 1) * gardens_in_dim(gardens, r, c) for r, c in ((-1, 1), (1, 1), (1, -1), (-1, -1)))
+odd_border = sum(n_grids * gardens_in_dim(gardens, r, c) for r, c in ((-2, 1), (1, 2), (1, -2), (-2, -1)))
+print("Part 2:", evens + odds + corners + even_border + odd_border)
+
+"""
+See charts in draft folder.
+My infinity function stores dimensions, which makes it trivial to count the odd/evens(parity),
+the partial diamonds etc... The grid is 131. And we start in the middle. So 65 steps to get
+out from the grid, then 2 full grids (131*2) to get all cases
+
+All values have (upper, down, left, right) partial triangles from evens.
+What is left is the partial even/odds from the borders.
+n = 2:
+    even: 1 (1*1) (n-1)
+    odd: 4 (2*2) (n^2)
+    ne border:
+        even: 1 (n-1)
+        odd: 2 (n)
+    se border:
+        even: 1 (n-1)
+        odd: 2 (n)
+    sw border:
+        even: 1 (n-1)
+        odd: 2 (n)
+    nw border:
+        even: 1 (n-1)
+        odd: 2 (n)
+n = 4
+    even: 9 (3*3) (n-1)
+    odd: 16 (4*4) (n^2)
+    ne border:
+        even: 3 (n-1)
+        odd: 4 (n)
+    se border:
+        even: 3 (n-1)
+        odd: 4 (n)
+    sw border:
+        even: 3 (n-1)
+        odd: 4 (n)
+    nw border:
+        even: 3 (n-1)
+        odd: 4 (n)
+n = 6
+    even: 25 (5*5) (n-1)
+    odd: 36 (6*6) (n^2)
+    ne border:
+        even: 5 (n-1)
+        odd: 6 (n)
+    se border:
+        even: 5 (n-1)
+        odd: 6 (n)
+    sw border:
+        even: 5 (n-1)
+        odd: 6 (n)
+    nw border:
+        even: 5 (n-1)
+        odd: 6 (n)
+"""
