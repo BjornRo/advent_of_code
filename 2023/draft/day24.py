@@ -85,6 +85,7 @@ def intersect(pos_a: list[int], da: list[int], pos_b: list[int], db: list[int]) 
     return u >= 0 and v >= 0
 
 
+add_vec = lambda u, v: [vi + ui for vi, ui in zip(v, u)]
 sub_vec = lambda u, v: [vi - ui for vi, ui in zip(v, u)]
 
 
@@ -98,3 +99,42 @@ def add_vec2(u: list[int], v: list[int]):
 # isrink = tuple(
 #     Line(a[:2], b[:2]) for (a, b), _ in sorted(((x, sum(map(abs, x[1]))) for x in ishall), key=lambda i: i[1])
 # )
+
+
+add_vec = lambda u, v: [vi + ui for vi, ui in zip(v, u)]
+sub_vec = lambda u, v: [vi - ui for vi, ui in zip(v, u)]
+
+
+def determinant3(mat: list[Vec3] | tuple[Vec3, ...] | tuple[Vec3, Vec3, Vec3]) -> int:
+    (a, b, c), (d, e, f), (g, h, i) = mat  # Rule of Sarrus. Paranthesis below for readability
+    return (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (b * d * i) - (a * f * h)
+
+
+def cross_vec3(a: Vec3, b: Vec3) -> Vec3:
+    (a1, a2, a3), (b1, b2, b3) = a, b
+    return a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1
+
+
+def crosses(a: tuple[Vec3, Vec3], b: tuple[Vec3, Vec3]) -> None | tuple[float, float]:
+    ((pa1, pa2, _), (da1, da2, _)), ((pb1, pb2, _), (db1, db2, _)) = a, b
+    if det := da2 * db1 - da1 * db2:  # Linear dependent vectors equals zero.
+        dx, dy = pb1 - pa1, pb2 - pa2
+        if (u := (dy * db1 - dx * db2) / det) >= 0 and (dy * da1 - dx * da2) / det >= 0:
+            return (pa1 + da1 * u, pa2 + da2 * u)
+
+
+isrink = sorted(((x, sum(map(abs, x[1]))) for x in ishall), key=lambda i: i[0])
+
+mat3: list[tuple[Vec3, Vec3]] = []
+for posdir in ishall:  # Find 3 independent vectors, super naive
+    if len(mat3) == 3:
+        if determinant3(list(zip(*mat3))[1]) != 0:
+            break
+        mat3.clear()
+    mat3.append(posdir)
+# Mp, Md = list(zip(*mat3))
+mat3 = [ishall[0], ishall[1], ishall[3]]
+
+pa, da = mat3[0]
+pb, db = mat3[1]
+pc, dc = mat3[2]

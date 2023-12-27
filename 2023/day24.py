@@ -20,32 +20,18 @@ def part1(isbollar: list[tuple[Vec3, Vec3]], test_min: int, test_max: int, v=0) 
 
 
 print("Part 1:", part1(ishall, 200_000_000_000_000, 400_000_000_000_000))
+
 """ Part 2 """
 
+import z3
 
-def determinant3(mat: list[Vec3] | tuple[Vec3, ...] | tuple[Vec3, Vec3, Vec3]) -> int:
-    (a, b, c), (d, e, f), (g, h, i) = mat  # Rule of Sarrus. Paranthesis below for readability
-    return (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (b * d * i) - (a * f * h)
-
-
-def cross_vec3(a: Vec3, b: Vec3) -> Vec3:
-    (a1, a2, a3), (b1, b2, b3) = a, b
-    return a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1
-
-
-# import numpy as np
-
-a = [1, 3, 4]
-b = [2, 7, -5]
-cross_vec3(a, b)
-
-
-mat3: list[tuple[Vec3, Vec3]] = []
-for posdir in ishall:  # Find 3 independent vectors, super naive
-    if len(mat3) == 3:
-        if determinant3(list(zip(*mat3))[1]) != 0:
-            break
-        mat3.clear()
-    mat3.append(posdir)
-mat3 = [ishall[0], ishall[1], ishall[3]]
-Mp, Md = list(zip(*mat3))
+solver = z3.Solver()
+a, b, c, d1, d2, d3 = map(z3.Int, ("a", "b", "c", "d1", "d2", "d3"))
+for i, ((pa, pb, pc), (da, db, dc)) in enumerate(ishall):
+    t = z3.Int(f"{i}")
+    solver.add(a + d1 * t == pa + da * t)
+    solver.add(b + d2 * t == pb + db * t)
+    solver.add(c + d3 * t == pc + dc * t)
+solver.check()
+p0, p1, p2, da, db, dc = [solver.model().eval(x).as_long() for x in (a, b, c, d1, d2, d3)]  # type:ignore
+print("Part 2:", p0 + p1 + p2)
