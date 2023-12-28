@@ -1,4 +1,4 @@
-with open("in/1.txt") as f:
+with open("in/d1.txt") as f:
     n = j = 0
     for i, c in enumerate(f.read().rstrip(), 1):
         n += 1 if c == "(" else -1
