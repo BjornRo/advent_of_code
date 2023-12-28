@@ -1,16 +1,13 @@
-def part1(s: str):
-    vowels = set("aeiou")
-    vowel_count, twice = s[0] in vowels, False
+def part1(s: str, vowels=set("aeiou"), vowel_count=0, twice=False):
     for i in range(len(s) - 1):
         ss = s[i : i + 2]
         if ss in {"ab", "cd", "pq", "xy"}:
-            vowel_count = 0
-            break
+            return False
         if not twice and ss[0] == ss[1]:
             twice = True
         if ss[1] in vowels:
             vowel_count += 1
-    return vowel_count >= 3 and twice
+    return vowel_count + (s[0] in vowels) >= 3 and twice
 
 
 def part2(s: str):
