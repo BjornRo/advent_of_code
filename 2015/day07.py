@@ -16,34 +16,53 @@ i: 65079
 x: 123
 y: 456 """
 
-from collections import defaultdict, deque
+from collections import deque
 
-circuits = defaultdict(int)
 with open("in/d7.txt") as f:
-    operations = deque(sorted((x.rstrip().split(" -> ") for x in f), key=lambda x: x[0].isdigit()))
-while True:
-    op, targ = operations.pop()
-    if not op.isdigit():
-        operations.append([op, targ])
-        break
-    circuits[targ] = int(op)
+    operations = deque(x.rstrip().split(" -> ") for x in f)
 
-while operations:
+
+def operate(val1: int, op: str, val2: int) -> int:
+    match op:
+        case "LSHIFT":
+            return val1 << val2
+        case "RSHIFT":
+            return val1 >> val2
+        case "AND":
+            return val1 & val2
+        case "OR":
+            return val1 | val2
+    assert False
+
+
+circuits: dict[str, int] = {}
+while True:
     _op, targ = operations.popleft()
     match _op.split():
-        case _, symb:  # NOT. There are no digit symbols with NOT.
+        case "NOT", symb:  # There are no digit symbols with NOT.
             if symb in circuits:
+                circuits[targ] = 65536 + ~circuits[symb]
                 continue
         case symb1, op, symb2:
             if symb1.isdigit() and symb2 in circuits:
+                circuits[targ] = operate(int(symb1), op, circuits[symb2])
                 continue
             if symb1.isdigit() and symb2.isdigit():
+                circuits[targ] = operate(int(symb1), op, int(symb2))
                 continue
             if symb1 in circuits and symb2.isdigit():
-                print("yes")
+                circuits[targ] = operate(circuits[symb1], op, int(symb2))
                 continue
             if symb1 in circuits and symb2 in circuits:
+                circuits[targ] = operate(circuits[symb1], op, circuits[symb2])
                 continue
+        case [symb]:
+            if symb.isdigit():
+                circuits[targ] = int(symb)
+                continue
+            if symb in circuits:
+                circuits[targ] = circuits[symb]
+                break
+    operations.append([_op, targ])  # We cannot do any operations yet
 
-    # We cannot do any operations yet
-    # operations.append([_op, targ])
+print("Part 1:", circuits["a"])
