@@ -11,16 +11,16 @@ def part1(s: str, vowels=set("aeiou"), vowel_count=0, twice=False):
 
 
 def part2(s: str):
-    twice, between = False, s[len(s) - 3] == s[len(s) - 1]
+    bools = s[len(s) - 3] == s[len(s) - 1]
     for i in range(len(s) - 3):
-        if not between and s[i] == s[i + 2]:
-            between = True
-        if not twice:
+        if not bools & 1 and s[i] == s[i + 2]:
+            bools |= 1
+        if not bools & 2:
             for j in range(i + 2, len(s) - 1):
                 if s[i : i + 2] == s[j : j + 2]:
-                    twice = True
+                    bools |= 2
                     break
-        if between and twice:
+        if bools == 3:
             return True
     return False
 
