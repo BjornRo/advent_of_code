@@ -9,21 +9,18 @@ with open("in/d9.txt") as f:
 
 
 def galaxytrotter(graph: dict[str, dict[str, int]], max_min):
-    all_places, stack, route_length = set(graph), [], float("inf") if max_min.__name__ == "min" else 0
+    stack, route_length = [], float("inf") if max_min.__name__ == "min" else 0
     for place in graph:
-        if place not in graph:
-            continue
         stack.append((place, set(), 0))
         while stack:
             place, visited, cost = stack.pop()
-            if place in visited:
-                continue
-            visited.add(place)
-            if visited == all_places:
-                route_length = max_min(route_length, cost)
-                continue
-            for next_place, weight in graph[place].items():
-                stack.append((next_place, visited.copy(), weight + cost))
+            if place not in visited:
+                visited.add(place)
+                if visited == graph.keys():
+                    route_length = max_min(route_length, cost)
+                    continue
+                for next_place, weight in graph[place].items():
+                    stack.append((next_place, visited.copy(), weight + cost))
     return route_length
 
 
