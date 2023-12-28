@@ -3,9 +3,9 @@ from collections import defaultdict
 graph = defaultdict(dict)
 with open("in/d9.txt") as f:
     for toto, weight in (x.rstrip().split(" = ") for x in f):
-        src, dst = toto.split(" to ")
-        graph[src][dst] = int(weight)
-        graph[dst][src] = int(weight)
+        (src, dst), weight = toto.split(" to "), int(weight)
+        graph[src][dst] = weight
+        graph[dst][src] = weight
 
 
 def galaxytrotter(graph: dict[str, dict[str, int]], max_min):
