@@ -35,7 +35,7 @@ def recycle_it(matrix: tuple[tuple[int, ...], ...], index=1, cycling={}) -> int:
 
 trans_it = lambda x: tuple(zip(*x))
 with open("in/d14.txt") as f:
-    raw_matrix = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
+    raw_matrix = trans_it(({"#": 0, ".": 1, "O": 2}[c] for c in x.rstrip()) for x in f)
 
 print("Part 1:", count_it(rock_it(raw_matrix)))
 print("Part 2:", recycle_it(raw_matrix))
