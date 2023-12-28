@@ -1,7 +1,9 @@
 with open("in/d3.txt") as f:
-    visited, santa, robot = {(0, 0)}, {(0, 0)}, set()
+    visited, santa, robot = set(), {(0, 0)}, set()
     row = col = srow = scol = rrow = rcol = 0
     for i, c in enumerate(f.read()):
+        if (k := (row, col)) not in visited:
+            visited.add(k)
         match c:
             case "^":
                 row -= 1
@@ -27,8 +29,6 @@ with open("in/d3.txt") as f:
                     scol -= 1
                 else:
                     rcol -= 1
-        if (k := (row, col)) not in visited:
-            visited.add(k)  # type:ignore
         if i % 2 == 0:
             if (k := (srow, scol)) not in santa:
                 santa.add(k)  # type:ignore
