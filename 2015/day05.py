@@ -14,12 +14,17 @@ def part1(s: str):
 
 
 def part2(s: str):
+    twice, between = False, s[len(s) - 3] == s[len(s) - 1]
     for i in range(len(s) - 3):
-        for j in range(i + 2, len(s) - 1):
-            if s[i : i + 2] == s[j : j + 2]:
-                for i in range(len(s) - 2):
-                    if s[i] == s[i + 2]:
-                        return True
+        if not between and s[i] == s[i + 2]:
+            between = True
+        if not twice:
+            for j in range(i + 2, len(s) - 1):
+                if s[i : i + 2] == s[j : j + 2]:
+                    twice = True
+                    break
+        if between and twice:
+            return True
     return False
 
 
