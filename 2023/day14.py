@@ -1,11 +1,10 @@
-from time import time as time_it
+from time import perf_counter as time_it
 
 start_it = time_it()
 
 
-def rock_it(matrix: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...], ...]:
-    new_matrix, stack, waiting_rocks = [], [], []
-    row_len = len(matrix[0]) - 1
+def rock_it(matrix: tuple[tuple[int, ...], ...]) -> list[tuple[int, ...]]:
+    new_matrix, stack, waiting_rocks, row_len = [], [], [], len(matrix[0]) - 1
     for row in matrix:
         for i in range(row_len, -1, -1):
             c = row[i]
@@ -16,35 +15,25 @@ def rock_it(matrix: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...], ...]:
                 stack.extend(waiting_rocks)
                 waiting_rocks *= 0
             stack.append(c)
-        stack.extend(waiting_rocks)
-        new_matrix.append(tuple(stack))
-        stack *= 0
-        waiting_rocks *= 0
-    return tuple(new_matrix)
+        new_matrix.append((*stack, *waiting_rocks))
+        waiting_rocks, stack = waiting_rocks * 0, stack * 0
+    return new_matrix
 
 
-def count_it(matrix: tuple[tuple[int, ...], ...]) -> int:
-    total = 0
-    for row in matrix:
-        for i, j in enumerate(row, 1):
-            if j == 2:
-                total += i
-    return total
+def count_it(matrix: list[tuple[int, ...]]) -> int:
+    return sum(i for row in matrix for i, j in enumerate(row, 1) if j == 2)
 
 
-trans_it = lambda x: tuple(zip(*x))
-
-
-def recycle_it(matrix: tuple[tuple[int, ...], ...]) -> int:
-    index, cycling = 0, {}
+def recycle_it(matrix: tuple[tuple[int, ...], ...], index=1, cycling={}) -> int:
     while True:
-        index += 1
         matrix = trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(trans_it(rock_it(matrix))))))))
         if matrix in cycling and (1_000_000_000 - index) % (index - cycling[matrix]) == 0:
             return count_it(row[::-1] for row in matrix)  # type: ignore - Generators are ok
         cycling[matrix] = index
+        index += 1
 
 
+trans_it = lambda x: tuple(zip(*x))
 with open("in/d14.txt") as f:
     raw_matrix = trans_it((0 if c == "#" else 1 if c == "." else 2 for c in x.rstrip()) for x in f)
 
