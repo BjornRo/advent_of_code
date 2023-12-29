@@ -9,7 +9,7 @@ def operate(val1: int, op: str, val2: int) -> int:
             return val1 >> val2
         case "AND":
             return val1 & val2
-    return val1 | val2 # "OR"
+    return val1 | val2  # "OR"
 
 
 def assembler(operations: deque[list[str]], part2: int = 0):
@@ -34,7 +34,7 @@ def assembler(operations: deque[list[str]], part2: int = 0):
 
 
 with open("in/d7.txt") as f:
-    operations = [x.rstrip().split(" -> ") for x in f]
+    operations = deque(x.rstrip().split(" -> ") for x in f)
     part1 = assembler(deque(operations))
 print("Part 1:", part1)
-print("Part 2:", assembler(deque(operations), part1))
+print("Part 2:", assembler(operations, part1))
