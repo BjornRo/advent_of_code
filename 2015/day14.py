@@ -26,23 +26,14 @@ class Raindear:
         return self.distance
 
 
-time_limit, max_val = 2503, 0
-animal_control, points = [], []
 with open("in/d14.txt") as f:
-    for speed, duration, rest in (map(int, re.findall(r"\d+", s)) for s in f):
-        animal_control.append(Raindear(speed, duration, rest))
-        points.append(0)
-        _time_limit, distance = time_limit, 0
-        while _time_limit > 0:
-            maxdiff = min(_time_limit, duration)
-            distance += speed * maxdiff
-            _time_limit -= maxdiff + rest
-        max_val = max(max_val, distance)
-print("Part 1:", max_val)
+    animal_control = [Raindear(spd, dur, rest) for spd, dur, rest in (map(int, re.findall(r"\d+", s)) for s in f)]
 
-for _ in range(time_limit):
+points = [0] * len(animal_control)
+for _ in range(2503):
     distances = [a.tick() for a in animal_control]
     for i, dist in enumerate(distances):
         if dist >= max(distances):
             points[i] += 1
+print("Part 1:", max(a.distance for a in animal_control))
 print("Part 2:", max(points))
