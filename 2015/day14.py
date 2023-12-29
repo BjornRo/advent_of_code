@@ -12,17 +12,14 @@ class Raindear:
     current_duration = 0
 
     def tick(self):
+        self.current_duration += 1
         if self.is_speeding:
             self.distance += self.speed
-            self.current_duration += 1
             if self.current_duration == self.burst:
-                self.is_speeding = False
-                self.current_duration = 0
+                self.current_duration, self.is_speeding = 0, False
         else:
-            self.current_duration += 1
             if self.current_duration == self.rest:
-                self.is_speeding = True
-                self.current_duration = 0
+                self.current_duration, self.is_speeding = 0, True
         return self.distance
 
 
