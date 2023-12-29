@@ -3,8 +3,7 @@ def look_and_say(string: str) -> str:
     for c in string:
         if not start:
             start = c
-            continue
-        if start == c:
+        elif start == c:
             count += 1
         else:
             str_list.append(str(count))
