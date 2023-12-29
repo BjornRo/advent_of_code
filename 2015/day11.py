@@ -1,4 +1,4 @@
-def valid_pw(pw: bytes) -> bool:
+def valid_pw(pw: bytes) -> bool:  # "ilo" = (105,108,111)
     if (blen := len(pw)) == 8:
         if not (pw[blen - 2] in {105, 108, 111} or pw[blen - 1] in {105, 108, 111}):
             asc, twice = pw[blen - 1] - pw[blen - 2] == 1 and pw[blen - 2] - pw[blen - 3] == 1, pw[0] == pw[1]
