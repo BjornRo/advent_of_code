@@ -5,20 +5,18 @@ from dataclasses import dataclass
 @dataclass
 class Raindear:
     speed: int
-    burst: int
-    rest: int
-    distance = 0
-    is_speeding = True
-    current_duration = 0
+    speed_len: int
+    rest_len: int
+    distance = current_duration = is_resting = 0
 
     def tick(self):
         self.current_duration += 1
-        if self.is_speeding:
+        if not self.is_resting:
             self.distance += self.speed
-            if self.current_duration == self.burst:
-                self.current_duration, self.is_speeding = 0, False
-        elif self.current_duration == self.rest:
-                self.current_duration, self.is_speeding = 0, True
+            if self.current_duration == self.speed_len:
+                self.current_duration, self.is_resting = 0, True
+        elif self.current_duration == self.rest_len:
+            self.current_duration, self.is_resting = 0, False
         return self.distance
 
 
