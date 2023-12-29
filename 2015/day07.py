@@ -24,16 +24,16 @@ def assembler(operations: deque[list[str]], part2: int = 0):
             case [symb] if symb.isdigit():
                 circuits[targ] = part2 if part2 and targ == "b" else int(symb)
                 continue
-            case "NOT", symb if symb in circuits:  # There are no digit symbols with NOT.
+            case ["NOT", symb] if symb in circuits:  # There are no digit symbols with NOT.
                 circuits[targ] = 65536 + ~circuits[symb]
                 continue
-            case symb1, op, symb2 if symb1.isdigit() and symb2 in circuits:
+            case [symb1, op, symb2] if symb1.isdigit() and symb2 in circuits:
                 circuits[targ] = operate(int(symb1), op, circuits[symb2])
                 continue
-            case symb1, op, symb2 if symb1 in circuits and symb2.isdigit():
+            case [symb1, op, symb2] if symb1 in circuits and symb2.isdigit():
                 circuits[targ] = operate(circuits[symb1], op, int(symb2))
                 continue
-            case symb1, op, symb2 if symb1 in circuits and symb2 in circuits:
+            case [symb1, op, symb2] if symb1 in circuits and symb2 in circuits:
                 circuits[targ] = operate(circuits[symb1], op, circuits[symb2])
                 continue  # symb1.isdigit() and symb2.isdigit() does not exist
         operations.append([_op, targ])  # We cannot do any operations yet
