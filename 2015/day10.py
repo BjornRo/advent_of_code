@@ -6,10 +6,9 @@ def look_and_say(string: str) -> str:
         elif start == c:
             count += 1
         else:
-            str_list.append(str(count))
-            str_list.append(start)
+            str_list.extend((str(count), start))
             count, start = 1, c
-    return "".join([*str_list, str(count), start])
+    return "".join((*str_list, str(count), start))
 
 
 with open("in/d10.txt") as f:
