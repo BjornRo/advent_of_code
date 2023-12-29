@@ -17,8 +17,7 @@ class Raindear:
             self.distance += self.speed
             if self.current_duration == self.burst:
                 self.current_duration, self.is_speeding = 0, False
-        else:
-            if self.current_duration == self.rest:
+        elif self.current_duration == self.rest:
                 self.current_duration, self.is_speeding = 0, True
         return self.distance
 
