@@ -41,6 +41,6 @@ def assembler(operations: deque[list[str]], part2: int = 0):
 
 with open("in/d7.txt") as f:
     operations = [x.rstrip().split(" -> ") for x in f]
-    part1 = assembler(deque([x.copy() for x in operations]))
+    part1 = assembler(deque(operations.copy()))
 print("Part 1:", part1)
 print("Part 2:", assembler(deque(operations), part1))
