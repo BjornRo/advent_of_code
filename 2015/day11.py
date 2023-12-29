@@ -18,9 +18,8 @@ def valid_pw(pw: bytes) -> bool:  # "ilo" = (105,108,111)
 
 
 def pw_generator(old_pw: str, skip=False):  # a:97, z:122
-    pw, plen, last = bytearray(old_pw.encode()), len(old_pw), len(old_pw) - 1
-    if plen != 8:
-        assert False
+    pw, last = bytearray(old_pw.encode()), len(old_pw) - 1
+    assert last + 1 == 8
     while not valid_pw(pw) or skip:
         skip = False
         pw[last] += 1
