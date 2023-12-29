@@ -4,8 +4,7 @@ from collections import defaultdict
 table1, table2 = defaultdict(dict), defaultdict(dict)
 with open("in/d13.txt") as f:
     for src, gl, v, dst in re.findall(r"([a-zA-Z]+)[a-z\s]+(gain|lose)[a-z\s]+(\d+)[a-z\s]+([a-zA-Z]+)", f.read()):
-        table1[src][dst] = int(v) * (1 if gl == "gain" else -1)
-        table2[src][dst] = int(v) * (1 if gl == "gain" else -1)
+        table1[src][dst] = table2[src][dst] = int(v) * (1 if gl == "gain" else -1)
         table2["yes"][dst] = table2[src]["yes"] = 0
 
 
@@ -19,8 +18,7 @@ def table_fighters(table: dict[str, dict[str, int]]) -> int:
             if set(visited) == table.keys():
                 fight_club = max(fight_club, cost + table[start][person] + table[person][start])
                 continue
-            for next_place, weight in table[person].items():
-                stack.append((next_place, visited, weight + cost + table[next_place][person]))
+            stack.extend((nextp, visited, w + cost + table[nextp][person]) for nextp, w in table[person].items())
     return fight_club
 
 
