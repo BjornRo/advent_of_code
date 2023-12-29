@@ -9,8 +9,7 @@ def operate(val1: int, op: str, val2: int) -> int:
             return val1 >> val2
         case "AND":
             return val1 & val2
-        case _:  # "OR"
-            return val1 | val2
+    return val1 | val2 # "OR"
 
 
 def assembler(operations: deque[list[str]], part2: int = 0):
