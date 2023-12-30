@@ -20,7 +20,7 @@ def find_min(buckets: tuple[int, ...], capacity: int, n_buckets: int) -> int | f
     return total
 
 
-def min_ways_to_fill(buckets: tuple[int, ...], capacity: int, n_buckets: int, max_buckets: int | float) -> int | float:
+def min_ways_to_fill(buckets: tuple[int, ...], capacity: int, n_buckets: int, max_buckets: int) -> int:
     if capacity == 150 and n_buckets == max_buckets:
         return True
     if capacity >= 150 or not buckets or n_buckets > max_buckets:
@@ -34,19 +34,13 @@ def min_ways_to_fill(buckets: tuple[int, ...], capacity: int, n_buckets: int, ma
 with open("in/d17.txt") as f:
     buckets = tuple(sorted(map(int, f.read().strip().split()), reverse=True))
 
-
-min_containers = float("inf")
 for i in range(len(buckets)):
-    min_containers = min(find_min(buckets[i:], buckets[i], 1), min_containers)
+    min_containers = min(find_min(buckets[i:], buckets[i], 1), len(buckets))
     if isinstance(min_containers, int):
+        total1 = total2 = 0
+        for i in range(len(buckets)):
+            total1 += fill_it_up(buckets[i:], buckets[i])
+            total2 += min_ways_to_fill(buckets[i:], buckets[i], 1, min_containers)
+        print("Part 1:", total1)
+        print("Part 2:", total2)
         break
-assert isinstance(min_containers, int)
-
-total1 = total2 = 0
-for i in range(len(buckets)):
-    total1 += fill_it_up(buckets[i:], buckets[i])
-    total2 += min_ways_to_fill(buckets[i:], buckets[i], 1, min_containers)
-
-
-print("Part 1:", total1)
-print("Part 2:", total2)
