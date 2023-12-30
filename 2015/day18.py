@@ -1,6 +1,6 @@
 with open("in/d18.txt") as f:
     p = [False]  # Pad False around the map for easier bound checking
-    lighters = [*map(list, zip(*((*p, *r, *p) for r in (zip(*(p + [c == "#" for c in r.strip()] + p for r in f))))))]
+    lighters = [*map(list, zip(*((*p, *r, *p) for r in (zip(*(p + [c == "#" for c in r.rstrip()] + p for r in f))))))]
 
 MAX = len(lighters) - 1
 
