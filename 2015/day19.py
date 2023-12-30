@@ -28,7 +28,7 @@ def context_full_grammar(string: str) -> int:
 print("Part 1:", context_full_grammar(string))
 
 
-def context_cost_grammar(text: str) -> int | float:
+def context_cost_grammar(text: str) -> int:
     steps, lgram, last_value, new_text = 0, len(rev_list_grammar), 0, text
     while new_text != "e":
         for k, v in random.sample(rev_list_grammar, lgram):  # Otherwise infinite loop due to
