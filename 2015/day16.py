@@ -21,7 +21,7 @@ perfumes: 1
 ticker = tuple(map(lambda x: (x[0], int(x[1])), (x.split(": ") for x in ticker.split("\n"))))
 
 
-def aunt_finder(part2: bool = False, aunt=0):
+def aunt_finder(part2: bool = False):
     for aunt, vals in aunts.items():
         ticks = 0
         for k, v in ticker:
@@ -35,8 +35,7 @@ def aunt_finder(part2: bool = False, aunt=0):
                 elif v == vals[k]:
                     ticks += 1
         if ticks == 3:
-            break
-    return aunt
+            return aunt
 
 
 print("Part 1:", aunt_finder())
