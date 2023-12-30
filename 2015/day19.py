@@ -14,14 +14,10 @@ def context_full_grammar(string: str) -> int:
     for i in range(len(string) - 1):
         sub_string = string[i : i + 2]
         if sub_string in grammar:
-            for prod in grammar[sub_string]:
-                distinct.add(string[:i] + prod + string[i + 2 :])
-        if (ss := sub_string[0]) in grammar:
-            for prod in grammar[ss]:
-                distinct.add(string[:i] + prod + string[i + 1 :])
-        if (ss := sub_string[1]) in grammar:
-            for prod in grammar[ss]:
-                distinct.add(string[: i + 1] + prod + string[i + 2 :])
+            distinct.update(string[:i] + prod + string[i + 2 :] for prod in grammar[sub_string])
+        for j, s in enumerate(sub_string, i):
+            if s in grammar:
+                distinct.update(string[:j] + prod + string[j + 1 :] for prod in grammar[s])
     return len(distinct)
 
 
