@@ -17,6 +17,8 @@ def find_min(buckets: tuple[int, ...], capacity: int, n_buckets: int) -> int | f
     total = float("inf")
     for i in range(len(buckets) - 1):
         total = min(find_min(buckets[i + 1 :], capacity + buckets[i + 1], n_buckets + 1), total)
+        if isinstance(total, int):
+            return total
     return total
 
 
