@@ -2,11 +2,9 @@ with open("in/d18.txt") as f:
     p = [False]  # Pad False around the map for easier bound checking
     lighters = [*map(list, zip(*((*p, *r, *p) for r in (zip(*(p + [c == "#" for c in r.rstrip()] + p for r in f))))))]
 
-MAX = len(lighters) - 1
-
 
 def light_killer(chart: list[list[bool]], steps: int, part2: bool = False) -> int:
-    chart = [[*r] for r in chart]  # Copy chart
+    MAX, chart = len(chart) - 1, [[*r] for r in chart]  # Copy chart
     mood_killer: list[tuple[bool, int, int]] = []  # Lights to turn on/off
     corners = set((r, c) for r in range(1, MAX, MAX - 2) for c in range(1, MAX, MAX - 2))
     if part2:
