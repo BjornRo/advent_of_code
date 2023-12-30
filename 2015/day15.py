@@ -3,7 +3,7 @@ import math
 import re
 
 with open("in/d15.txt") as f:
-    chemicals = tuple(zip(*(list(map(int, re.findall(r"-?\d+", s))) for s in f)))
+    chemicals = tuple(zip(*(map(int, re.findall(r"-?\d+", s)) for s in f)))
 
 part1 = part2 = 0
 for comb in (combo for combo in it.permutations(range(1, 101), len(chemicals[0])) if sum(combo) == 100):
