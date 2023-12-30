@@ -5,7 +5,7 @@ with open("in/d18.txt") as f:
 MAX = len(lighters) - 1
 
 
-def light_killer(chart: list[list[bool]], steps: int, part2: bool = False):
+def light_killer(chart: list[list[bool]], steps: int, part2: bool = False) -> int:
     chart = [[*r] for r in chart]  # Copy chart
     mood_killer: list[tuple[bool, int, int]] = []  # Lights to turn on/off
     corners = set((r, c) for r in range(1, MAX, MAX - 2) for c in range(1, MAX, MAX - 2))
@@ -24,10 +24,8 @@ def light_killer(chart: list[list[bool]], steps: int, part2: bool = False):
         while mood_killer:
             onoff, row, col = mood_killer.pop()
             chart[row][col] = onoff
-    return chart
+    return sum(chart[i][j] for i in range(1, MAX) for j in range(1, MAX))
 
 
-uncharted = light_killer(lighters, 100)
-print("Part 1:", sum(uncharted[i][j] for i in range(1, MAX) for j in range(1, MAX)))
-uncharted = light_killer(lighters, 100, True)
-print("Part 2:", sum(uncharted[i][j] for i in range(1, MAX) for j in range(1, MAX)))
+print("Part 1:", light_killer(lighters, 100))
+print("Part 2:", light_killer(lighters, 100, True))
