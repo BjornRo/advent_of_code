@@ -10,7 +10,7 @@ with open("in/d20.txt") as f:
     num = int(f.read().strip())
 
 part1 = part2 = 0
-for i in range(1, num // 18):
+for i in range(num // 50, num):
     divs = divisors(i)
     if not part1:
         if sum(divs) * 10 >= num:
