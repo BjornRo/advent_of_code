@@ -39,6 +39,7 @@ class Poison:
 @dataclass
 class Boss:
     hp: int
+    damage: int
     curse: None | Poison = None
 
     def alive(self) -> bool:
@@ -75,3 +76,6 @@ class Character:
 
 with open("in/d22.txt") as f:
     hp, dmg = (int(x.split()[-1]) for x in f)
+
+boss = Boss(hp=13, damage=8)
+char = Character(hp=10, mana=250)
