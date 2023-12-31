@@ -32,12 +32,12 @@ with open("in/d21.txt") as f:
 
 least_gold, max_gold = 1 << 32, 0
 for w, a, (r1, r2) in it.product(wps, ars, it.permutations((*rgs, (0, 0)), 2)):
-    (fdmg, farm) = map(sum, zip(*(w, a, r1, r2)))
-    freal_dmg, breal_dmg, fhp, bohp = fdmg - barm, bdmg - farm, 100, bhp
-    while fhp > 0 and bohp > 0:
-        if (bohp := bohp - freal_dmg) <= 0:
-            least_gold = min(least_gold, wps[w] + ars[a] + rgs[r1] + rgs[r2])
-        if (fhp := fhp - breal_dmg) <= 0:
-            max_gold = max(max_gold, wps[w] + ars[a] + rgs[r1] + rgs[r2])
+    (fdmg, farm), fhp, bohp = map(sum, zip(*(w, a, r1, r2))), 100, bhp
+    if (freal_dmg := fdmg - barm) > 0 and (breal_dmg := bdmg - farm) > 0:
+        while fhp > 0 and bohp > 0:
+            if (bohp := bohp - freal_dmg) <= 0:
+                least_gold = min(least_gold, wps[w] + ars[a] + rgs[r1] + rgs[r2])
+            if (fhp := fhp - breal_dmg) <= 0:
+                max_gold = max(max_gold, wps[w] + ars[a] + rgs[r1] + rgs[r2])
 print("Part 1:", least_gold)
 print("Part 2:", max_gold)
