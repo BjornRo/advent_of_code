@@ -39,7 +39,7 @@ class Poison:
 @dataclass
 class Boss:
     hp: int
-    damage: int
+    attack: int
     curse: None | Poison = None
 
     def alive(self) -> bool:
@@ -50,6 +50,9 @@ class Boss:
                 self.curse = None
         return self.hp > 0
 
+    def damage(self, dmg: int):
+        self.hp -= dmg
+
 
 @dataclass
 class Character:
@@ -57,6 +60,9 @@ class Character:
     mana: int
     shield = 0
     actives: list[Shield | Recharge] = field(default_factory=list)
+
+    def damage(self, dmg: int):
+        self.hp += self.shield - dmg
 
     def alive(self) -> bool:
         remaining = []
@@ -77,7 +83,7 @@ class Character:
 with open("in/d22.txt") as f:
     hp, dmg = (int(x.split()[-1]) for x in f)
 
-boss = Boss(hp=13, damage=8)
+boss = Boss(hp=13, attack=8)
 player = Character(hp=10, mana=250)
 
 # Player turn
@@ -100,4 +106,3 @@ boss.hp -= 4
 # Boss turn
 boss.alive()
 player.alive()
-
