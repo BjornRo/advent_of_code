@@ -78,4 +78,26 @@ with open("in/d22.txt") as f:
     hp, dmg = (int(x.split()[-1]) for x in f)
 
 boss = Boss(hp=13, damage=8)
-char = Character(hp=10, mana=250)
+player = Character(hp=10, mana=250)
+
+# Player turn
+# Player casts Poison.
+curse = Poison()
+player.mana -= curse.mana
+boss.curse = curse
+
+# Boss turn
+boss.alive()
+player.alive()
+player.hp -= boss.damage
+
+# Player turn
+boss.alive()
+player.alive()
+player.mana -= 53
+boss.hp -= 4
+
+# Boss turn
+boss.alive()
+player.alive()
+
