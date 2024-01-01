@@ -4,8 +4,7 @@ with open("in/d24.txt") as f:
 
 def find_qe(group_size: int, nums: list[int], min_qe: list[int], qe: int = 1, counter: int = 0) -> int:
     if counter == group_size:
-        if qe < min_qe[0]:
-            min_qe[0] = qe
+        min_qe[0] = qe
     else:
         for n in range(len(nums)):
             if (new_counter := counter + nums[n]) <= group_size and (new_qe := nums[n] * qe) < min_qe[0]:
