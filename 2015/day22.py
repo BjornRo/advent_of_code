@@ -40,12 +40,10 @@ def land_of_magic(boss_hp: int, boss_attack: int, part2: bool = False):
                     case Drain():
                         cboss.damage(move.dmg)
                         cplayer.hp += move.heal
-                    case Shield():
+                    case Shield() | Recharge(): # Might need to check if active exist? Works anyways.
                         cplayer.actives.append(move)
                     case Poison():
                         cboss.curse = move
-                    case Recharge():
-                        cplayer.actives.append(move)
                 if cboss.hp <= 0:
                     min_mana = min(cplayer.mana_used, min_mana)
                     continue
