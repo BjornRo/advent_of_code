@@ -25,15 +25,14 @@ print("Part 1:", context_full_grammar(string))
 
 
 def context_cost_grammar(text: str) -> int:
-    steps, lgram, last_value, new_text = 0, len(rev_list_grammar), 0, text
+    steps, lgram, new_text = 0, len(rev_list_grammar), text
     while new_text != "e":
+        reset = True
         for k, v in random.sample(rev_list_grammar, lgram):  # Otherwise infinite loop due to
             if sstep := new_text.count(k):  # deriving wrong path.
                 steps += sstep
-                new_text = new_text.replace(k, v)
-        if (lx := len(new_text)) != last_value:
-            last_value = lx
-        else:  # Try again and hope the randomness solves it :), NICE! LOL
+                new_text, reset = new_text.replace(k, v), False
+        if reset:  # Try again and hope the randomness solves it :), NICE! LOL
             new_text, steps = text, 0
     return steps
 
