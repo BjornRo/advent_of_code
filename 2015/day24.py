@@ -6,11 +6,10 @@ def find_qe(group_size: int, nums: list[int], min_qe: list[int], qe: int = 1, co
     if counter == group_size:
         if qe < min_qe[0]:
             min_qe[0] = qe
-        return min_qe[0]
-
-    for n in range(len(nums)):
-        if (new_counter := counter + nums[n]) <= group_size and (new_qe := nums[n] * qe) < min_qe[0]:
-            find_qe(group_size, nums[n + 1 :], min_qe, new_qe, new_counter)
+    else:
+        for n in range(len(nums)):
+            if (new_counter := counter + nums[n]) <= group_size and (new_qe := nums[n] * qe) < min_qe[0]:
+                find_qe(group_size, nums[n + 1 :], min_qe, new_qe, new_counter)
     return min_qe[0]
 
 
