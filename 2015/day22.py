@@ -5,28 +5,26 @@ from dataclasses import dataclass, field
 def main():
     with open("in/d22.txt") as f:
         hp, dmg = (int(x.split()[-1]) for x in f)
-    print(land_of_magic(hp, dmg))
+    print("Part 1:", land_of_magic(hp, dmg))
+    print("Part 2:", land_of_magic(hp, dmg, True))
 
 
-# 1295, 1182 too high
-
-
-def land_of_magic(boss_hp: int, boss_attack: int):
-    min_mana = 1 << 32
-    stack = [(Character(hp=50, mana=500), Boss(hp=boss_hp, attack=boss_attack))]
+def land_of_magic(boss_hp: int, boss_attack: int, part2: bool = False):
+    stack, min_mana = [(Character(hp=50, mana=500), Boss(hp=boss_hp, attack=boss_attack))], 1 << 32
     while stack:
         player, boss = stack.pop()
 
+        if part2:
+            player.hp -= 1
         if player.mana_used >= min_mana or player.hp <= 0:
             continue
 
+        # Player turn
         player.turn()
         boss.turn()
-        if boss.hp <= 0:
-            min_mana = min(player.mana_used, min_mana)
-            continue
 
         if player.mana < 53:
+            # Boss turn
             player.turn()
             boss.turn()
             player.damage(boss.attack)
@@ -35,36 +33,28 @@ def land_of_magic(boss_hp: int, boss_attack: int):
 
         for move in MagicMissile(), Drain(), Shield(), Poison(), Recharge():
             cplayer, cboss = deepcopy(player), deepcopy(boss)
-            match move:
-                case MagicMissile():
-                    if not cplayer.mana_use(move.mana):
-                        continue
-                    cboss.damage(move.dmg)
-                case Drain():
-                    if not cplayer.mana_use(move.mana):
-                        continue
-                    cboss.damage(move.dmg)
-                    cplayer.hp += move.heal
-                case Shield():
-                    if move in cplayer.actives or not cplayer.mana_use(move.mana):
-                        continue
-                    cplayer.actives.append(move)
-                case Poison():
-                    if cboss.curse is not None or not cplayer.mana_use(move.mana):
-                        continue
-                    cboss.curse = move
-                case Recharge():
-                    if move in cplayer.actives or not cplayer.mana_use(move.mana):
-                        continue
-                    cplayer.actives.append(move)
-            if cboss.hp <= 0:
-                min_mana = min(cplayer.mana_used, min_mana)
-                continue
-            cplayer.turn()
-            cboss.turn()
-            cplayer.damage(cboss.attack)
-            if player.hp > 0:
-                stack.append((cplayer, cboss))
+            if cplayer.mana_use(move.mana):
+                match move:
+                    case MagicMissile():
+                        cboss.damage(move.dmg)
+                    case Drain():
+                        cboss.damage(move.dmg)
+                        cplayer.hp += move.heal
+                    case Shield():
+                        cplayer.actives.append(move)
+                    case Poison():
+                        cboss.curse = move
+                    case Recharge():
+                        cplayer.actives.append(move)
+                if cboss.hp <= 0:
+                    min_mana = min(cplayer.mana_used, min_mana)
+                    continue
+                # Boss turn
+                cplayer.turn()
+                cboss.turn()
+                cplayer.damage(cboss.attack)
+                if cplayer.hp > 0:
+                    stack.append((cplayer, cboss))
     return min_mana
 
 
@@ -169,39 +159,3 @@ class Character:
 
 
 main()
-
-# # P
-# boss.turn()
-# player.turn()
-# recharge = Recharge()
-# if recharge not in player.actives and player.mana_use(recharge.mana):
-#     player.actives.append(recharge)
-
-# # P
-# boss.turn()
-# player.turn()
-# shield = Shield()
-# if shield not in player.actives and player.mana_use(shield.mana):
-#     player.actives.append(shield)
-
-
-# # P
-# boss.turn()
-# player.turn()
-# drain = Drain()
-# if player.mana_use(drain.mana):
-#     player.hp += drain.heal
-#     boss.damage(drain.damage)
-# # P
-# boss.turn()
-# player.turn()
-# poison = Poison()
-# if boss.curse is None and player.mana_use(poison.mana):
-#     boss.curse = poison
-
-# # P
-# boss.turn()
-# player.turn()
-# magicmissile = MagicMissile()
-# if player.mana_use(magicmissile.mana):
-#     boss.damage(magicmissile.dmg)
