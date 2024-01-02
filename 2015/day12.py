@@ -11,6 +11,6 @@ def del_red(jsdata: dict | list | int | str):
 
 
 with open("in/d12.txt") as f:
-    string = f.read().strip()
-    print("Part 1:", sum(map(int, re.findall(r"-?\d+", string))))
-    print("Part 2:", sum(map(int, re.findall(r"-?\d+", json.dumps(del_red(json.loads(string)))))))
+    string = f.read().rstrip()
+print("Part 1:", sum(map(int, re.findall(r"-?\d+", string))))
+print("Part 2:", sum(map(int, re.findall(r"-?\d+", json.dumps(del_red(json.loads(string)))))))

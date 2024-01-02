@@ -1,7 +1,7 @@
 from hashlib import md5
 
 with open("in/d4.txt") as f:
-    string = f.read().strip()
+    string = f.read().rstrip()
 
 found = False # just to stop printing part1.
 for i in range(10_000_000):

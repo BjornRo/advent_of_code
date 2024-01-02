@@ -36,7 +36,7 @@ def pw_generator(old_pw: str, skip=False):  # a:97, z:122
 
 
 with open("in/d11.txt") as f:
-    for l in (x.strip() for x in f):
-        new_pw = pw_generator(l)
-        print("Part 1:", new_pw)
-        print("Part 2:", pw_generator(new_pw, True))
+    l = f.read().rstrip()
+new_pw = pw_generator(l)
+print("Part 1:", new_pw)
+print("Part 2:", pw_generator(new_pw, True))

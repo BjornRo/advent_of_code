@@ -7,7 +7,7 @@ def divisors(n: int) -> list[int]:
 
 
 with open("in/d20.txt") as f:
-    num = int(f.read().strip())
+    num = int(f.read().rstrip())
 
 part1 = part2 = 0
 for i in range(num // 60, num):
