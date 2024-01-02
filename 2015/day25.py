@@ -1,10 +1,5 @@
-import re
-
 with open("in/d25.txt") as f:
-    row, col = map(int, re.findall(r"\d+", f.read().strip()))
-
-# c = 20151125 -> range(arit_sum(row + col - 2) + col - 1)
-next_code, arit_sum, c = lambda number: (number * 252533) % 33554393, lambda n: (n * (n + 1)) // 2, 27995004
-for _ in range(arit_sum(row + col - 2) + col - 61):
-    c = next_code(c)
+    (row, col), c = map(int, "".join(c for c in f.read() if c.isdigit() or c == " ").split()), 20151125
+for _ in range((lambda n: (n * (n + 1)) // 2)(row + col - 2) + col - 1):  # Arit sum: 1+2+3+...+n
+    c = (c * 252533) % 33554393
 print("Part 1:", c)
