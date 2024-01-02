@@ -25,7 +25,7 @@ def find_nodes(graph: list[list[int]] | list[list[bool]], start_node: tuple[int,
 
 
 def find_start(matrix: list[list[bool]] | list[list[int]], targ_val: int, offset=0) -> tuple[int, int]:
-    return next(iter((i + offset, j + offset) for i, r in enumerate(matrix) for j, c in enumerate(r) if c == targ_val))
+    return next((i + offset, j + offset) for i, r in enumerate(matrix) for j, c in enumerate(r) if c == targ_val)
 
 
 empty_mat = [[0] * SCOL for _ in range(SROW)]
