@@ -15,12 +15,12 @@ def dfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_ste
     while stack:
         (row, col), steps, visited = stack.pop()
         for dir, nrow, ncol in ("^", row + 1, col), ("v", row - 1, col), ("<", row, col + 1), (">", row, col - 1):
-            if (nrow, ncol) == end:
+            if (k := (nrow, ncol)) == end:
                 max_steps = max(len(visited) - 1, max_steps)
                 continue
-            if (value := graph[nrow][ncol]) != "#" and (nrow, ncol) not in visited:
+            if (value := graph[nrow][ncol]) != "#" and k not in visited:
                 if value == "." or dir != value:
-                    stack.append(((nrow, ncol), steps + 1, [(nrow, ncol), *visited]))
+                    stack.append((k, steps + 1, [k, *visited]))
     return max_steps
 
 
