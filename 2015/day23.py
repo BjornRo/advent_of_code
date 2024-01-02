@@ -2,8 +2,8 @@ with open("in/d23.txt") as f:
     instructions = [x.strip().split(maxsplit=1) for x in f]
 
 
-def assembly(part2=False):
-    ins_len, pc, registers = len(instructions), 0, {"a": 1 if part2 else 0, "b": 0}
+def assembly(a: int):
+    ins_len, pc, registers = len(instructions), 0, {"a": a, "b": 0}
     while pc < ins_len:
         ins, arg = instructions[pc]
         match ins:
@@ -27,5 +27,5 @@ def assembly(part2=False):
     return registers["b"]
 
 
-print("Part 1:", assembly())
-print("Part 2:", assembly(True))
+print("Part 1:", assembly(0))
+print("Part 2:", assembly(1))
