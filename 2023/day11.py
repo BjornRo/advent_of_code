@@ -1,7 +1,7 @@
 import time
 
 start = time.time()
-with open("d11.txt", "rt") as f:
+with open("in/d11.txt", "rt") as f:
     rows, cols = map(list,zip(*((i, j) for i, row in enumerate(f, 1) for j, col in enumerate(row.strip(), 1) if col == "#")))
     cols.sort()
 
