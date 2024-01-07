@@ -1,15 +1,14 @@
 from collections import defaultdict, deque
 
 with open("in/d21.txt") as f:
-    _p = [-1]  # padding
-    _g = zip(*(_p + [1 if c == "." else 2 if c == "S" else 0 for c in x.strip()] + _p for x in f))
-    chart: tuple[tuple[int, ...], ...] = tuple(zip(*(_p + list(y) + _p for y in _g)))
+    _p, _m = lambda x: (-1, *x, -1), {"#": 0, ".": 1, "S": 2}  # Pad -> Transpose -> Pad.
+    chart: tuple[tuple[int, ...], ...] = tuple(zip(*(_p(y) for y in zip(*(_p(_m[c] for c in x.rstrip()) for x in f)))))
 
 Row, Col, DimRow, DimCol = [int] * 4
 Key = tuple[Row, Col, DimRow, DimCol]
 
 
-def beyond_infinity(graph: tuple[tuple[int, ...], ...], start: Key, ssteps: int):
+def beyond_infinity(graph: tuple[tuple[int, ...], ...], start: Key, ssteps: int) -> dict[tuple[int, int], int]:
     max_grid, less_max_grid = len(graph) - 1, len(graph) - 2
     queue, visited, gardens = deque([(*start, ssteps)]), {start}, defaultdict(int)
     while queue:
@@ -45,8 +44,8 @@ print("Part 1:", partial_inf(64)[(0, 0)])
 
 grid_size = len(chart) - 2  # 131
 n_grids = (26501365 - 65) // grid_size  # 202300
-gardens = partial_inf(65 + grid_size * 2)
 
+gardens = partial_inf(65 + grid_size * 2)
 evens = gardens[(0, 0)] * (n_grids - 1) ** 2
 odds = gardens[(1, 0)] * n_grids**2
 corners = sum(gardens[(r, c)] for r, c in ((-2, 0), (0, 2), (2, 0), (0, -2)))

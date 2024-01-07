@@ -3,24 +3,23 @@ from collections import defaultdict
 
 start_time = time.time()
 with open("in/d23.txt") as f:
-    chart: tuple[str, ...] = tuple(x.strip() for x in f)
+    _m = {"#": 0, ".": 1, "^": 2, "v": 3, "<": 4, ">": 5}
+    chart: tuple[tuple[int, ...], ...] = tuple(tuple(_m[c] for c in x.strip()) for x in f)
 
 seo = (0, 1), (len(chart) - 1, len(chart[0]) - 2), (-1, 1)
 Row, Col, Steps = int, int, int
 Node2D = tuple[Row, Col]
 
 
-def dfs(graph: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
+def dfs(graph: tuple[tuple[int, ...], ...], start: Node2D, end: Node2D, oob: Node2D, max_steps=0) -> int:
     stack = [(start, max_steps, [start, oob])]
     while stack:
         (row, col), steps, visited = stack.pop()
-        for dir, nrow, ncol in ("^", row + 1, col), ("v", row - 1, col), ("<", row, col + 1), (">", row, col - 1):
+        for dir, nrow, ncol in (2, row + 1, col), (3, row - 1, col), (4, row, col + 1), (5, row, col - 1):
             if (k := (nrow, ncol)) == end:
                 max_steps = max(len(visited) - 1, max_steps)
-                continue
-            if (value := graph[nrow][ncol]) != "#" and k not in visited:
-                if value == "." or dir != value:
-                    stack.append((k, steps + 1, [k, *visited]))
+            elif (value := graph[nrow][ncol]) and dir != value and k not in visited:
+                stack.append((k, steps + 1, [k, *visited]))
     return max_steps
 
 
@@ -32,7 +31,7 @@ CurrentPos, CurrPath, StartPathPos, Visited = Node2D, list[Node2D], Node2D, list
 Graph, State = dict[tuple[Node2D, Node2D], Steps], tuple[CurrentPos, CurrPath, StartPathPos]
 
 
-def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node2D):
+def find_paths_dfs(chart: tuple[tuple[int, ...], ...], start: Node2D, end: Node2D, oob: Node2D):
     graph: Graph = {}
     next_state: list[State] = [(start, [start, oob], start)]
     visited_crossings: set[Node2D] = set()
@@ -44,7 +43,7 @@ def find_paths_dfs(chart: tuple[str, ...], start: Node2D, end: Node2D, oob: Node
             graph[(start_path, (row, col))] = len([x for x in curr_path if x != oob]) - 1
             continue
         for nrow, ncol in (row + 1, col), (row - 1, col), (row, col + 1), (row, col - 1):
-            if chart[nrow][ncol] != "#" and (nrow, ncol) not in curr_path:
+            if chart[nrow][ncol] and (nrow, ncol) not in curr_path:
                 intersection.append((nrow, ncol))
         at_intersect = len(intersection) >= 2
         if at_intersect:
@@ -84,8 +83,7 @@ def dfs2_imp(graph: dict[Node2D, dict[Node2D, int]], start: Node2D, end: Node2D,
         for next_node, next_weight in graph[rowcol].items():
             if next_node == end:
                 max_steps = max(weight + next_weight, max_steps)
-                continue
-            if next_node not in visited:
+            elif next_node not in visited:
                 next_state.append((next_node, weight + next_weight, [next_node, *visited]))
     return max_steps
 
