@@ -1,4 +1,4 @@
-def pp(s: set): # Pretty print path
+def pp(s: set):  # Pretty print path
     zeros = [list(map(str, x)) for x in chart]  # type:ignore
     for row, col in s:
         if row == -1:
@@ -25,6 +25,37 @@ with open("in/d23.txt") as f:
 START, END, OOB = (0, 1), (len(chart) - 1, len(chart[0]) - 2), (-1, 1)
 
 
+def find_paths_dag_dfs(chart: tuple[tuple[int, ...], ...], start: Node2D, end: Node2D, oob: Node2D):
+    xstate = tuple[Node2D, Node2D, int]
+    graph: Graph = {}
+    next_state: list[xstate] = [(start, start, 0)]
+    visited: set[Node2D] = set((start, oob))
+    visited_crossings = set()
+    intersection: list[tuple[int, int, int]] = []
+    while next_state:
+        intersection *= 0
+        (row, col), start_path, steps = next_state.pop()
+        if (row, col) == end:
+            n1, n2 = sorted((start_path, (row, col)))
+            graph[(n1, n2)] = steps
+            continue
+        visited.add((row, col))
+        for dir, nrow, ncol in (2, row + 1, col), (3, row - 1, col), (4, row, col + 1), (5, row, col - 1):
+            if chart[nrow][ncol] and (k := (nrow, ncol)) not in visited:
+                intersection.append((dir, nrow, ncol))
+        at_intersect = len(intersection) >= 2
+        if at_intersect:
+            n1, n2 = sorted((start_path, (row, col)))
+            if not (key := (n1, n2)) in graph:  # while another waits at intersect+1.
+                graph[key] = steps
+            start_path = (row, col)  # Start now from this new intersection
+            steps = 0
+        for dir, nrow, ncol in intersection:
+            if dir != chart[nrow][ncol]:
+                next_state.append(((nrow, ncol), start_path, steps + 1))
+    return graph
+
+
 # for i in chart:
 #     print("".join(map(str, i)))
 
@@ -46,6 +77,34 @@ def pp(s: set):
         zeros[row][col] = "x"
     for r in zeros:
         print("".join(r))
+
+
+def find_paths_dfs(chart: tuple[tuple[int, ...], ...], start: Node2D, end: Node2D, oob: Node2D):
+    graph: Graph = {}
+    next_state: list[State] = [(start, [start, oob], start)]
+    visited_crossings: set[Node2D] = set()
+    intersection: list[Node2D] = []
+    while next_state:
+        intersection *= 0
+        (row, col), curr_path, start_path = next_state.pop()
+        if (row, col) == end:
+            graph[(start_path, (row, col))] = len([x for x in curr_path if x != oob]) - 1
+            continue
+        for nrow, ncol in (row + 1, col), (row - 1, col), (row, col + 1), (row, col - 1):
+            if chart[nrow][ncol] and (nrow, ncol) not in curr_path:
+                intersection.append((nrow, ncol))
+        at_intersect = len(intersection) >= 2
+        if at_intersect:
+            gkey = (start_path, (row, col))  # If a frontier comes from the other direction
+            if not (gkey in graph or gkey[::-1] in graph):  # while another waits at intersect+1.
+                graph[gkey] = len([x for x in curr_path if x != oob]) - 1  # From intersection to intersection
+            if (row, col) in visited_crossings:  # No need to revisit a crossing
+                continue
+            visited_crossings.add((row, col))
+            start_path = (row, col)  # Start now from this new intersection
+        for nrowcol in intersection:
+            next_state.append((nrowcol, [nrowcol, *([start_path] if at_intersect else curr_path)], start_path))
+    return graph
 
 
 def find_nodef(graph: tuple[tuple, ...] | list[list[int]], last_intersection: tuple[int, int]):
