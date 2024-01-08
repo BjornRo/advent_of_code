@@ -74,7 +74,7 @@ def dfs_rec(graph: Graph, node: Node2D, end: Node2D, visited=set(), steps=0):
 
 
 reduced_graph = find_paths_dag_dfs(chart, *start_end)
-print("Part 1:", dfs_rec(reduced_graph, *start_end))
+print("Part 1:", dfs_imp(reduced_graph, *start_end))
 print("  Finished in:", round(time.time() - start_time, 5), "secs")
 
 
@@ -86,10 +86,10 @@ def dag_to_undirected(chart: Graph, end: Node2D) -> dict[Node2D, dict[Node2D, in
     prev_end, weight = next(iter(graph[end].items()))  # Optimization
     graph[prev_end] = {end: weight}  # 1. Last intersection always leads to the end
     for v in graph.values():  # 2. If 4 paths, remove lowest weight.
-        x = tuple(v.values())
         if len(v) == 4:
-            m, c = min(x), tuple(v.items())
-            for kk, vv in c:
+            x = v.values()
+            m = min(x)
+            for kk, vv in zip(v, x):
                 if vv == m:
                     v.pop(kk)
                     break  # End optimization
