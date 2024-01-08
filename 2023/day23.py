@@ -53,22 +53,24 @@ def dfs_imp(graph: Graph, start: Node2D, end: Node2D, max_steps=0):
         for next_node, next_weight in graph[node].items():
             if next_node not in visited:
                 if next_node == end:
-                    max_steps = max(weight + next_weight, max_steps)
+                    if (result := weight + next_weight) > max_steps:
+                        max_steps = result
                     continue
                 next_state.append((next_node, weight + next_weight, {*visited, next_node}))
     return max_steps
 
 
-def dfs_rec(graph: Graph, node: Node2D, end: Node2D, visited=set(), max_steps=0):
+def dfs_rec(graph: Graph, node: Node2D, end: Node2D, visited=set(), steps=0):
     if node == end:
-        return max_steps
+        return steps
     visited.add(node)
-    steps = 0
+    max_steps = 0
     for next_node, weight in graph[node].items():
         if next_node not in visited:
-            steps = max(dfs_rec(graph, next_node, end, visited, max_steps + weight), steps)
+            if (result := dfs_rec(graph, next_node, end, visited, steps + weight)) > max_steps:
+                max_steps = result
     visited.remove(node)
-    return steps
+    return max_steps
 
 
 reduced_graph = find_paths_dag_dfs(chart, *start_end)
@@ -95,5 +97,5 @@ def dag_to_undirected(chart: Graph, end: Node2D) -> dict[Node2D, dict[Node2D, in
 
 
 # pypy is faster with imperative, cpython is faster with recursion
-print("Part 2:", dfs_imp(dag_to_undirected(reduced_graph, start_end[1]), *start_end))
+print("Part 2:", dfs_rec(dag_to_undirected(reduced_graph, start_end[1]), *start_end))
 print("  Total time for p1,p2:", round(time.time() - start_time, 5), "secs")
