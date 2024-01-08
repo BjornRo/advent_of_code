@@ -2,11 +2,11 @@ from heapq import heappop, heappush
 
 with open("in/d17.txt") as f:
     _p = lambda x: (0, *x, 0)  # Padding
-    raw_mat = tuple(zip(*(_p(y) for y in zip(*(_p(int(c) for c in x.rstrip()) for x in f)))))
+    chart = tuple(zip(*(_p(y) for y in zip(*(_p(int(c) for c in x.rstrip()) for x in f)))))
 
 
-PathSum = Row = Col = Steps = int  #  Up, Down, Left, Right
-END, DIRS, State = ((len(raw_mat) - 2, len(raw_mat[0]) - 2)), {0: 1, 1: 0, 2: 3, 3: 2}, tuple[Row, Col, int, Steps]
+PathSum, Row, Col, Steps, Dir = [int] * 5  #  Up, Down, Left, Right
+END, DIRS, State = ((len(chart) - 2, len(chart[0]) - 2)), {0: 1, 1: 0, 2: 3, 3: 2}, tuple[Row, Col, Dir, Steps]
 
 
 def crucial(max_steps: int, part2: bool):
@@ -32,7 +32,7 @@ def crucial(max_steps: int, part2: bool):
                             _col -= 1
                         case 3:
                             _col += 1
-                    if index_value := raw_mat[_row][_col]:
+                    if index_value := chart[_row][_col]:
                         if part2 and i != dir and steps < 4:
                             continue
                         if i == dir:
