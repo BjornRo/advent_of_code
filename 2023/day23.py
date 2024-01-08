@@ -82,7 +82,7 @@ def dag_to_undirected(chart: Graph, end: Node2D) -> dict[Node2D, dict[Node2D, in
     graph: defaultdict[Node2D, dict[Node2D, int]] = defaultdict(dict)
     for node1, next_nodes in chart.items():
         for node2, weight in next_nodes.items():
-            graph[node1][node2], graph[node2][node1] = weight, weight
+            graph[node1][node2] = graph[node2][node1] = weight
     prev_end, weight = next(iter(graph[end].items()))  # Optimization
     graph[prev_end] = {end: weight}  # 1. Last intersection always leads to the end
     for v in graph.values():  # 2. If 4 paths, remove lowest weight.

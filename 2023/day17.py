@@ -1,25 +1,17 @@
-from enum import IntEnum, auto
 from heapq import heappop, heappush
 
 with open("in/d17.txt") as f:
-    p = [0]  # padding
-    raw_mat = tuple(zip(*(p + list(y) + p for y in zip(*(p + [int(c) for c in x.rstrip()] + p for x in f)))))
-
-
-class Dir(IntEnum):
-    U = auto()
-    D = auto()
-    L = auto()
-    R = auto()
+    p = lambda x: (0, *x, 0)  # Padding
+    raw_mat = tuple(zip(*(p(y) for y in zip(*(p(int(c) for c in x.rstrip()) for x in f)))))
 
 
 PathSum = Row = Col = Steps = int
-END, State = ((len(raw_mat) - 2, len(raw_mat[0]) - 2)), tuple[Row, Col, Dir, Steps]
+END, State = ((len(raw_mat) - 2, len(raw_mat[0]) - 2)), tuple[Row, Col, int, Steps]
 
 
 def crucial(max_steps: int, part2: bool):
-    queue: list[tuple[PathSum, State]] = [(0, (1, 1, Dir.R, 1)), (0, (1, 1, Dir.D, 1))]
-    visited = set()
+    queue: list[tuple[PathSum, State]] = [(0, (1, 1, 3, 1)), (0, (1, 1, 1, 1))]
+    visited, m = set(), {0: 1, 1: 0, 2: 3, 3: 2}  #  Up, Down, Left, Right
     while queue:
         path_sum, (row, col, dir, steps) = heappop(queue)
         if (row, col) == END:
@@ -28,26 +20,27 @@ def crucial(max_steps: int, part2: bool):
             return path_sum
         if (k := (row, col, dir, steps)) not in visited:
             visited.add(k)
-            for i in Dir:
-                if i != {Dir.U: Dir.D, Dir.D: Dir.U, Dir.L: Dir.R, Dir.R: Dir.L}[dir]:
+            for i in m:
+                if i != m[dir]:  # No 180s
                     _row, _col = row, col
                     match i:
-                        case Dir.U:
+                        case 0:
                             _row -= 1
-                        case Dir.D:
+                        case 1:
                             _row += 1
-                        case Dir.L:
+                        case 2:
                             _col -= 1
-                        case Dir.R:
+                        case 3:
                             _col += 1
                     if index_value := raw_mat[_row][_col]:
-                        _steps = 1
+                        if part2 and i != dir and steps < 4:
+                            continue
                         if i == dir:
                             if steps >= max_steps:
                                 continue
                             _steps = steps + 1
-                        elif part2 and i != dir and steps < 4:
-                            continue
+                        else:
+                            _steps = 1
                         heappush(queue, (path_sum + index_value, (_row, _col, i, _steps)))
 
 
