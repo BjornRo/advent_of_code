@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from heapq import heappop, heappush
 
 with open("in/d17.txt") as f:
@@ -46,3 +50,4 @@ def crucial(max_steps: int, part2: bool):
 
 print("Part 1:", crucial(max_steps=3, part2=False))
 print("Part 2:", crucial(max_steps=10, part2=True))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

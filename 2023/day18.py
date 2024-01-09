@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 plan: list[tuple[str, int, str]]
 with open("in/d18.txt") as f:
     plan = [(dir, int(steps), color[1:-1]) for dir, steps, color in (x.strip().split() for x in f if x.strip())]
@@ -78,3 +82,4 @@ def surveyors(vertices: list[tuple[int, int]], initial_area=0) -> float:
 
 
 print("Part 2:", int(surveyors(polygons, total) + 1))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

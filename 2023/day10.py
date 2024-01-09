@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 mat, SCALE = [tuple(x.strip()) for x in open("in/d10.txt") if x.strip()], 3
 SROW, SCOL = len(mat) * SCALE, len(mat[0]) * SCALE
 baseshapes = (((0, 0, 0), (1, 1, 1), (0, 0, 0)), ((0, 1, 0), (0, 1, 1), (0, 0, 0)))  # Shapes: [-, L]
@@ -39,3 +43,4 @@ counter = lambda matrix: sum(matrix[i][j] for i in range(1, SROW, SCALE) for j i
 strike = find_nodes(empty_mat, start_node=find_start(empty_mat, 2), wall=0)
 print("Part 1:", counter(strike) // 2)
 print("Part 2:", counter(find_nodes(strike, start_node=find_start(strike, 1, 1), wall=1)))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

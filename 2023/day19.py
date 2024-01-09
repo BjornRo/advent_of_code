@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 import re
 
 with open("in/d19.txt") as f:
@@ -62,3 +66,4 @@ def judger(subject: list[list[str]], xmas_minmax: dict[str, list[int]]) -> int:
 
 
 print("Part 2:", judger(workflows["in"], {k: [1, 4000] for k in "xmas"}))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

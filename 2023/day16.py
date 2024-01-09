@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from enum import IntEnum
 from typing import Literal
 
@@ -84,3 +88,4 @@ with open("in/d16.txt") as f:
 DITCH_ROW, DITCH_COL = len(lawn), len(lawn[0])
 print("Part 1:", lawn_shapes(lawn, DITCH_ROW, DITCH_COL, Dir.RIGHT, (0, 0), False))
 print("Part 2:", max((lawn_shapes(lawn, DITCH_ROW, DITCH_COL, *x, True) for x in lawn_starter(DITCH_ROW, DITCH_COL))))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

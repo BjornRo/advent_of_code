@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from math import lcm
 
 with open("in/d8.txt", "rt") as f:
@@ -7,13 +11,16 @@ with open("in/d8.txt", "rt") as f:
         for k, v in (x.split("=") for x in f if x.strip())
     }
 
-def g(_map: str, _maps: dict[str, tuple[str, ...]], _strat: tuple[bool,...]) -> int:
+
+def g(_map: str, _maps: dict[str, tuple[str, ...]], _strat: tuple[bool, ...]) -> int:
     i, strat_len = 0, len(_strat)
     while (_map := _maps[_map][_strat[i % strat_len]])[-1] != "Z":
         i += 1
     return i + 1
 
+
 path_to_z = [g(_m, maps, strat) for _m in sorted(m for m in maps if m[-1] == "A")]
 
 print("Part 1:", path_to_z[0])
 print("Part 2:", lcm(*path_to_z))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

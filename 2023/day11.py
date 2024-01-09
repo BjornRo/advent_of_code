@@ -1,6 +1,7 @@
-import time
+from time import perf_counter as time_it
 
-start = time.time()
+start_it = time_it()
+
 with open("in/d11.txt", "rt") as f:
     rows, cols = map(list,zip(*((i, j) for i, row in enumerate(f, 1) for j, col in enumerate(row.strip(), 1) if col == "#")))
     cols.sort()
@@ -23,4 +24,4 @@ def sum_list_distances(galaxy: list[int], multiplier: int) -> int:
 
 print("Part 1:", sum_list_distances(rows.copy(), 1) + sum_list_distances(cols.copy(), 1))
 print("Part 2:", sum_list_distances(rows, 1000000) + sum_list_distances(cols, 1000000))
-print(time.time() - start)
+print("Finished in:", round(time_it() - start_it, 4), "secs")

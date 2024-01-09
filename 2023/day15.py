@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from collections import defaultdict as hot_box
 
 
@@ -32,3 +36,4 @@ with open("in/d15.txt", "rb") as f:
 
 print("Part 1:", sum(map(up_in_smoke, dealer)))
 print("Part 2:", hash_trip(dealer))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

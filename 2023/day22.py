@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 with open("in/d22.txt") as f:
     bricks = tuple(tuple(map(int, x.replace("~", ",").split(","))) for x in f)
 ZPos, ZBrick, Id, GRID = int, int, int, next(max(*a, *b, *d, *e) + 1 for a, b, _, d, e, _ in [tuple(zip(*(bricks)))])
@@ -52,3 +56,4 @@ def check_deleted(bricks: tuple[Brick, ...] | list[Brick], pseudo_pop_id: int, c
 settled_stack, b_len = settle(tuple(sorted(line_to_2d(b, id) for id, b in enumerate(bricks)))), len(bricks)
 print("Part 1:", sum(check_deleted(settled_stack, i, False) for i in range(b_len)))
 print("Part 2:", sum(check_deleted(settled_stack, i, True) for i in range(b_len)))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

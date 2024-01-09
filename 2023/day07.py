@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 def solver(content: list[tuple[list[int], int]], joker: bool) -> int:
     buckets = tuple([] for _ in range(7))
     for pair in content:
@@ -28,7 +32,9 @@ def solver(content: list[tuple[list[int], int]], joker: bool) -> int:
             out_value += value * index
     return out_value
 
+
 m = {"T": 10, "J": 11, "Q": 12, "K": 13, "A": 14}
-i = [([m[c] if c in m else int(c) for c in i], int(j)) for i, j in (x.split(" ") for x in open("d7.txt"))]
+i = [([m[c] if c in m else int(c) for c in i], int(j)) for i, j in (x.split(" ") for x in open("in/d7.txt"))]
 print("Part 1:", solver(i, False))
 print("Part 2:", solver(i, True))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

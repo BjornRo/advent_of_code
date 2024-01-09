@@ -1,4 +1,8 @@
-with open("d1.txt", "rt") as f:
+from time import perf_counter as time_it
+
+start_it = time_it()
+
+with open("in/d1.txt", "rt") as f:
     infile = f.read().strip().split("\n")
 
 def part1(x: str):
@@ -24,3 +28,4 @@ def part2(x: str, rev=False) -> str:
 
 print("Part 1:", sum(map(part1, infile)))
 print("Part 2:", sum(map(lambda x: int(part2(x) + part2(x, True)), infile)))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

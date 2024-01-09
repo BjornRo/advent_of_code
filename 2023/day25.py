@@ -1,3 +1,8 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
+
 def bfs():  # Does not work on test input :-). Gives same result as networkx below
     from collections import defaultdict, deque
 
@@ -28,6 +33,7 @@ def bfs():  # Does not work on test input :-). Gives same result as networkx bel
 
 
 print("Part 1:", bfs())
+print("Finished in:", round(time_it() - start_it, 4), "secs")
 
 
 # import networkx as nx

@@ -1,3 +1,8 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
+
 def springtime(spring: str, records: tuple[int, ...], cache: dict, counter=0):  # I have no clue why this works.
     if (k := (spring, records, counter)) in cache:
         return cache[k]
@@ -20,7 +25,7 @@ def springtime(spring: str, records: tuple[int, ...], cache: dict, counter=0):  
                 n += springtime(spring[1:], records, cache, 0)
             elif records and records[0] == counter:
                 n += springtime(spring[1:], records[1:], cache, 0)
-            cache[(spring, records, counter)] = n
+            cache[k] = n
             return n
     return springtime(spring[1:], records, cache, counter + 1)
 
@@ -32,3 +37,4 @@ with open("in/d12.txt") as f:
         p1, p2 = p1 + springtime(s, r, {}), p2 + springtime("?".join([s] * 5), r * 5, {})
 print("Part 1:", p1)
 print("Part 2:", p2)
+print("Finished in:", round(time_it() - start_it, 4), "secs")

@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from collections import defaultdict, deque
 
 with open("in/d21.txt") as f:
@@ -52,6 +56,7 @@ corners = sum(gardens[(r, c)] for r, c in ((-2, 0), (0, 2), (2, 0), (0, -2)))
 even_border = sum((n_grids - 1) * gardens[(r, c)] for r, c in ((-1, 1), (1, 1), (1, -1), (-1, -1)))
 odd_border = sum(n_grids * gardens[(r, c)] for r, c in ((-2, 1), (1, 2), (1, -2), (-2, -1)))
 print("Part 2:", evens + odds + corners + even_border + odd_border)
+print("Finished in:", round(time_it() - start_it, 4), "secs")
 
 """
 See charts in draft folder.

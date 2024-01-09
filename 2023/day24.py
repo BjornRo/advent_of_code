@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 Vec3 = list[int] | tuple[int, ...] | tuple[int, int, int]
 with open("in/d24.txt") as f:
     _g = (map(int, x.replace("@", ",").split(",")) for x in f)
@@ -35,3 +39,4 @@ for i, ((pa, pb, pc), (da, db, dc)) in enumerate(ishall):
 solver.check()
 p0, p1, p2, da, db, dc = [solver.model().eval(x).as_long() for x in (a, b, c, d1, d2, d3)]  # type:ignore
 print("Part 2:", p0 + p1 + p2)
+print("Finished in:", round(time_it() - start_it, 4), "secs")

@@ -1,3 +1,7 @@
+from time import perf_counter as time_it
+
+start_it = time_it()
+
 from collections import deque
 from dataclasses import dataclass, field
 from math import lcm
@@ -71,3 +75,4 @@ def tmi(part1: int) -> int:
 
 print("Part 1:", tmi(1000))
 print("Part 2:", tmi(0))
+print("Finished in:", round(time_it() - start_it, 4), "secs")

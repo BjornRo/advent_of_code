@@ -1,6 +1,6 @@
 import time
 
-with open("d5.txt", "rt") as f:
+with open("in/d5.txt", "rt") as f:
     _seeds, _infile = f.read().replace(" map", "").split("\n", 1)
 seeds: list[int] = [int(x) for x in _seeds.replace(":", "").split(" ")[1:]]
 maps: list[list[list[int]]] = [
