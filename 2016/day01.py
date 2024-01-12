@@ -16,6 +16,6 @@ for r_turn, steps in maze:
         position += current_turn * steps
 
 assert isinstance(part2, complex)
-complex_sum = lambda x: sum(map(abs, (int(x.real), int(x.imag))))
+complex_sum = lambda x: sum(map(abs, map(int, (x.real, x.imag))))
 print("Part 1:", complex_sum(position))
 print("Part 2:", complex_sum(part2))
