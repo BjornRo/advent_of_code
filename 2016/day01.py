@@ -1,10 +1,10 @@
 with open("in/d1.txt") as f:
-    maze = [(y[0], int(y[1:])) for y in (x.strip() for x in f.read().split(","))]
+    maze = [(y[0] == "R", int(y[1:])) for y in (x.strip() for x in f.read().split(","))]
 
 position, current_turn, part2 = complex(0, 0), complex(-1, 0), None
 visited = {position}
-for turn, steps in maze:
-    current_turn *= -1j if turn == "R" else 1j
+for r_turn, steps in maze:
+    current_turn *= -1j if r_turn else 1j
     if part2 is None:
         for _ in range(steps):
             position += current_turn
