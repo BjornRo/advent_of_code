@@ -1,23 +1,21 @@
 with open("in/d1.txt") as f:
     maze = [(y[0], int(y[1:])) for y in (x.strip() for x in f.read().split(","))]
 
-
-
-
-maze = [(y[0], int(y[1:])) for y in (x.strip() for x in "R8, R4, R4, R8".split(","))]
-position = complex(0, 0)
-visited = [(int(position.real), int(position.imag))]
-
+position, current_turn, part2 = complex(0, 0), complex(-1, 0), None
+visited = {position}
 for turn, steps in maze:
-    position *= 1j if turn == "R" else -1j
-    for _ in range(steps):
-        position += 1
-    visited.append(position)
-    print(position)
-    breakpoint()
-    converted = (int(position.real), int(position.imag))
-    print(position)
-    if converted in visited:
-        print(converted)
-    visited.append((int(position.real), int(position.imag)))
-print(abs(int(position.real)) + abs(int(position.imag)))
+    current_turn *= -1j if turn == "R" else 1j
+    if part2 is None:
+        for _ in range(steps):
+            position += current_turn
+            if position in visited:
+                part2 = position
+                continue
+            visited.add(position)
+    else:
+        position += current_turn * steps
+
+assert isinstance(part2, complex)
+complex_sum = lambda x: sum(map(abs, (int(x.real), int(x.imag))))
+print("Part 1:", complex_sum(position))
+print("Part 2:", complex_sum(part2))
