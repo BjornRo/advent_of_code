@@ -8,7 +8,7 @@ for r_turn, steps in maze:
     if part2 is None:
         for _ in range(steps):
             position += current_turn
-            if position in visited:
+            if position in visited and part2 is None:
                 part2 = position
                 continue
             visited.add(position)
