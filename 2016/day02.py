@@ -22,6 +22,6 @@ def mission_improbable(keypad: tuple[tuple[str, ...], ...]):
     return code
 
 
-pad = lambda x: zip(*map(lambda y: ("0", *tuple(y), "0"), x))
+pad = lambda x: zip(*map(lambda y: ("0", *y, "0"), x))
 print("Part 1:", mission_improbable(tuple(pad(pad(("123", "456", "789"))))))
 print("Part 2:", mission_improbable(tuple(pad(pad(("00100", "02340", "56789", "0ABC0", "00D00"))))))
