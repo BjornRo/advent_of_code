@@ -12,6 +12,4 @@ def roomizer(wroom, total=0, pid=-1):
 
 
 with open("in/d4.txt") as f:
-    total, pid = roomizer(r.rstrip()[:-1].replace("[", "-").rsplit("-", 2) for r in f)
-    print("Part 1:", total)
-    print("Part 2:", pid)
+    print("Part 1: {}\nPart 2: {}".format(*roomizer(r.rstrip()[:-1].replace("[", "-").rsplit("-", 2) for r in f)))
