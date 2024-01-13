@@ -1,16 +1,15 @@
 def expand_data(comp_data: str, part2: bool, total=0, i=0, start_paren=False):
-    comp_len, data = len(comp_data), []
+    comp_len, data = len(comp_data), ""
     while i < comp_len:
         if comp_data[i] == ")":
-            x, y = map(int, "".join(data).split("x"))
+            x, y = map(int, data.split("x"))
             total += (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x) * y
             i += x
-            data *= 0
-            start_paren = False
+            start_paren, data = False, ""
         elif comp_data[i] == "(":
             start_paren = True
         elif start_paren:
-            data.append(comp_data[i])
+            data += comp_data[i]  # only a few chars, list-building less efficent.
         else:
             total += 1
         i += 1
