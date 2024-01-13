@@ -3,7 +3,7 @@ def expand_data(comp_data: str, part2: bool, total=0, i=0, start_paren=False):
     while i < comp_len:
         if comp_data[i] == ")":
             x, y = map(int, "".join(data).split("x"))
-            total += y * (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x)
+            total += (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x) * y
             i += x
             data *= 0
             start_paren = False
@@ -19,5 +19,5 @@ def expand_data(comp_data: str, part2: bool, total=0, i=0, start_paren=False):
 
 with open("in/d9.txt") as f:
     compress = f.read().strip()
-print("Part 1:", expand_data(compress, False))
-print("Part 2:", expand_data(compress, True))
+print("Part 1:", expand_data(compress, part2=False))
+print("Part 2:", expand_data(compress, part2=True))
