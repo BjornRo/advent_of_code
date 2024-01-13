@@ -1,10 +1,9 @@
 with open("in/d9.txt") as f:
     compressed = f.read().strip()
+MAX_LEN = len(compressed)
 
-max_len = len(compressed)
-total = i = 0
-data, start_paren = "", False
-while i < max_len:
+data, start_paren, total, i = "", False, 0, 0
+while i < MAX_LEN:
     if compressed[i] == ")":
         (x, y), data, start_paren = map(int, data.split("x")), "", False
         total += x * y
@@ -19,9 +18,8 @@ while i < max_len:
 print("Part 1", total)
 
 # Part 2
-total = i = 0
-data, start_paren = "", False
-while i < max_len:
+data, start_paren, total, i = "", False, 0, 0
+while i < MAX_LEN:
     if compressed[i] == ")":
         (x, y), data, start_paren = map(int, data.split("x")), "", False
         total += x * y
