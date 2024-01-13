@@ -1,10 +1,9 @@
 def expand_data(comp_data: str, part2: bool, total=0, i=0, start_paren=False, data=""):
     while i < len(comp_data):
         if comp_data[i] == ")":
-            x, y = map(int, data.split("x"))
+            (x, y), start_paren, data = map(int, data.split("x")), False, ""
             total += (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x) * y
             i += x
-            start_paren, data = False, ""
         elif comp_data[i] == "(":
             start_paren = True
         elif start_paren:
