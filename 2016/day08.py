@@ -11,7 +11,6 @@ for i in instructions:
             for i in range(row):
                 for j in range(col):
                     screen[i][j] = True
-            continue
         case [_, "row", *rp]:
             (row, pixel), new_vals = map(int, rp), [False] * COL
             for i in range(COL):
