@@ -1,40 +1,23 @@
-with open("in/d9.txt") as f:
-    compress = f.read().strip()
-MAX_LEN = len(compress)
-
-data, start_paren, total, i = "", False, 0, 0
-while i < MAX_LEN:
-    if compress[i] == ")":
-        (x, y), data, start_paren = map(int, data.split("x")), "", False
-        total += x * y
-        i += x
-    elif compress[i] == "(":
-        start_paren = True
-    elif start_paren:
-        data += compress[i]
-    else:
-        total += 1
-    i += 1
-print("Part 1", total)
-
-
-# Part 2
-def expand_data(comp_data: str):
-    comp_len = len(comp_data)
-    data, start_paren, total, i = "", False, 0, 0
+def expand_data(comp_data: str, part2: bool, total=0, i=0, start_paren=False):
+    comp_len, data = len(comp_data), []
     while i < comp_len:
         if comp_data[i] == ")":
-            (x, y), data, start_paren = map(int, data.split("x")), "", False
-            total += expand_data(comp_data[i + 1 : i + x + 1]) * y
+            x, y = map(int, "".join(data).split("x"))
+            total += y * (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x)
             i += x
+            data *= 0
+            start_paren = False
         elif comp_data[i] == "(":
             start_paren = True
         elif start_paren:
-            data += comp_data[i]
+            data.append(comp_data[i])
         else:
             total += 1
         i += 1
     return total
 
 
-print(expand_data(compress))
+with open("in/d9.txt") as f:
+    compress = f.read().strip()
+print("Part 1:", expand_data(compress, False))
+print("Part 2:", expand_data(compress, True))
