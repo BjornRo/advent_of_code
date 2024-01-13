@@ -5,14 +5,7 @@ with open("in/d7.txt") as f:
     abbas = tuple(abber(x.rstrip()) for x in f)
 
 
-def teeless(abba: str) -> bool:
-    for i in range(len(abba) - 3):
-        if abba[i : i + 2] == abba[i + 2 : i + 4][::-1] and abba[i] != abba[i + 1]:
-            return True
-    return False
-
-
-def snooper(abbas: tuple[tuple[str, ...], tuple[str, ...]]):
+def snooper(abbas: tuple[tuple[str, ...], tuple[str, ...]]) -> bool:
     for sq_sqrt, retval in zip(abbas, (False, True)):
         for s in sq_sqrt:
             for i in range(len(s) - 3):
@@ -21,4 +14,17 @@ def snooper(abbas: tuple[tuple[str, ...], tuple[str, ...]]):
     return False
 
 
-print(sum(snooper(a) for a in abbas))
+def listenor(sq: tuple[str, ...], sqrt: tuple[str, ...]) -> bool:
+    for s in sq:
+        for i in range(len(s) - 2):
+            a, b, c = s[i : i + 3]
+            if a == c and a != b:
+                t = b + a + b
+                for ss in sqrt:
+                    if t in ss:
+                        return True
+    return False
+
+
+print("Part 1:", sum(snooper(a) for a in abbas))
+print("Part 2:", sum(listenor(*a) for a in abbas))
