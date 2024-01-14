@@ -6,9 +6,9 @@ def expand_data(comp_data: str, part2: bool, total=0, i=0, data=""):
                 i += 1
             (x, y), data = map(int, data[1:].split("x")), ""
             total += (expand_data(comp_data[i + 1 : i + x + 1], part2) if part2 else x) * y
-            i += x + 1
-            continue
-        total += 1
+            i += x
+        else:
+            total += 1
         i += 1
     return total
 
