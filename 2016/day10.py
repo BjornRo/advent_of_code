@@ -20,12 +20,12 @@ while queue:
             chips[bot_id].append(value)
         case bot_id, outbot1, outbot_id1, outbot2, outbot_id2 if len(vals := chips[bot_id]) == 2:
             low, high = sorted(vals)
+            chips[bot_id] *= 0
             if low == 17 and high == 61:
                 part1 = bot_id
             for ob, ob_id, val in (outbot1, outbot_id1, low), (outbot2, outbot_id2, high):
                 target = chips if ob == "b" else outputs
                 target[ob_id].append(val)
-            chips[bot_id] *= 0
         case _:
             queue.append(i)
 
