@@ -11,9 +11,8 @@ def botnet(string: str):
 
 
 with open("in/d10.txt") as f:
-    instructions = tuple(sorted((botnet(s) for s in f), key=len))
-
-chips, outputs, queue, part1 = defaultdict(list[int]), defaultdict(list[int]), deque(instructions), None
+    queue = deque(sorted((botnet(s) for s in f), key=len))
+chips, outputs, part1 = defaultdict(list[int]), defaultdict(list[int]), None
 while queue:
     i = queue.popleft()
     match i:
