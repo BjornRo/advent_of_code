@@ -6,11 +6,13 @@ def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tup
     if elevator == MAX_LESS:
         return True
     gens, micro, powered = set(), set(), False
-    for e in (c for c in (*floor, *append) if c not in ignore):
+    for e in (c for c in floor if c not in ignore):
+        (micro if e[1] == "m" else gens).add(e[0])
+    for e in append:
         (micro if e[1] == "m" else gens).add(e[0])
     for m in tuple(micro):
         if m in gens:
-            powered = True # Optimization somehow?
+            powered = True
             micro.remove(m)
             gens.remove(m)
     return not ((powered and micro) or (gens and micro))
