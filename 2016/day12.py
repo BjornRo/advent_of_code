@@ -9,7 +9,7 @@ def assembly(a: int):
             case "dec", reg:
                 registers[reg] -= 1
             case "jnz", reg, val:
-                if (reg.isdigit() and int(reg) != 0) or registers[reg] != 0:
+                if (reg in registers and registers[reg] != 0) or (reg.isdigit() and int(reg) != 0):
                     pc += int(val) - 1
         pc += 1
     return registers["a"]
