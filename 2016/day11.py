@@ -52,15 +52,9 @@ def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
     return min_steps
 
 
-def mopper(string: str, items: list[str]) -> tuple:
-    for s in string.rstrip().split("a ")[1:]:
-        a, b = s.split()[:2]
-        items.append(a[0] + b[0])
-    return tuple(sorted(items))
-
-
+mopper = lambda string: tuple(sorted("".join(c[0] for c in s.split()[:2]) for s in string.rstrip().split("a ")[1:]))
 with open("in/d11.txt") as f:
-    init_floors1 = tuple(mopper(s, []) if i != 3 else () for i, s in enumerate(f))
+    init_floors1 = tuple(mopper(s) if i != 3 else () for i, s in enumerate(f))
 MAX_LESS = len(init_floors1) - 1
 print("Part 1:", levels(init_floors1))
 print("Part 2:", levels((tuple(sorted((*init_floors1[0], "eg", "em", "dg", "dm"))), *init_floors1[1:])))
