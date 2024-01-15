@@ -2,24 +2,15 @@ from collections import deque
 from itertools import permutations
 
 
-def mopper(string: str, items: list[str]) -> tuple:
-    for s in string.rstrip().split("a ")[1:]:
-        a, b = s.split()[:2]
-        items.append(a[0] + b[0])
-    return tuple(sorted(items))
-
-
 def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tuple = ()) -> bool:
     if elevator == MAX_LESS:
         return True
     gens, micro, powered = set(), set(), False
-    for e in (c for c in floor if c not in ignore):
-        (micro if e[1] == "m" else gens).add(e[0])
-    for e in append:
+    for e in (c for c in (*floor, *append) if c not in ignore):
         (micro if e[1] == "m" else gens).add(e[0])
     for m in tuple(micro):
         if m in gens:
-            powered = True
+            powered = True # Optimization somehow?
             micro.remove(m)
             gens.remove(m)
     return not ((powered and micro) or (gens and micro))
@@ -37,7 +28,7 @@ def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
         lvl, steps, floors = stack.popleft()
         if steps >= min_steps or (k := hash((lvl, floors))) in vis:
             continue
-        vis.add(k) # Visited requires floors to be sorted, otherwise it appears as a new state.
+        vis.add(k)  # Visited requires floors to be sorted, otherwise it appears as a new state.
         if len(floors[-1]) == END:
             if steps < min_steps:
                 min_steps = steps
@@ -57,6 +48,13 @@ def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
                     (prev, pfloor), (succ, sfloor) = sorted(((lvl, clvl), (next_lvl, nlvl)))
                     stack.append((next_lvl, steps + 1, (*floors[:prev], pfloor, sfloor, *floors[succ + 1 :])))
     return min_steps
+
+
+def mopper(string: str, items: list[str]) -> tuple:
+    for s in string.rstrip().split("a ")[1:]:
+        a, b = s.split()[:2]
+        items.append(a[0] + b[0])
+    return tuple(sorted(items))
 
 
 with open("in/d11.txt") as f:
