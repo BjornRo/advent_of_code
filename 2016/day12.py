@@ -1,6 +1,5 @@
 def assembly(a: int):
-    ins_len, pc, registers = len(instructions), 0, {k: 0 for k in "abcd"}
-    registers["c"] = a
+    ins_len, pc, registers = len(instructions), 0, {k: a if k == "c" else 0 for k in "abcd"}
     while pc < ins_len:
         match instructions[pc]:
             case "cpy", val, reg:
