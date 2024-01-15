@@ -18,7 +18,7 @@ def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tup
     return not ((powered and micro) or (gens and micro))
 
 
-def deep_fried(floor1: tuple[str, ...], elevator1: int, floor2: tuple[str, ...], elevator2: int, elem=()) -> bool:
+def deep_fried(floor1: tuple[str, ...], elevator1: int, floor2: tuple[str, ...], elevator2: int, elem: tuple) -> bool:
     return fried(floor1, elevator1, ignore=elem) and fried(floor2, elevator2, append=elem)
 
 
