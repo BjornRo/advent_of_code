@@ -17,6 +17,6 @@ def assembly(a: int):
 
 
 with open("in/d12.txt") as f:
-    instructions = [x.rstrip().split() for x in f]
+    instructions = tuple(x.rstrip().split() for x in f)
 print("Part 1:", assembly(0))
 print("Part 2:", assembly(1))
