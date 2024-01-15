@@ -7,11 +7,8 @@ with open("in/d1.txt") as f:
                 position += current_turn
                 if position in visited and part2 is None:
                     part2 = position
-                    continue
                 visited.add(position)
         else:
             position += current_turn * steps
-
-complex_sum = lambda x: sum(map(abs, map(int, (x.real, x.imag))))
-print("Part 1:", complex_sum(position))
-print("Part 2:", complex_sum(part2))
+for i, p in enumerate((position, part2), 1):
+    print(f"Part {i}:", sum(map(abs, map(int, (p.real, p.imag)))))  # type:ignore
