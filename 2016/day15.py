@@ -1,4 +1,4 @@
-def drop_it(discer: tuple[list[int], ...], start: int):
+def drop_it(discer: tuple[tuple[int, ...], ...], start: int):
     for i, (n_pos, curr_pos) in enumerate(discer, 1 + start):
         if (curr_pos + i) % n_pos != 0:
             return False
@@ -6,8 +6,8 @@ def drop_it(discer: tuple[list[int], ...], start: int):
 
 
 with open("in/d15.txt") as f:
-    discus = tuple([*map(int, (c for c in x.strip().replace(".", "").split() if c.isdigit()))] for x in f)
-part1, part2, discard = None, None, (*discus, [11, 0])
+    discus = tuple(tuple(map(int, (c for c in x.strip().replace(".", "").split() if c.isdigit()))) for x in f)
+part1, part2, discard = None, None, (*discus, (11, 0))
 for i in range(100_000_000_000):
     if part1 is None and drop_it(discus, i):
         part1 = i
