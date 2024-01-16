@@ -11,16 +11,16 @@ def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tup
         (micro if e[1] == "m" else gens).add(e[0])
     for m in tuple(micro):
         if m in gens:
-            powered = True
+            powered = True  # Optimizes in python, do not know why...
             micro.remove(m)
             gens.remove(m)
     return not ((powered and micro) or (gens and micro))
 
 
-def deep_fried(cf: tuple[str, ...], cl: int, nf: tuple[str, ...], nl: int, elem: tuple, ofloors: tuple):
-    if fried(cf, cl, ignore=elem) and fried(nf, nl, append=elem):
-        (p, pf), (s, sf) = sorted(((cl, tuple(x for x in cf if x not in elem)), (nl, tuple(sorted((*nf, *elem))))))
-        return (*ofloors[:p], pf, sf, *ofloors[s + 1 :])
+def deep_fried(c: int, l: int, elem: tuple, f: tuple):
+    if fried(f[c], c, ignore=elem) and fried(f[l], l, append=elem):  # Sort to know if next is above or below current
+        (p, pf), (s, sf) = sorted(((c, tuple(x for x in f[c] if x not in elem)), (l, tuple(sorted((*f[l], *elem))))))
+        return (*f[:p], pf, sf, *f[s + 1 :])
 
 
 def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
@@ -38,13 +38,12 @@ def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
             continue
         if 0 <= (nlvl := lvl - 1) < MLEN:
             for e in floors[lvl]:
-                if (flrs := deep_fried(floors[lvl], lvl, floors[nlvl], nlvl, (e,), floors)) is not None:
+                if (flrs := deep_fried(lvl, nlvl, (e,), floors)) is not None:
                     stack.append((nlvl, steps + 1, flrs))
         if 0 <= (nlvl := lvl + 1) < MLEN:
-            cfloor, nfloor = floors[lvl], floors[nlvl]
-            for i, a in enumerate(cfloor[:-1]):
-                for b in cfloor[i + 1 :]:
-                    if fried((a, b), 0) and (flrs := deep_fried(cfloor, lvl, nfloor, nlvl, (a, b), floors)) is not None:
+            for i, a in enumerate(floors[lvl][:-1]):
+                for b in floors[lvl][i + 1 :]:
+                    if fried((a, b), 0) and (flrs := deep_fried(lvl, nlvl, (a, b), floors)) is not None:
                         stack.append((nlvl, steps + 1, flrs))
     return min_steps
 
