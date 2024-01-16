@@ -24,7 +24,23 @@ for i in instructions:
             for i, v in enumerate(new_vals):
                 screen[i][col] = v
 
+display_to_ascii = {
+    (" ## ", "#  #", "#  #", "####", "#  #", "#  #"): "A",
+    ("### ", "#  #", "### ", "#  #", "#  #", "### "): "B",
+    ("####", "#   ", "### ", "#   ", "#   ", "#   "): "F",
+    ("  ##", "   #", "   #", "   #", "#  #", " ## "): "J",
+    ("### ", "#  #", "#  #", "### ", "#   ", "#   "): "P",
+    (" ###", "#   ", "#   ", " ## ", "   #", "### "): "S",
+    ("#  #", "#  #", "#  #", "#  #", "#  #", " ## "): "U",
+    ("####", "   #", "  # ", " #  ", "#   ", "####"): "Z",
+}
+letters, letter = [], []
+for i in zip(*screen):
+    if (s := "".join("#" if x else " " for x in i)) and "#" in s:
+        letter.append(s)
+    else:
+        letters.append(display_to_ascii[tuple("".join(x) for x in zip(*letter))])  # type:ignore
+        letter *= 0
+
 print("Part 1:", sum(c for row in screen for c in row))
-print("Part 2:")
-for i in screen:
-    print("   ", "".join("#" if x else " " for x in i))
+print("Part 2:", "".join(letters))
