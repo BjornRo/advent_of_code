@@ -1,5 +1,4 @@
 from collections import deque
-from itertools import permutations
 
 
 def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tuple = ()) -> bool:
@@ -18,8 +17,10 @@ def fried(floor: tuple[str, ...], elevator: int, ignore: tuple = (), append: tup
     return not ((powered and micro) or (gens and micro))
 
 
-def deep_fried(floor1: tuple[str, ...], elevator1: int, floor2: tuple[str, ...], elevator2: int, elem: tuple) -> bool:
-    return fried(floor1, elevator1, ignore=elem) and fried(floor2, elevator2, append=elem)
+def deep_fried(cf: tuple[str, ...], cl: int, nf: tuple[str, ...], nl: int, elem: tuple, ofloors: tuple):
+    if fried(cf, cl, ignore=elem) and fried(nf, nl, append=elem):
+        (p, pf), (s, sf) = sorted(((cl, tuple(x for x in cf if x not in elem)), (nl, tuple(sorted((*nf, *elem))))))
+        return (*ofloors[:p], pf, sf, *ofloors[s + 1 :])
 
 
 def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
@@ -35,20 +36,16 @@ def levels(start: tuple[tuple[str, ...], ...], min_steps=1 << 32):
             if steps < min_steps:
                 min_steps = steps
             continue
-        if 0 <= (next_lvl := lvl - 1) < MLEN:
-            curr_floor, next_floor = floors[lvl], floors[next_lvl]
-            for e in curr_floor:
-                if deep_fried(curr_floor, lvl, next_floor, next_lvl, (e,)):
-                    clvl, nlvl = tuple(x for x in curr_floor if x != e), tuple(sorted((*next_floor, e)))
-                    (prev, pfloor), (succ, sfloor) = sorted(((lvl, clvl), (next_lvl, nlvl)))
-                    stack.append((next_lvl, steps + 1, (*floors[:prev], pfloor, sfloor, *floors[succ + 1 :])))
-        if 0 <= (next_lvl := lvl + 1) < MLEN:
-            curr_floor, next_floor = floors[lvl], floors[next_lvl]
-            for p in permutations(curr_floor, 2):  # Return empty if less than n elems
-                if fried(p, 0) and deep_fried(curr_floor, lvl, next_floor, next_lvl, p):
-                    clvl, nlvl = tuple(x for x in curr_floor if x not in p), tuple(sorted((*next_floor, *p)))
-                    (prev, pfloor), (succ, sfloor) = sorted(((lvl, clvl), (next_lvl, nlvl)))
-                    stack.append((next_lvl, steps + 1, (*floors[:prev], pfloor, sfloor, *floors[succ + 1 :])))
+        if 0 <= (nlvl := lvl - 1) < MLEN:
+            for e in floors[lvl]:
+                if (flrs := deep_fried(floors[lvl], lvl, floors[nlvl], nlvl, (e,), floors)) is not None:
+                    stack.append((nlvl, steps + 1, flrs))
+        if 0 <= (nlvl := lvl + 1) < MLEN:
+            cfloor, nfloor = floors[lvl], floors[nlvl]
+            for i, a in enumerate(cfloor[:-1]):
+                for b in cfloor[i + 1 :]:
+                    if fried((a, b), 0) and (flrs := deep_fried(cfloor, lvl, nfloor, nlvl, (a, b), floors)) is not None:
+                        stack.append((nlvl, steps + 1, flrs))
     return min_steps
 
 
