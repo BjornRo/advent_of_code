@@ -1,16 +1,16 @@
 def its_a_bait(rows: int, total: int):
-    trapper, trap_len = [[False, False] + its_a_trap + [False, False]], len(its_a_trap) + 2
-    for i in range(rows - 1):
+    trapper, (t_len, tless, tr_len) = [False, False, *its_a_trap, False, False], (len(its_a_trap) + i for i in range(3))
+    for _ in range(rows - 1):
         next_trap = [False, False]
-        for j in range(1, trap_len):
-            match trapper[i][j : j + 3]:
+        for j in range(1, tless):
+            match trapper[j : j + 3]:
                 case [True, True, False] | [False, True, True] | [False, False, True] | [True, False, False]:
                     next_trap.append(True)
                 case _:
                     next_trap.append(False)
-        next_trap[trap_len:] = False, False
-        total += sum(not c for c in next_trap) - 4
-        trapper.append(next_trap)
+                    if j <= t_len:
+                        total += 1
+        trapper[2:tr_len] = next_trap[2:tr_len]
     return total
 
 
