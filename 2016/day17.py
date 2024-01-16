@@ -5,7 +5,7 @@ from hashlib import md5
 
 def in_the_closet(part2: bool):
     m_step = "" if part2 else ("B" * 1000)
-    q: deque[tuple[int, int, str]] = deque([(1, 1, d) for i, x in enumerate(C("")) if x in E and (d := L[i]) in "DR"])
+    q: deque[tuple[int, int, str]] = deque([(1, 1, l) for l, x in zip(L, C("")) if x in E and l in "DR"])
     while q:
         row, col, steps = q.popleft()
         match steps[-1]:
@@ -25,9 +25,9 @@ def in_the_closet(part2: bool):
             if not part2:
                 if len(steps) >= len(m_step):
                     continue
-            for i, b in enumerate(C(steps)):
-                if b in E:
-                    q.append((row, col, steps + L[i]))
+            for l, s in zip(L, C(steps)):
+                if s in E:
+                    q.append((row, col, steps + l))
     return m_step
 
 
