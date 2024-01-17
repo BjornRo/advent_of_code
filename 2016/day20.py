@@ -1,13 +1,11 @@
-with open("in/d20.txt") as f:
-    blocked = sorted(sorted(map(int, x.rstrip().split("-"))) for x in f)
-
-
 def find_holes(curr_min: int, curr_max: int, blocked: list[list[int]]):
     if not (blocked and (curr_min <= blocked[0][0] <= (curr_max + 1))):
         return (curr_min, curr_max), blocked  # Min,max and rest of the ranges
     return find_holes(curr_min, max(blocked[0][1], curr_max), blocked[1:])
 
 
+with open("in/d20.txt") as f:
+    blocked = sorted([*map(int, x.rstrip().split("-"))] for x in f)
 a, b = find_holes(blocked[0][0], blocked[0][1], blocked[1:])
 print("Part 1:", a[1] + 1)
 
