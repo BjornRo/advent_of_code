@@ -1,7 +1,5 @@
-def find_holes(curr_min: int, curr_max: int, blocked: list[list[int]]):
-    if not (blocked and (curr_min <= blocked[0][0] <= (curr_max + 1))):
-        return (curr_min, curr_max), blocked  # Min,max and rest of the ranges
-    return find_holes(curr_min, max(blocked[0][1], curr_max), blocked[1:])
+def find_holes(mi: int, ma: int, b: list[list[int]]):
+    return ((mi, ma), b) if not (b and (mi <= b[0][0] <= (ma + 1))) else find_holes(mi, max(b[0][1], ma), b[1:])
 
 
 with open("in/d20.txt") as f:
