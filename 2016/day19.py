@@ -27,21 +27,14 @@ for i in range(2, stealing_philosophers + 1):
 curr.next = start
 curr = start
 
-while True:
-    if curr.id == curr.next.id:
-        print(curr.id)  # type:ignore
-        break
-    curr.next = curr.next.next  # type:ignore
-    curr = curr.next  # type:ignore
+while curr.id != curr.next.id:
+    curr.next = curr.next.next
+    curr = curr.next
+print("Part 1:", curr.id)
 
-x = stealing_philosophers
-y = 3
-for _ in range(1000):
-    _y = y * 3
-    if _y > x:
-        print(x - y)
-        break
-    elif _y == x:
-        print(_y)
-        break
-    y = _y
+i = 3
+while i < stealing_philosophers:
+    i *= 3
+if not (i := (stealing_philosophers - i // 3)):
+    i = stealing_philosophers
+print("Part 2:", i)
