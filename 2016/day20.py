@@ -11,7 +11,7 @@ def find_holes(curr_min: int, curr_max: int, blocked: list[list[int]]):
 a, b = find_holes(blocked[0][0], blocked[0][1], blocked[1:])
 print("Part 1:", a[1] + 1)
 
-total_ips = 0  # Assuming first range starting with 0
+total_ips = a[0]
 while b:
     aa, b = find_holes(b[0][0], b[0][1], b[1:])
     total_ips += aa[0] - (a[1] + 1)
