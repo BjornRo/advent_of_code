@@ -3,8 +3,8 @@ def find_holes(mi: int, ma: int, b: list[list[int]]):
 
 
 with open("in/d20.txt") as f:
-    blocked = sorted([*map(int, x.rstrip().split("-"))] for x in f)
-a, b = find_holes(blocked[0][0], blocked[0][1], blocked[1:])
+    a, *blocked = sorted([*map(int, x.rstrip().split("-"))] for x in f)
+a, b = find_holes(a[0], a[1], blocked)
 print("Part 1:", a[1] + 1)
 
 total_ips = a[0]
