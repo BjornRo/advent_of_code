@@ -1,5 +1,5 @@
 def find_holes(mi: int, ma: int, b: list[list[int]]):
-    return ((mi, ma), b) if not (b and (mi <= b[0][0] <= (ma + 1))) else find_holes(mi, max(b[0][1], ma), b[1:])
+    return find_holes(mi, max(b[0][1], ma), b[1:]) if b and (mi <= b[0][0] <= (ma + 1)) else ((mi, ma), b)
 
 
 with open("in/d20.txt") as f:
