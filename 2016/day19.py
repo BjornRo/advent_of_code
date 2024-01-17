@@ -7,7 +7,16 @@ with open("in/d19.txt") as f:
 @dataclass
 class LinkedPhilosopher:
     id: int
-    next: "None | LinkedPhilosopher" = None
+    _next: "None | LinkedPhilosopher" = None
+
+    @property
+    def next(self) -> "LinkedPhilosopher":
+        assert isinstance(self._next, LinkedPhilosopher)
+        return self._next
+
+    @next.setter
+    def next(self, n: "LinkedPhilosopher") -> None:
+        self._next = n
 
 
 start = LinkedPhilosopher(1)
@@ -19,7 +28,7 @@ curr.next = start
 curr = start
 
 while True:
-    if curr.id == curr.next.id:  # type:ignore
+    if curr.id == curr.next.id:
         print(curr.id)  # type:ignore
         break
     curr.next = curr.next.next  # type:ignore
