@@ -1,4 +1,4 @@
-def assembly(ins_len: int, a_val: int, instructions: list[tuple[str, ...]], sensitivity: int, pc=0):
+def assembly(instructions: list[tuple[str, ...]], ins_len: int, a_val: int, sensitivity: int, pc=0):
     a, b, k, registers = set(), set(), 0, {k: a_val if k == "a" else 0 for k in "abcd"}
     while pc < ins_len:
         match instructions[pc]:
@@ -35,6 +35,6 @@ def assembly(ins_len: int, a_val: int, instructions: list[tuple[str, ...]], sens
 with open("in/d25.txt") as f:
     instructions = tuple(tuple(x.rstrip().split()) for x in f)
 for i in range(1_000):
-    if assembly(len(instructions), i, list(instructions), sensitivity=10):
+    if assembly(list(instructions), len(instructions), i, sensitivity=10):
         print("Part 1:", i)
         break
