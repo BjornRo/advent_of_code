@@ -7,7 +7,7 @@ def assembly(ins_len: int, registers: dict[str, int], pc=0):
                 registers[reg] += 1
             case "dec", reg:
                 registers[reg] -= 1
-            case "jnz", reg, val if (reg.isdigit() and int(reg) != 0) or (reg in registers and registers[reg] != 0):
+            case "jnz", reg, val if (reg.isdigit() and int(reg) != 0) or registers[reg] != 0:
                 pc += int(val) - 1
         pc += 1
     return registers["a"]
