@@ -24,27 +24,16 @@ def swap_block(a: Block, b: Block) -> bool:
 
 
 def move_up(curr_pos: tuple[int, int], steps=0):
-    while (npos := move_up_one(*curr_pos)) != curr_pos:
+    while (npos := mv_up_one(*curr_pos)) != curr_pos:
         steps += 1
         curr_pos = npos
     return steps, curr_pos
 
 
-def move_up_one(row: int, col: int):
-    return (r, col) if (r := row - 1) >= 0 and swap_block(grid[row][col], grid[r][col]) else (row, col)
-
-
-def move_down_one(row: int, col: int):
-    return (r, col) if (r := row + 1) > MAX_ROW and swap_block(grid[row][col], grid[r][col]) else (row, col)
-
-
-def move_left_one(row: int, col: int):
-    return (row, c) if (c := col - 1) >= 0 and swap_block(grid[row][col], grid[row][c]) else (row, col)
-
-
-def move_right_one(row: int, col: int):
-    return (row, c) if (c := col + 1) < MAX_COL and swap_block(grid[row][col], grid[row][c]) else (row, col)
-
+mv_up_one = lambda r, c: (y, c) if (y := r - 1) >= 0 and swap_block(grid[row][c], grid[y][c]) else (r, c)
+mv_down_one = lambda r, c: (y, c) if (y := r + 1) > MAX_ROW and swap_block(grid[r][c], grid[y][c]) else (r, c)
+mv_left_one = lambda r, c: (r, x) if (x := c - 1) >= 0 and swap_block(grid[r][c], grid[r][x]) else (r, c)
+mv_right_one = lambda r, c: (r, x) if (x := c + 1) < MAX_COL and swap_block(grid[r][c], grid[r][x]) else (r, c)
 
 MAX_COL, MAX_ROW = map(lambda x: int(x) + 1, fs[-1][:2])
 grid: list[list[Block]] = [[Block(0, 0)] * MAX_COL for _ in range(MAX_ROW)]
@@ -58,16 +47,16 @@ steps = 0
 while empty != (0, 1):
     steps, empty = move_up(empty)
     while empty != (0, 1):
-        empty = move_left_one(*empty)
+        empty = mv_left_one(*empty)
         steps += 1
         nsteps, empty = move_up(empty)
         steps += nsteps
         if nsteps:  # Test if we can move upwards
-            while empty != (nempty := move_right_one(*empty)):
+            while empty != (nempty := mv_right_one(*empty)):
                 empty = nempty
                 steps += 1
             while empty != (0, 1):
-                empty = move_right_one(*move_up_one(*move_left_one(*move_left_one(*move_down_one(*empty)))))
+                empty = mv_right_one(*mv_up_one(*mv_left_one(*mv_left_one(*mv_down_one(*empty)))))
                 steps += 5
 print("Part 1:", sum(viability(a, b) for a, b in permutations(fs, 2)))
 print("Part 2:", steps)
