@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from itertools import permutations
 
 with open("in/d22.txt") as f:
     f.readline()
@@ -56,5 +55,5 @@ while empty != (0, 1):
             empty = mv_right_one(*mv_up_one(*mv_left_one(*mv_left_one(*mv_down_one(*empty)))))
             steps += 5
 
-print("Part 1:", sum(used <= noodle(*b)[-1] for a, b in permutations(fs, 2) if (used := noodle(*a)[-2])))
+print("Part 1:", sum(used <= noodle(*b)[-1] for a in fs if (used := noodle(*a)[-2]) for b in fs if a != b))
 print("Part 2:", steps)
