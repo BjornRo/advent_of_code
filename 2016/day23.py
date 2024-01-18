@@ -1,21 +1,20 @@
-def assembly(ins_len: int, registers: dict[str, int], pc=0):
-    ins = list(instructions)
+def assembly(ins_len: int, registers: dict[str, int], instructions: list[tuple[str, ...]], pc=0):
     while pc < ins_len:
-        match ins[pc]:
+        match instructions[pc]:
             case "cpy", val, reg:
-                registers[reg] = int(val) if val.isdigit() else registers[val]
+                registers[reg] = int(val) if val[-1].isdigit() else registers[val]
             case "inc", reg:
                 registers[reg] += 1
             case "tgl", reg:
-                match ins[pc + registers[reg]]:
-                    case i, r1:
-                        ins[pc + registers[reg]] = ("dec" if i == "inc" else "inc", r1)
-                    case i, r1, r2:
-                        if i == "jnz":
-                            if not r2[-1].isdigit():
-                                ins[pc + registers[reg]] = ("cpy", r1, r2)
-                        else:
-                            ins[pc + registers[reg]] = ("jnz", r1, r2)
+                if (pcr := pc + registers[reg]) < ins_len:
+                    match instructions[pcr]:
+                        case i, r1:
+                            instructions[pcr] = ("dec" if i == "inc" else "inc", r1)
+                        case i, r1, r2:
+                            if i != "jnz":
+                                instructions[pcr] = ("jnz", r1, r2)
+                            elif not r2[-1].isdigit():
+                                instructions[pcr] = ("cpy", r1, r2)
             case "dec", reg:
                 registers[reg] -= 1
             case "jnz", r1, r2:
@@ -27,5 +26,5 @@ def assembly(ins_len: int, registers: dict[str, int], pc=0):
 
 with open("in/d23.txt") as f:
     instructions = tuple(tuple(x.rstrip().split()) for x in f)
-print("Part 1:", assembly(len(instructions), {k: 0 for k in "abcd"}))
-# print("Part 2:", assembly(len(instructions), {k: 1 if k == "c" else 0 for k in "abcd"}))
+print("Part 1:", assembly(len(instructions), {k: 7 if k == "a" else 0 for k in "abcd"}, list(instructions)))
+print("Part 2:", assembly(len(instructions), {k: 12 if k == "a" else 0 for k in "abcd"}, list(instructions)))
