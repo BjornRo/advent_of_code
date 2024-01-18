@@ -42,21 +42,19 @@ for col, row, size, used, _ in map(lambda x: noodle(*x), fs):
     if not used:
         empty = (row, col)
 
-steps = 0
+steps, empty = move_up(empty)
 while empty != (0, 1):
-    steps, empty = move_up(empty)
-    while empty != (0, 1):
-        empty = mv_left_one(*empty)
-        steps += 1
-        nsteps, empty = move_up(empty)
-        steps += nsteps
-        if nsteps:  # Test if we can move upwards
-            while empty != (nempty := mv_right_one(*empty)):
-                empty = nempty
-                steps += 1
-            while empty != (0, 1):
-                empty = mv_right_one(*mv_up_one(*mv_left_one(*mv_left_one(*mv_down_one(*empty)))))
-                steps += 5
+    empty = mv_left_one(*empty)
+    steps += 1
+    nsteps, empty = move_up(empty)
+    steps += nsteps
+    if nsteps:  # Test if we can move upwards
+        while empty != (nempty := mv_right_one(*empty)):
+            empty = nempty
+            steps += 1
+        while empty != (0, 1):
+            empty = mv_right_one(*mv_up_one(*mv_left_one(*mv_left_one(*mv_down_one(*empty)))))
+            steps += 5
 
 print("Part 1:", sum(used <= noodle(*b)[-1] for a, b in permutations(fs, 2) if (used := noodle(*a)[-2])))
 print("Part 2:", steps)
