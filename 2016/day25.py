@@ -25,7 +25,7 @@ def assembly(ins_len: int, registers: dict[str, int], instructions: list[tuple[s
                 (a if k % 2 == 0 else b).add(registers[reg])
                 if len(a) >= 2 or len(b) >= 2:
                     return False
-                if k >= 10: # Increase for higher sensitivity
+                if k >= 10:  # Increase for higher sensitivity
                     return True
                 k += 1
         pc += 1
