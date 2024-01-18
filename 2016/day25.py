@@ -22,13 +22,10 @@ def assembly(ins_len: int, registers: dict[str, int], instructions: list[tuple[s
                 if (int(r1) if r1[-1].isdigit() else registers[r1]) != 0:
                     pc += (int(r2) if r2[-1].isdigit() else registers[r2]) - 1
             case "out", reg:
-                if k % 2 == 0:
-                    a.add(registers[reg])
-                else:
-                    b.add(registers[reg])
+                (a if k % 2 == 0 else b).add(registers[reg])
                 if len(a) >= 2 or len(b) >= 2:
                     return False
-                if k >= 10000:
+                if k >= 10: # Increase for higher sensitivity
                     return True
                 k += 1
         pc += 1
