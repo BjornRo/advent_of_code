@@ -2,9 +2,8 @@ from collections import defaultdict, deque
 
 
 def num_theory(vent: tuple[tuple[int, ...], ...], number: int, start: tuple[int, int]):
-    visited = set()  # Position, Steps
+    min_steps, visited = 1 << 32, set()
     queue: deque[tuple[int, int, int]] = deque([(*start, 0)])
-    min_steps = 1 << 32
     while queue:
         row, col, steps = queue.popleft()
         if vent[row][col] == number:
@@ -21,8 +20,8 @@ def num_theory(vent: tuple[tuple[int, ...], ...], number: int, start: tuple[int,
 
 
 def cartographer(chart: dict[int, dict[int, int]], part2: bool):
-    queue: deque[tuple[int, set[int], int]] = deque([(0, {0}, 0)])  # Pos, Visited, Steps
     min_steps, end = 1 << 32, {*chart.keys()}
+    queue: deque[tuple[int, set[int], int]] = deque([(0, {0}, 0)])
     while queue:
         pos, visited, steps = queue.popleft()
         if visited == end:
