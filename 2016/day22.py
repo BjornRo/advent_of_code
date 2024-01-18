@@ -21,17 +21,11 @@ def swap_block(a: Block, b: Block) -> bool:
     return False
 
 
-def move_up(curr_pos: tuple[int, int], steps=0):
-    while (npos := mv_up_one(*curr_pos)) != curr_pos:
-        steps += 1
-        curr_pos = npos
-    return steps, curr_pos
-
-
 mv_up_one = lambda r, c: (y, c) if (y := r - 1) >= 0 and swap_block(grid[row][c], grid[y][c]) else (r, c)
 mv_down_one = lambda r, c: (y, c) if (y := r + 1) > MAX_ROW and swap_block(grid[r][c], grid[y][c]) else (r, c)
 mv_left_one = lambda r, c: (r, x) if (x := c - 1) >= 0 and swap_block(grid[r][c], grid[r][x]) else (r, c)
 mv_right_one = lambda r, c: (r, x) if (x := c + 1) < MAX_COL and swap_block(grid[r][c], grid[r][x]) else (r, c)
+mv_up = lambda c_pos, steps=0: (steps, c_pos) if (npos := mv_up_one(*c_pos)) == c_pos else mv_up(npos, steps + 1)
 
 MAX_COL, MAX_ROW = map(lambda x: int(x) + 1, fs[-1][:2])
 grid: list[list[Block]] = [[Block(0, 0)] * MAX_COL for _ in range(MAX_ROW)]
@@ -41,11 +35,11 @@ for col, row, size, used, _ in map(lambda x: noodle(*x), fs):
     if not used:
         empty = (row, col)
 
-steps, empty = move_up(empty)
+steps, empty = mv_up(empty)
 while empty != (0, 1):
     empty = mv_left_one(*empty)
     steps += 1
-    nsteps, empty = move_up(empty)
+    nsteps, empty = mv_up(empty)
     steps += nsteps
     if nsteps:  # Test if we can move upwards
         while empty != (nempty := mv_right_one(*empty)):
