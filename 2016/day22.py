@@ -7,7 +7,6 @@ with open("in/d22.txt") as f:
     fs = [x.rstrip().rsplit("/", 1)[1].replace("node-x", "").replace("-y", " ").split() for x in f]
 
 noodle = lambda row, col, size, use, avail, *_: (int(row), int(col), int(size[:-1]), int(use[:-1]), int(avail[:-1]))
-viability = lambda node_a, node_b: (used := noodle(*node_a)[-2]) and (used <= noodle(*node_b)[-1])
 
 
 @dataclass
@@ -58,5 +57,6 @@ while empty != (0, 1):
             while empty != (0, 1):
                 empty = mv_right_one(*mv_up_one(*mv_left_one(*mv_left_one(*mv_down_one(*empty)))))
                 steps += 5
-print("Part 1:", sum(viability(a, b) for a, b in permutations(fs, 2)))
+
+print("Part 1:", sum(used <= noodle(*b)[-1] for a, b in permutations(fs, 2) if (used := noodle(*a)[-2])))
 print("Part 2:", steps)
