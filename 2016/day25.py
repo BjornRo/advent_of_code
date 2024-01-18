@@ -1,6 +1,3 @@
-from itertools import pairwise
-
-
 def assembly(ins_len: int, registers: dict[str, int], instructions: list[tuple[str, ...]], pc=0):
     a, b, k = set(), set(), 0
     while pc < ins_len:
