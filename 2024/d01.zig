@@ -5,10 +5,11 @@ const time = std.time;
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
     defer {
         const end = time.nanoTimestamp();
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000_000);
-        std.io.getStdOut().writer().print("Time taken: {d:.10}s\n", .{elapsed}) catch {};
+        writer.print("Time taken: {d:.10}s\n", .{elapsed}) catch {};
     }
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
