@@ -11,6 +11,31 @@ pub inline fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     return buffer;
 }
 
+pub fn getFirstAppArg(allocator: Allocator) ![]u8 {
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    return try std.mem.Allocator.dupe(allocator, u8, args[args.len - 1]);
+}
+
+pub fn combinePrefixAndFilename(
+    allocator: *std.mem.Allocator,
+    prefix: []const u8,
+    filename: []const u8,
+) ![]u8 {
+    const totalLength = prefix.len + filename.len;
+
+    // Allocate memory for the combined string
+    var result = try allocator.alloc(u8, totalLength);
+
+    // Copy the prefix into the result
+    result[0..prefix.len].copy(prefix);
+
+    // Copy the filename into the result
+    result[prefix.len..].copy(filename);
+
+    return result;
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),
