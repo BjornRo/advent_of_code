@@ -1,1 +1,7 @@
 in/
+.zig-cache/
+zig-out/
+*.exe
+*.o
+!*.*
+

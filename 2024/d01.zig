@@ -10,11 +10,14 @@ pub fn main() !void {
     defer {
         const end = time.nanoTimestamp();
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000_000);
-        writer.print("Time taken: {d:.10}s\n", .{elapsed}) catch {};
+        writer.print("\nTime taken: {d:.10}s\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    // const allocator = gpa.allocator();
+    var buffer: [70_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getFirstAppArg(allocator);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -37,9 +40,25 @@ pub fn main() !void {
     }
     std.mem.sort(i32, left.items, {}, std.sort.asc(i32));
     std.mem.sort(i32, right.items, {}, std.sort.asc(i32));
-    var sum: i64 = 0;
-    for (left.items, 0..) |elem, i| {
-        sum += @as(i64, @abs(elem - right.items[i]));
+
+    var counter = std.AutoHashMap(i32, i32).init(allocator);
+    defer counter.deinit();
+
+    var p1_sum: i64 = 0;
+    for (left.items, 0..) |left_elem, i| {
+        const right_elem = right.items[i];
+        p1_sum += @abs(left_elem - right_elem);
+
+        const count = counter.get(right_elem) orelse 0;
+        try counter.put(right_elem, count + 1);
     }
-    myf.printAny(sum);
+    try writer.print("Part 1: {d}\n", .{p1_sum});
+
+    // P2
+    var p2_sum: i64 = 0;
+    for (left.items) |elem| {
+        p2_sum += elem * (counter.get(elem) orelse 0);
+    }
+
+    try writer.print("Part 2: {d}\n", .{p2_sum});
 }
