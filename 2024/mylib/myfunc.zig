@@ -20,10 +20,7 @@ pub inline fn getFirstAppArg(allocator: Allocator) ![]u8 {
 pub inline fn getDelimType(text: []const u8) !enum { CRLF, LF } {
     for (1..text.len - 1) |i| {
         if (text[i] == '\n') {
-            if (text[i - 1] == '\r') {
-                return .CRLF;
-            }
-            return .LF;
+            return if (text[i - 1] == '\r') .CRLF else .LF;
         }
     }
     return error.NoDelimFound;
