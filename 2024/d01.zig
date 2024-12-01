@@ -29,36 +29,33 @@ pub fn main() !void {
     var right = std.ArrayList(i32).init(allocator);
     defer inline for (.{ left, right }) |res| res.deinit();
 
+    var counter = std.AutoHashMap(i32, i32).init(allocator);
+    defer counter.deinit();
+
     var input_iter = std.mem.splitAny(u8, input, "\r\n|\n");
     while (input_iter.next()) |row| {
         if (row.len == 0) continue;
         var row_iter = std.mem.splitSequence(u8, row, "   ");
         const _left = try std.fmt.parseInt(i32, row_iter.next().?, 10);
         const _right = try std.fmt.parseInt(i32, row_iter.next().?, 10);
+
         try left.append(_left);
         try right.append(_right);
+
+        const count = counter.get(_right) orelse 0;
+        try counter.put(_right, count + 1);
     }
     std.mem.sort(i32, left.items, {}, std.sort.asc(i32));
     std.mem.sort(i32, right.items, {}, std.sort.asc(i32));
 
-    var counter = std.AutoHashMap(i32, i32).init(allocator);
-    defer counter.deinit();
-
     var p1_sum: i64 = 0;
+    var p2_sum: i64 = 0;
     for (left.items, 0..) |left_elem, i| {
         const right_elem = right.items[i];
+
         p1_sum += @abs(left_elem - right_elem);
-
-        const count = counter.get(right_elem) orelse 0;
-        try counter.put(right_elem, count + 1);
-    }
-    try writer.print("Part 1: {d}\n", .{p1_sum});
-
-    // P2
-    var p2_sum: i64 = 0;
-    for (left.items) |elem| {
-        p2_sum += elem * (counter.get(elem) orelse 0);
+        p2_sum += left_elem * (counter.get(left_elem) orelse 0);
     }
 
-    try writer.print("Part 2: {d}\n", .{p2_sum});
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
