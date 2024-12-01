@@ -3,7 +3,6 @@ in/
 zig-out/
 *.exe
 *.o
-!*.*
 *.obj
 *.pdb
-
+!*.*
