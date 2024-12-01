@@ -50,9 +50,7 @@ pub fn main() !void {
 
     var p1_sum: i64 = 0;
     var p2_sum: i64 = 0;
-    for (left.items, 0..) |left_elem, i| {
-        const right_elem = right.items[i];
-
+    for (left.items, right.items) |left_elem, right_elem| {
         p1_sum += @abs(left_elem - right_elem);
         p2_sum += left_elem * (counter.get(left_elem) orelse 0);
     }
