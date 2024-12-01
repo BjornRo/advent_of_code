@@ -17,6 +17,18 @@ pub inline fn getFirstAppArg(allocator: Allocator) ![]u8 {
     return try std.mem.Allocator.dupe(allocator, u8, args[args.len - 1]);
 }
 
+pub inline fn getDelimType(text: []const u8) !enum { CRLF, LF } {
+    for (1..text.len - 1) |i| {
+        if (text[i] == '\n') {
+            if (text[i - 1] == '\r') {
+                return .CRLF;
+            }
+            return .LF;
+        }
+    }
+    return error.NoDelimFound;
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),

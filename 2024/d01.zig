@@ -1,6 +1,7 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
 const Deque = @import("mylib/deque.zig").Deque;
+const builtin = @import("builtin");
 const expect = std.testing.expect;
 const time = std.time;
 
@@ -32,10 +33,11 @@ pub fn main() !void {
     var counter = std.AutoHashMap(i32, i32).init(allocator);
     defer counter.deinit();
 
-    var input_iter = std.mem.splitAny(u8, input, "\r\n|\n");
+    const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
+    var input_iter = std.mem.splitSequence(u8, input, delim);
     while (input_iter.next()) |row| {
         if (row.len == 0) continue;
-        var row_iter = std.mem.splitSequence(u8, row, "   ");
+        var row_iter = std.mem.splitSequence(u8, row, " " ** 3);
         const _left = try std.fmt.parseInt(i32, row_iter.next().?, 10);
         const _right = try std.fmt.parseInt(i32, row_iter.next().?, 10);
 
