@@ -11,7 +11,7 @@ pub inline fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     return buffer;
 }
 
-pub fn getFirstAppArg(allocator: Allocator) ![]u8 {
+pub inline fn getFirstAppArg(allocator: Allocator) ![]u8 {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
     return try std.mem.Allocator.dupe(allocator, u8, args[args.len - 1]);
