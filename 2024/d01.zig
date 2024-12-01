@@ -1,6 +1,6 @@
 const std = @import("std");
-const myf = @import("myfunc.zig");
-const Deque = @import("deque.zig").Deque;
+const myf = @import("mylib/myfunc.zig");
+const Deque = @import("mylib/deque.zig").Deque;
 const expect = std.testing.expect;
 const time = std.time;
 
