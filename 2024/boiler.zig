@@ -1,5 +1,5 @@
 const std = @import("std");
-const myf = @import("myfunc.zig");
+const myf = @import("mylib/myfunc.zig");
 const expect = std.testing.expect;
 const time = std.time;
 
@@ -9,7 +9,7 @@ pub fn main() !void {
     defer {
         const end = time.nanoTimestamp();
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000_000);
-        writer.print("Time taken: {d:.10}s\n", .{elapsed}) catch {};
+        writer.print("\nTime taken: {d:.10}s\n", .{elapsed}) catch {};
     }
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
