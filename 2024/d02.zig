@@ -28,12 +28,12 @@ pub fn main() !void {
 
     const S = struct {
         inline fn safe(a: T, b: T, increasing: bool, diff: T) bool {
-            if (@abs(a - b) <= diff) {
-                if (increasing) {
-                    if (a < b) return true;
-                } else {
-                    if (a > b) return true;
-                }
+            if (increasing) {
+                const res = b - a;
+                if (0 < res and res <= diff) return true;
+            } else {
+                const res = a - b;
+                if (0 < res and res <= diff) return true;
             }
             return false;
         }
