@@ -55,15 +55,18 @@ pub fn main() !void {
     var p1_sum: T = 0;
     var p2_sum: T = 0;
 
+    var row = std.ArrayList(T).init(allocator);
+    var masked_row = std.ArrayList(T).init(allocator);
+    inline for (.{ row, masked_row }) |r| r.deinit();
+
     const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
     var input_iter = std.mem.splitSequence(u8, input, delim);
     while (input_iter.next()) |row_str| {
         if (row_str.len == 0) continue;
-        var row = std.ArrayList(T).init(allocator);
-        defer row.deinit();
 
         var row_iter = std.mem.splitScalar(u8, row_str, ' ');
         while (row_iter.next()) |scalar| try row.append(try std.fmt.parseInt(T, scalar, 10));
+        defer row.clearRetainingCapacity();
 
         if (S.safe_row(row.items)) {
             p1_sum += 1;
@@ -72,8 +75,7 @@ pub fn main() !void {
         }
         const slice = row.items;
         for (0..slice.len) |i| {
-            var masked_row = std.ArrayList(T).init(allocator);
-            defer masked_row.deinit();
+            defer masked_row.clearRetainingCapacity();
             for (0..slice.len) |j| {
                 if (i == j) continue;
                 try masked_row.append(slice[j]);
