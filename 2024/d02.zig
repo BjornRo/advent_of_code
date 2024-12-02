@@ -56,8 +56,9 @@ pub fn main() !void {
     var p2_sum: T = 0;
 
     var row = std.ArrayList(T).init(allocator);
-    var masked_row = std.ArrayList(T).init(allocator);
-    inline for (.{ row, masked_row }) |r| r.deinit();
+    row.deinit();
+
+    var filter_row: [12]T = undefined;
 
     const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
     var input_iter = std.mem.splitSequence(u8, input, delim);
@@ -74,13 +75,11 @@ pub fn main() !void {
             continue;
         }
         const slice = row.items;
-        for (0..slice.len) |i| {
-            defer masked_row.clearRetainingCapacity();
-            for (0..slice.len) |j| {
-                if (i == j) continue;
-                try masked_row.append(slice[j]);
-            }
-            if (S.safe_row(masked_row.items)) {
+        const slice_len = slice.len;
+        for (0..slice_len) |i| {
+            @memcpy(filter_row[0..i], slice[0..i]);
+            @memcpy(filter_row[i .. slice_len - 1], slice[i + 1 .. slice_len]);
+            if (S.safe_row(filter_row[0 .. slice_len - 1])) {
                 p2_sum += 1;
                 break;
             }
