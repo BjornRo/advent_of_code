@@ -23,7 +23,7 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-    const T = i32;
+    const T = i16;
     const MAX_DIFF = 3;
 
     const S = struct {
@@ -55,26 +55,28 @@ pub fn main() !void {
     var p1_sum: T = 0;
     var p2_sum: T = 0;
 
-    var row = std.ArrayList(T).init(allocator);
-    row.deinit();
-
-    var filter_row: [12]T = undefined;
+    const ASSUME_MAX_ROW = 12;
+    var row: [ASSUME_MAX_ROW]T = undefined;
+    var filter_row: [ASSUME_MAX_ROW - 1]T = undefined;
 
     const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
     var input_iter = std.mem.splitSequence(u8, input, delim);
     while (input_iter.next()) |row_str| {
         if (row_str.len == 0) continue;
 
+        var idx: usize = 0;
         var row_iter = std.mem.splitScalar(u8, row_str, ' ');
-        while (row_iter.next()) |scalar| try row.append(try std.fmt.parseInt(T, scalar, 10));
-        defer row.clearRetainingCapacity();
+        while (row_iter.next()) |value| {
+            row[idx] = try std.fmt.parseInt(T, value, 10);
+            idx += 1;
+        }
 
-        if (S.safe_row(row.items)) {
+        const slice = row[0..idx];
+        if (S.safe_row(slice)) {
             p1_sum += 1;
             p2_sum += 1;
             continue;
         }
-        const slice = row.items;
         const slice_len = slice.len;
         for (0..slice_len) |i| {
             @memcpy(filter_row[0..i], slice[0..i]);
