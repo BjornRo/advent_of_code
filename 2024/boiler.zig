@@ -14,6 +14,9 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
     const allocator = gpa.allocator();
+    // var buffer: [70_000]u8 = undefined;
+    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    // const allocator = fba.allocator();
 
     const filename = try myf.getFirstAppArg(allocator);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
