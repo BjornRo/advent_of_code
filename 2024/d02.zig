@@ -34,28 +34,52 @@ pub fn main() !void {
             }
             return false;
         }
+        fn safe_row(row: []T) bool {
+            var prev = row[0];
+            var curr = row[1];
+            if (prev == curr or @abs(prev - curr) > MAX_DIFF) return false;
+            const increasing = prev < curr;
+
+            for (1..row.len) |i| {
+                curr = row[i];
+                if (!safe(prev, curr, increasing, MAX_DIFF)) return false;
+                prev = curr;
+            }
+            return true;
+        }
     };
 
     var p1_sum: T = 0;
+    var p2_sum: T = 0;
 
     const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
     var input_iter = std.mem.splitSequence(u8, input, delim);
-    while (input_iter.next()) |row| {
-        if (row.len == 0) continue;
+    while (input_iter.next()) |row_str| {
+        if (row_str.len == 0) continue;
+        var row = std.ArrayList(T).init(allocator);
+        defer row.deinit();
 
-        var row_iter = std.mem.splitScalar(u8, row, ' ');
-        var prev = try std.fmt.parseInt(T, row_iter.next().?, 10);
-        var curr = try std.fmt.parseInt(T, row_iter.next().?, 10);
-        if (prev == curr or @abs(prev - curr) > MAX_DIFF) continue;
-        const increasing = prev < curr;
-        prev = curr;
-        while (row_iter.next()) |next_scalar| {
-            curr = try std.fmt.parseInt(T, next_scalar, 10);
-            if (!S.safe(prev, curr, increasing, MAX_DIFF)) break;
-            prev = curr;
-        } else {
+        var row_iter = std.mem.splitScalar(u8, row_str, ' ');
+        while (row_iter.next()) |scalar| try row.append(try std.fmt.parseInt(T, scalar, 10));
+
+        if (S.safe_row(row.items)) {
             p1_sum += 1;
+            p2_sum += 1;
+            continue;
+        }
+        const slice = row.items;
+        for (0..slice.len) |i| {
+            var masked_row = std.ArrayList(T).init(allocator);
+            defer masked_row.deinit();
+            for (0..slice.len) |j| {
+                if (i == j) continue;
+                try masked_row.append(slice[j]);
+            }
+            if (S.safe_row(masked_row.items)) {
+                p2_sum += 1;
+                break;
+            }
         }
     }
-    try writer.print("{d}\n", .{p1_sum});
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
