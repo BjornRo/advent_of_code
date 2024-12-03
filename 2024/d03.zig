@@ -26,7 +26,6 @@ pub fn main() !void {
     const T = u64;
     const TR = struct {
         const Self = @This();
-        const fail = RetType{ .result = .FAIL, .next = Self.m_or_d };
         const Result = enum { OK, FAIL, ACCEPT };
         const RetType = struct {
             result: Result,
@@ -34,7 +33,9 @@ pub fn main() !void {
         };
         const FnType = *const fn (u8) RetType;
 
-        fn retFactory(res: Result, next: FnType) RetType {
+        const fail = RetType{ .result = .FAIL, .next = Self.m_or_d };
+
+        inline fn retFactory(res: Result, next: FnType) RetType {
             return .{ .result = res, .next = next };
         }
         fn m_or_d(char: u8) RetType {
@@ -105,8 +106,7 @@ pub fn main() !void {
     var found_substr = false;
     var found_start: T = 0;
     while (i < input.len) : (i += 1) {
-        const char = input[i];
-        const res = f(char);
+        const res = f(input[i]);
         switch (res.result) {
             .OK => {
                 if (!found_substr) {
@@ -116,8 +116,8 @@ pub fn main() !void {
                 f = res.next;
             },
             .FAIL => {
-                found_substr = false;
                 f = TR.m_or_d;
+                found_substr = false;
             },
             .ACCEPT => {
                 f = TR.m_or_d;
