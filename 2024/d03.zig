@@ -23,7 +23,6 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-    const T = u64;
     const TR = struct {
         const Self = @This();
         const Result = enum { OK, FAIL, ACCEPT };
@@ -32,7 +31,6 @@ pub fn main() !void {
             next: *const fn (u8) RetType,
         };
         const FnType = *const fn (u8) RetType;
-
         const fail = RetType{ .result = .FAIL, .next = Self.m_or_d };
 
         inline fn retFactory(res: Result, next: FnType) RetType {
@@ -97,44 +95,42 @@ pub fn main() !void {
         }
     };
 
-    var p1_sum: T = 0;
-    var p2_sum: T = 0;
+    var p1_sum: u64 = 0;
+    var p2_sum: u64 = 0;
 
     var f: TR.FnType = TR.m_or_d;
-    var i: T = 0;
+    var i: u16 = 0;
     var active = true;
-    var found_substr = false;
-    var found_start: T = 0;
+    var found_start: i32 = -1;
     while (i < input.len) : (i += 1) {
         const res = f(input[i]);
         switch (res.result) {
             .OK => {
-                if (!found_substr) {
-                    found_substr = true;
+                if (found_start == -1) {
                     found_start = i;
                 }
                 f = res.next;
             },
             .FAIL => {
                 f = TR.m_or_d;
-                found_substr = false;
+                found_start = -1;
             },
             .ACCEPT => {
+                if (input[@intCast(found_start)] == 'd') {
+                    active = input[@intCast(found_start + 2)] == '(';
+                } else {
+                    const slice = input[@intCast(found_start)..i];
+                    const comma_idx = std.mem.indexOf(u8, slice, ",").?;
+                    const left = try std.fmt.parseInt(u32, slice[4..comma_idx], 10);
+                    const right = try std.fmt.parseInt(u32, slice[comma_idx + 1 ..], 10);
+                    const result = left * right;
+                    p1_sum += result;
+                    if (active) {
+                        p2_sum += result;
+                    }
+                }
                 f = TR.m_or_d;
-                found_substr = false;
-                if (input[found_start] == 'd') {
-                    active = input[found_start + 2] == '(';
-                    continue;
-                }
-                const slice = input[found_start..i];
-                const comma_idx = std.mem.indexOf(u8, slice, ",").?;
-                const left = try std.fmt.parseInt(u32, slice[4..comma_idx], 10);
-                const right = try std.fmt.parseInt(u32, slice[comma_idx + 1 ..], 10);
-                const result = left * right;
-                p1_sum += result;
-                if (active) {
-                    p2_sum += result;
-                }
+                found_start = -1;
             },
         }
     }
