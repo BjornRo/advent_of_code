@@ -23,18 +23,17 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-
-    const test_str = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
-
     const T = u32;
     const TR = struct {
         const Self = @This();
+        const Result = enum { OK, FAIL, ACCEPT };
+        const FnType = *const fn ([]const u8, T) RetType;
         const RetType = struct {
-            result: enum { OK, FAIL, ACCEPT },
-            next: fn ([]const u8, usize) RetType,
+            result: Result,
+            next: *const fn ([]const u8, T) RetType,
         };
         const fail = RetType{ .result = .FAIL, .next = Self.m };
-        fn retFactory(res: RetType.result, next: RetType.next) RetType {
+        fn retFactory(res: Self.Result, next: Self.FnType) RetType {
             return .{ .result = res, .next = next };
         }
 
@@ -43,15 +42,15 @@ pub fn main() !void {
             return Self.fail;
         }
         fn u(in: []const u8, index: T) RetType {
-            if (in[index] == 'm') return retFactory(.OK, Self.l);
+            if (in[index] == 'u') return retFactory(.OK, Self.l);
             return Self.fail;
         }
         fn l(in: []const u8, index: T) RetType {
-            if (in[index] == 'm') return retFactory(.OK, Self.lpar);
+            if (in[index] == 'l') return retFactory(.OK, Self.lpar);
             return Self.fail;
         }
         fn lpar(in: []const u8, index: T) RetType {
-            if (in[index] == 'm') return retFactory(.OK, Self.ldigit);
+            if (in[index] == '(') return retFactory(.OK, Self.ldigit);
             return Self.fail;
         }
         fn ldigit(in: []const u8, index: T) RetType {
@@ -65,11 +64,43 @@ pub fn main() !void {
         }
         fn rdigit(in: []const u8, index: T) RetType {
             if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.rdigit);
-            if (in[index] == ')') return retFactory(.OK, Self.rpar);
+            if (in[index] == ')') return retFactory(.ACCEPT, Self.m); // Accepting
             return Self.fail;
         }
-        fn rpar(_: []const u8, _: T) RetType { // accept
-            return retFactory(.ACCEPT, Self.m);
-        }
     };
+
+    // const test_str = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
+    var p1_sum: T = 0;
+    p1_sum += 1;
+    p1_sum -= 1;
+
+    var f: TR.FnType = TR.m;
+    var i: T = 0;
+    var found_substr = false;
+    var found_start: T = 0;
+    while (i < input.len) : (i += 1) {
+        const res = f(input, i);
+        switch (res.result) {
+            .OK => {
+                if (!found_substr) {
+                    found_substr = true;
+                    found_start = i;
+                }
+                f = res.next;
+            },
+            .FAIL => {
+                found_substr = false;
+                f = TR.m;
+            },
+            .ACCEPT => {
+                // TODO parse the string
+                found_substr = false;
+                const slice = input[found_start .. i + 1];
+                try writer.print("{s}\n", .{slice});
+                p1_sum += 1;
+                f = TR.m;
+            },
+        }
+    }
+    myf.printAny(p1_sum);
 }
