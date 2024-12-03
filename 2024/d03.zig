@@ -122,11 +122,11 @@ pub fn main() !void {
             .ACCEPT => {
                 f = TR.m_or_d;
                 found_substr = false;
-                const slice = input[found_start..i];
-                if (slice[0] == 'd') {
-                    active = slice[2] == '(';
+                if (input[found_start] == 'd') {
+                    active = input[found_start + 2] == '(';
                     continue;
                 }
+                const slice = input[found_start..i];
                 const comma_idx = std.mem.indexOf(u8, slice, ",").?;
                 const left = try std.fmt.parseInt(u32, slice[4..comma_idx], 10);
                 const right = try std.fmt.parseInt(u32, slice[comma_idx + 1 ..], 10);
