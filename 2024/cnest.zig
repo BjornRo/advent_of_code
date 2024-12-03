@@ -16,8 +16,12 @@ pub fn make_example(allocator: std.mem.Allocator) !StringHashMap(MMap) {
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
-    defer arena.deinit();
-    const parentMap = try make_example(allocator);
+    var parentMap = try make_example(allocator);
+    defer {
+        var iter = parentMap.valueIterator();
+        while (iter.next()) |cm| cm.deinit();
+        parentMap.deinit();
+    }
     const childMap: ?MMap = parentMap.get("foo");
     const value = childMap.?.get("hello");
     std.debug.print("\nValue: {d}\n", .{value.?});
