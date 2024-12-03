@@ -24,5 +24,52 @@ pub fn main() !void {
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
 
-    std.debug.print("{s}\n", .{input});
+    const test_str = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
+
+    const T = u32;
+    const TR = struct {
+        const Self = @This();
+        const RetType = struct {
+            result: enum { OK, FAIL, ACCEPT },
+            next: fn ([]const u8, usize) RetType,
+        };
+        const fail = RetType{ .result = .FAIL, .next = Self.m };
+        fn retFactory(res: RetType.result, next: RetType.next) RetType {
+            return .{ .result = res, .next = next };
+        }
+
+        fn m(in: []const u8, index: T) RetType {
+            if (in[index] == 'm') return retFactory(.OK, Self.u);
+            return Self.fail;
+        }
+        fn u(in: []const u8, index: T) RetType {
+            if (in[index] == 'm') return retFactory(.OK, Self.l);
+            return Self.fail;
+        }
+        fn l(in: []const u8, index: T) RetType {
+            if (in[index] == 'm') return retFactory(.OK, Self.lpar);
+            return Self.fail;
+        }
+        fn lpar(in: []const u8, index: T) RetType {
+            if (in[index] == 'm') return retFactory(.OK, Self.ldigit);
+            return Self.fail;
+        }
+        fn ldigit(in: []const u8, index: T) RetType {
+            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.ldigit);
+            if (in[index] == ',') return retFactory(.OK, Self.comma);
+            return Self.fail;
+        }
+        fn comma(in: []const u8, index: T) RetType {
+            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.rdigit);
+            return Self.fail;
+        }
+        fn rdigit(in: []const u8, index: T) RetType {
+            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.rdigit);
+            if (in[index] == ')') return retFactory(.OK, Self.rpar);
+            return Self.fail;
+        }
+        fn rpar(_: []const u8, _: T) RetType { // accept
+            return retFactory(.ACCEPT, Self.m);
+        }
+    };
 }
