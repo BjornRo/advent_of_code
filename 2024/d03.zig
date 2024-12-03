@@ -23,7 +23,7 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-    const T = u32;
+    const T = u64;
     const TR = struct {
         const Self = @This();
         const Result = enum { OK, FAIL, ACCEPT };
@@ -93,11 +93,12 @@ pub fn main() !void {
                 f = TR.m;
             },
             .ACCEPT => {
-                // TODO parse the string
                 found_substr = false;
-                const slice = input[found_start .. i + 1];
-                try writer.print("{s}\n", .{slice});
-                p1_sum += 1;
+                found_start += 4;
+                const comma_idx = std.mem.indexOf(u8, input[found_start..i], ",").?;
+                const left = try std.fmt.parseInt(u32, input[found_start .. found_start + comma_idx], 10);
+                const right = try std.fmt.parseInt(u32, input[found_start + comma_idx + 1 .. i], 10);
+                p1_sum += left * right;
                 f = TR.m;
             },
         }
