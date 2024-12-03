@@ -1,0 +1,147 @@
+const std = @import("std");
+const myf = @import("mylib/myfunc.zig");
+const expect = std.testing.expect;
+const time = std.time;
+
+pub fn main() !void {
+    const start = time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
+    defer {
+        const end = time.nanoTimestamp();
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000_000);
+        writer.print("\nTime taken: {d:.10}s\n", .{elapsed}) catch {};
+    }
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    // const allocator = gpa.allocator();
+    var buffer: [21_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
+
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    // End setup
+    const TR = struct {
+        const Self = @This();
+        const Result = enum { OK, FAIL, ACCEPT };
+        const RetType = struct {
+            result: Result,
+            next: *const fn (u8) RetType,
+        };
+        const FnType = *const fn (u8) RetType;
+        const fail = RetType{ .result = .FAIL, .next = Self.u };
+
+        inline fn retFactory(res: Result, next: FnType) RetType {
+            return .{ .result = res, .next = next };
+        }
+        // fn m_or_d(char: u8) RetType {
+        //     if (char == 'm') return retFactory(.OK, Self.u);
+        //     if (char == 'd') return retFactory(.OK, Self.o);
+        //     return Self.fail;
+        // }
+        fn u(char: u8) RetType {
+            if (char == 'u') return retFactory(.OK, Self.l);
+            return Self.fail;
+        }
+        fn l(char: u8) RetType {
+            if (char == 'l') return retFactory(.OK, Self.lpar);
+            return Self.fail;
+        }
+        fn lpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.ldigit);
+            return Self.fail;
+        }
+        fn ldigit(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.ldigit);
+            if (char == ',') return retFactory(.OK, Self.comma);
+            return Self.fail;
+        }
+        fn comma(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.rdigit);
+            return Self.fail;
+        }
+        fn rdigit(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.rdigit);
+            if (char == ')') return retFactory(.ACCEPT, Self.rdigit);
+            return Self.fail;
+        }
+        // DO, DONT
+        fn o(char: u8) RetType {
+            if (char == 'o') return retFactory(.OK, Self.n_or_lpar);
+            return Self.fail;
+        }
+        fn n_or_lpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.drpar);
+            if (char == 'n') return retFactory(.OK, Self.squote);
+            return Self.fail;
+        }
+        fn drpar(char: u8) RetType {
+            if (char == ')') return retFactory(.ACCEPT, Self.drpar);
+            return Self.fail;
+        }
+        fn squote(char: u8) RetType {
+            if (char == '\'') return retFactory(.OK, Self.t);
+            return Self.fail;
+        }
+        fn t(char: u8) RetType {
+            if (char == 't') return retFactory(.OK, Self.dlpar);
+            return Self.fail;
+        }
+        fn dlpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.drpar);
+            return Self.fail;
+        }
+    };
+
+    var p1_sum: u64 = 0;
+    var p2_sum: u64 = 0;
+
+    var f: TR.FnType = TR.o; // placeholder
+    var i: u16 = 0;
+    var active = true;
+    var found_start: i32 = -1;
+    while (i < input.len) : (i += 1) {
+        const char = input[i];
+        if (found_start == -1) {
+            if (char == 'm') {
+                f = TR.u;
+                found_start = i;
+            } else if (char == 'd') {
+                f = TR.o;
+                found_start = i;
+            }
+            continue;
+        }
+        const res = f(char);
+        switch (res.result) {
+            .OK => {
+                if (found_start == -1) {
+                    found_start = i;
+                }
+                f = res.next;
+            },
+            .FAIL => {
+                found_start = -1;
+            },
+            .ACCEPT => {
+                if (input[@intCast(found_start)] == 'd') {
+                    active = input[@intCast(found_start + 2)] == '(';
+                } else {
+                    const slice = input[@intCast(found_start)..i];
+                    const comma_idx = std.mem.indexOf(u8, slice, ",").?;
+                    const left = try std.fmt.parseInt(u32, slice[4..comma_idx], 10);
+                    const right = try std.fmt.parseInt(u32, slice[comma_idx + 1 ..], 10);
+                    const result = left * right;
+                    p1_sum += result;
+                    if (active) {
+                        p2_sum += result;
+                    }
+                }
+                found_start = -1;
+            },
+        }
+    }
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
+}
