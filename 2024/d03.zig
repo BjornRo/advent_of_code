@@ -26,60 +26,87 @@ pub fn main() !void {
     const T = u64;
     const TR = struct {
         const Self = @This();
+        const fail = RetType{ .result = .FAIL, .next = Self.m_or_d };
         const Result = enum { OK, FAIL, ACCEPT };
-        const FnType = *const fn ([]const u8, T) RetType;
         const RetType = struct {
             result: Result,
-            next: *const fn ([]const u8, T) RetType,
+            next: *const fn (u8) RetType,
         };
-        const fail = RetType{ .result = .FAIL, .next = Self.m };
-        fn retFactory(res: Self.Result, next: Self.FnType) RetType {
+        const FnType = *const fn (u8) RetType;
+
+        fn retFactory(res: Result, next: FnType) RetType {
             return .{ .result = res, .next = next };
         }
-
-        fn m(in: []const u8, index: T) RetType {
-            if (in[index] == 'm') return retFactory(.OK, Self.u);
+        fn m_or_d(char: u8) RetType {
+            if (char == 'm') return retFactory(.OK, Self.u);
+            if (char == 'd') return retFactory(.OK, Self.o);
             return Self.fail;
         }
-        fn u(in: []const u8, index: T) RetType {
-            if (in[index] == 'u') return retFactory(.OK, Self.l);
+        fn u(char: u8) RetType {
+            if (char == 'u') return retFactory(.OK, Self.l);
             return Self.fail;
         }
-        fn l(in: []const u8, index: T) RetType {
-            if (in[index] == 'l') return retFactory(.OK, Self.lpar);
+        fn l(char: u8) RetType {
+            if (char == 'l') return retFactory(.OK, Self.lpar);
             return Self.fail;
         }
-        fn lpar(in: []const u8, index: T) RetType {
-            if (in[index] == '(') return retFactory(.OK, Self.ldigit);
+        fn lpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.ldigit);
             return Self.fail;
         }
-        fn ldigit(in: []const u8, index: T) RetType {
-            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.ldigit);
-            if (in[index] == ',') return retFactory(.OK, Self.comma);
+        fn ldigit(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.ldigit);
+            if (char == ',') return retFactory(.OK, Self.comma);
             return Self.fail;
         }
-        fn comma(in: []const u8, index: T) RetType {
-            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.rdigit);
+        fn comma(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.rdigit);
             return Self.fail;
         }
-        fn rdigit(in: []const u8, index: T) RetType {
-            if (std.ascii.isDigit(in[index])) return retFactory(.OK, Self.rdigit);
-            if (in[index] == ')') return retFactory(.ACCEPT, Self.m); // Accepting
+        fn rdigit(char: u8) RetType {
+            if (std.ascii.isDigit(char)) return retFactory(.OK, Self.rdigit);
+            if (char == ')') return retFactory(.ACCEPT, Self.m_or_d);
+            return Self.fail;
+        }
+        // DO, DONT
+        fn o(char: u8) RetType {
+            if (char == 'o') return retFactory(.OK, Self.n_or_lpar);
+            return Self.fail;
+        }
+        fn n_or_lpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.drpar);
+            if (char == 'n') return retFactory(.OK, Self.squote);
+            return Self.fail;
+        }
+        fn drpar(char: u8) RetType {
+            if (char == ')') return retFactory(.ACCEPT, Self.m_or_d);
+            return Self.fail;
+        }
+        fn squote(char: u8) RetType {
+            if (char == '\'') return retFactory(.OK, Self.t);
+            return Self.fail;
+        }
+        fn t(char: u8) RetType {
+            if (char == 't') return retFactory(.OK, Self.dlpar);
+            return Self.fail;
+        }
+        fn dlpar(char: u8) RetType {
+            if (char == '(') return retFactory(.OK, Self.drpar);
             return Self.fail;
         }
     };
 
-    // const test_str = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
     var p1_sum: T = 0;
-    p1_sum += 1;
-    p1_sum -= 1;
+    var p2_sum: T = 0;
 
-    var f: TR.FnType = TR.m;
+    var f: TR.FnType = TR.m_or_d;
     var i: T = 0;
+    var active = true;
     var found_substr = false;
     var found_start: T = 0;
     while (i < input.len) : (i += 1) {
-        const res = f(input, i);
+        const char = input[i];
+        const res = f(char);
         switch (res.result) {
             .OK => {
                 if (!found_substr) {
@@ -90,18 +117,26 @@ pub fn main() !void {
             },
             .FAIL => {
                 found_substr = false;
-                f = TR.m;
+                f = TR.m_or_d;
             },
             .ACCEPT => {
+                f = TR.m_or_d;
                 found_substr = false;
-                found_start += 4;
-                const comma_idx = std.mem.indexOf(u8, input[found_start..i], ",").?;
-                const left = try std.fmt.parseInt(u32, input[found_start .. found_start + comma_idx], 10);
-                const right = try std.fmt.parseInt(u32, input[found_start + comma_idx + 1 .. i], 10);
-                p1_sum += left * right;
-                f = TR.m;
+                const slice = input[found_start..i];
+                if (slice[0] == 'd') {
+                    active = slice[2] == '(';
+                    continue;
+                }
+                const comma_idx = std.mem.indexOf(u8, slice, ",").?;
+                const left = try std.fmt.parseInt(u32, slice[4..comma_idx], 10);
+                const right = try std.fmt.parseInt(u32, slice[comma_idx + 1 ..], 10);
+                const result = left * right;
+                p1_sum += result;
+                if (active) {
+                    p2_sum += result;
+                }
             },
         }
     }
-    myf.printAny(p1_sum);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
