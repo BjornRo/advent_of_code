@@ -33,7 +33,7 @@ pub fn main() !void {
     var counter = std.AutoHashMap(i32, i32).init(allocator);
     defer counter.deinit();
 
-    const delim = if (try myf.getDelimType(input) == .CRLF) "\r\n" else "\n";
+    const delim = if ((try myf.getDelimType(input)).delim == .CRLF) "\r\n" else "\n";
     var input_iter = std.mem.splitSequence(u8, input, delim);
     while (input_iter.next()) |row| {
         if (row.len == 0) continue;

@@ -2,6 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Type = std.builtin.Type;
 
+const DelimType = enum { CRLF, LF };
+
 pub inline fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
@@ -17,10 +19,11 @@ pub inline fn getAppArg(allocator: Allocator, index: usize) ![]u8 {
     return try std.mem.Allocator.dupe(allocator, u8, args[index]);
 }
 
-pub inline fn getDelimType(text: []const u8) !enum { CRLF, LF } {
+pub inline fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len: u32 } {
     for (1..text.len - 1) |i| {
         if (text[i] == '\n') {
-            return if (text[i - 1] == '\r') .CRLF else .LF;
+            const delim = if (text[i - 1] == '\r') DelimType.CRLF else DelimType.LF;
+            return .{ .delim = delim, .row_len = @intCast(if (delim == .CRLF) i - 1 else i) };
         }
     }
     return error.NoDelimFound;
