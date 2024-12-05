@@ -53,17 +53,14 @@ pub fn main() !void {
         for (0..slice.len - 1) |i| {
             const left = slice[i];
             const right = slice[i + 1];
-            const rule = .{ left[0], left[1], '|', right[0], right[1] };
-            if (rules.get(&rule) == null) {
+            if (rules.get(&.{ left[0], left[1], '|', right[0], right[1] }) == null) {
                 for (0..half_slice + 1) |j| {
                     for (j..slice.len) |k| {
                         const bleft = slice[j];
                         const bright = slice[k];
-                        const brule = .{ bleft[0], bleft[1], '|', bright[0], bright[1] };
-                        if (rules.get(&brule) != null) continue;
-                        const tmp = slice[j];
-                        slice[j] = slice[k];
-                        slice[k] = tmp;
+                        if (rules.get(&.{ bleft[0], bleft[1], '|', bright[0], bright[1] }) != null) continue;
+                        slice[j] = bright;
+                        slice[k] = bleft;
                     }
                 }
                 p2_sum += int(slice[half_slice]);
