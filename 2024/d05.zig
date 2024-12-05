@@ -30,11 +30,11 @@ pub fn main() !void {
     const in_attributes = try myf.getDelimType(input);
     const row_delim = if (in_attributes.delim == .CRLF) "\r\n" else "\n";
 
-    var rules_updates = std.mem.splitSequence(u8, input, if (in_attributes.delim == .CRLF) "\r\n\r\n" else "\n\n");
+    var rules_updates = std.mem.tokenizeSequence(u8, input, if (in_attributes.delim == .CRLF) "\r\n\r\n" else "\n\n");
 
     var rules = std.StringHashMap(bool).init(allocator);
     defer rules.deinit();
-    var rules_iter = std.mem.splitSequence(u8, rules_updates.next().?, row_delim);
+    var rules_iter = std.mem.tokenizeSequence(u8, rules_updates.next().?, row_delim);
     while (rules_iter.next()) |rule| try rules.put(rule, true);
 
     var row_elems = std.ArrayList([]const u8).init(allocator);
@@ -42,9 +42,8 @@ pub fn main() !void {
 
     var p1_sum: u32 = 0;
     var p2_sum: u32 = 0;
-    var updates_iter = std.mem.splitSequence(u8, rules_updates.next().?, row_delim);
+    var updates_iter = std.mem.tokenizeSequence(u8, rules_updates.next().?, row_delim);
     while (updates_iter.next()) |update| {
-        if (update.len == 0) break;
         var comma_iter = std.mem.splitScalar(u8, update, ',');
         while (comma_iter.next()) |elem| try row_elems.append(elem);
         defer row_elems.clearRetainingCapacity();
