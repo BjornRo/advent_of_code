@@ -47,6 +47,7 @@ pub fn main() !void {
         if (update.len == 0) break;
         var comma_iter = std.mem.splitScalar(u8, update, ',');
         while (comma_iter.next()) |elem| try row_elems.append(elem);
+        defer row_elems.clearRetainingCapacity();
 
         const slice = row_elems.items;
         const half_slice = slice.len / 2;
@@ -69,7 +70,6 @@ pub fn main() !void {
         } else {
             p1_sum += int(slice[half_slice]);
         }
-        row_elems.clearRetainingCapacity();
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
