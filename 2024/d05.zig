@@ -3,6 +3,10 @@ const myf = @import("mylib/myfunc.zig");
 const expect = std.testing.expect;
 const time = std.time;
 
+inline fn int(i: []const u8) u8 {
+    return std.fmt.parseInt(u8, i, 10) catch unreachable;
+}
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -28,8 +32,6 @@ pub fn main() !void {
 
     var rules_updates = std.mem.splitSequence(u8, input, if (in_attributes.delim == .CRLF) "\r\n\r\n" else "\n\n");
 
-    // Rules are in shape of "VAL0|VAL1", simply just do a lookup and ignore value
-    // We can swap order of VAL0 and VAL1 to see if they violate anything
     var rules = std.StringHashMap(bool).init(allocator);
     defer rules.deinit();
     var rules_iter = std.mem.splitSequence(u8, rules_updates.next().?, row_delim);
@@ -49,14 +51,16 @@ pub fn main() !void {
         const slice = row_elems.items;
         const half_slice = slice.len / 2;
         for (0..slice.len - 1) |i| {
-            const rule = concatVert(allocator, slice[i], slice[i + 1]);
-            defer allocator.free(rule);
-            if (rules.get(rule) == null) {
+            const left = slice[i];
+            const right = slice[i + 1];
+            const rule = .{ left[0], left[1], '|', right[0], right[1] };
+            if (rules.get(&rule) == null) {
                 for (0..half_slice + 1) |j| {
                     for (j..slice.len) |k| {
-                        const brule = concatVert(allocator, slice[j], slice[k]);
-                        defer allocator.free(brule);
-                        if (rules.get(brule) != null) continue;
+                        const bleft = slice[j];
+                        const bright = slice[k];
+                        const brule = .{ bleft[0], bleft[1], '|', bright[0], bright[1] };
+                        if (rules.get(&brule) != null) continue;
                         const tmp = slice[j];
                         slice[j] = slice[k];
                         slice[k] = tmp;
@@ -71,12 +75,4 @@ pub fn main() !void {
         row_elems.clearRetainingCapacity();
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
-}
-
-fn concatVert(alloc: std.mem.Allocator, left: []const u8, right: []const u8) []u8 {
-    return std.mem.concat(alloc, u8, &.{ left, "|", right }) catch unreachable;
-}
-
-fn int(i: []const u8) u8 {
-    return std.fmt.parseInt(u8, i, 10) catch unreachable;
 }
