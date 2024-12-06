@@ -13,12 +13,12 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [550_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    // const allocator = gpa.allocator();
+    var buffer: [470_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -70,7 +70,7 @@ pub fn main() !void {
     const rot_right = ComplexT.init(0, -1);
     // // const rot_left = ComplexT.init(0, 1);
 
-    var visited = std.AutoArrayHashMap(u32, u32).init(allocator);
+    var visited = std.AutoArrayHashMap(u32, ComplexT).init(allocator);
     defer visited.deinit();
 
     var direction = ComplexT.init(-1, 0); // Going upwards "^"
@@ -80,7 +80,7 @@ pub fn main() !void {
         const next_pos = position.add(direction);
         const res = try visited.getOrPut(F.complexTo32(position));
         if (!res.found_existing) {
-            res.value_ptr.* = F.complexTo32(direction);
+            res.value_ptr.* = direction;
         }
         if (!F.inBounds(next_pos, rows, cols)) break;
 
@@ -101,13 +101,12 @@ pub fn main() !void {
     for (0..visited_slice.len - 1) |i| {
         defer visited_dir.clearRetainingCapacity();
         const start_r, const start_c = F.u32Toi16(visited_slice[i]);
-        const dir_a, const dir_b = F.u32Toi16(value_slice[i]);
         const next_r, const next_c = F.u32Tou16(visited_slice[i + 1]);
         mat[next_r][next_c] = '#';
         defer mat[next_r][next_c] = '.';
 
         position = ComplexT.init(start_r, start_c);
-        direction = ComplexT.init(dir_a, dir_b);
+        direction = value_slice[i];
         while (true) {
             const res = try visited_dir.getOrPut(F.complexTo64(position, direction));
             if (res.found_existing) {
