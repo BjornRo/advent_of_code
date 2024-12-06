@@ -34,32 +34,21 @@ pub fn main() !void {
     // Imaginary numbers are usually mapped as Y = i, but I patternmatch REAL as Rows instead,..
     // Complex(REAL, IMAG)
     const ComplexT = Complex(f32);
-    var position = ComplexT.init(0, 0);
-    var direction = ComplexT.init(-1, 0); // Going upwards "^"
+    var start_row: u8 = 0;
+    var start_col: u8 = 0;
 
-    var rows: f32 = 0;
-    const cols: f32 = @floatFromInt(input_attributes.row_len);
+    var rows: u8 = 0;
+    const cols = input_attributes.row_len;
     var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
     while (in_iter.next()) |row| {
         try matrix.append(row);
-        const start_idx = std.mem.indexOf(u8, row, "^");
-        if (start_idx) |idx| {
-            position.im = @floatFromInt(idx);
-            position.re = rows;
+        if (std.mem.indexOf(u8, row, "^")) |idx| {
+            start_row = rows;
+            start_col = @truncate(idx);
         }
         rows += 1;
     }
     //
-
-    // var map = std.AutoHashMap([2]u8, bool).init(allocator);
-    // defer map.deinit();
-    // try map.put(.{ .x = 5, .y = 2 }, true);
-    // try map.put(.{ .x = 2, .y = 2 }, true);
-    // try map.put(.{ 5, 4 }, true);
-    // myf.printAny(map.contains(.{ 5, 4 }));
-    // myf.printAny(map.contains(.{ 5, 2 }));
-
-    // const Key = struct { k: ComplexT };
     const F = struct {
         inline fn inBounds(pos: ComplexT, max_row: f32, max_col: f32) bool {
             return 0 <= pos.re and pos.re < max_row and
@@ -68,8 +57,13 @@ pub fn main() !void {
         inline fn complexToKey(c: ComplexT) [2]i16 {
             return .{ @intFromFloat(c.re), @intFromFloat(c.im) };
         }
+        inline fn complexToKey2(c: ComplexT, d: ComplexT) [4]i16 {
+            return .{ @intFromFloat(c.re), @intFromFloat(c.im), @intFromFloat(d.re), @intFromFloat(d.im) };
+        }
     };
 
+    const frows: f32 = @floatFromInt(rows);
+    const fcols: f32 = @floatFromInt(cols);
     const rot_right = ComplexT.init(0, -1);
     // const rot_left = ComplexT.init(0, 1);
 
@@ -77,12 +71,13 @@ pub fn main() !void {
     defer visited.deinit();
 
     // REAL: row, IMAG: col
-    direction.im = direction.im;
+    var position = ComplexT.init(@floatFromInt(start_row), @floatFromInt(start_col));
+    var direction = ComplexT.init(-1, 0); // Going upwards "^"
     const mat = matrix.items;
     while (true) {
         try visited.put(F.complexToKey(position), true);
         const next_pos = position.add(direction);
-        if (!F.inBounds(next_pos, rows, cols)) break;
+        if (!F.inBounds(next_pos, frows, fcols)) break;
 
         const row: u8 = @intFromFloat(next_pos.re);
         const col: u8 = @intFromFloat(next_pos.im);
@@ -91,7 +86,37 @@ pub fn main() !void {
         } else {
             position = next_pos;
         }
-        // std.debug.print("row: {d}, col: {d}\n", .{ position.re, position.im });
     }
     myf.printAny(visited.count());
+
+    var p2_sum: u32 = 0;
+    for (0..rows) |i| {
+        for (0..cols) |j| {
+            if (i == start_row and j == start_col or mat[i][j] == '#') continue;
+            position = ComplexT.init(@floatFromInt(start_row), @floatFromInt(start_col));
+            direction = ComplexT.init(-1, 0); // Going upwards "^"
+
+            var visited_dir = std.AutoHashMap([4]i16, bool).init(allocator);
+            defer visited_dir.deinit();
+            while (true) {
+                const res = try visited_dir.getOrPut(F.complexToKey2(position, direction));
+                if (res.found_existing) {
+                    p2_sum += 1;
+                    break;
+                }
+                const next_pos = position.add(direction);
+                if (!F.inBounds(next_pos, frows, fcols)) break;
+
+                const row: u32 = @intFromFloat(next_pos.re);
+                const col: u32 = @intFromFloat(next_pos.im);
+
+                if (mat[row][col] == '#' or (row == i and col == j)) {
+                    direction = direction.mul(rot_right);
+                } else {
+                    position = next_pos;
+                }
+            }
+        }
+    }
+    myf.printAny(p2_sum);
 }

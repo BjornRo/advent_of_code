@@ -23,6 +23,7 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     std.debug.print("Input size: {d}\n\n", .{input.len});
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    // const input = @embedFile("in/d06t.txt");
     // End setup
 
     std.debug.print("{s}\n", .{input});
