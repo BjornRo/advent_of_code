@@ -1,5 +1,6 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
+const print = myf.printAny;
 const expect = std.testing.expect;
 const time = std.time;
 
