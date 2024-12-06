@@ -87,7 +87,7 @@ pub fn main() !void {
         }
     }
     const visited_slice = visited.keys();
-    var visited_dir = std.AutoArrayHashMap(u64, void).init(allocator);
+    var visited_dir = std.AutoHashMap(u64, void).init(allocator);
     defer visited_dir.deinit();
 
     var p2_sum: u16 = 0;
