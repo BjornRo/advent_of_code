@@ -10,8 +10,8 @@ pub fn main() !void {
     const writer = std.io.getStdOut().writer();
     defer {
         const end = time.nanoTimestamp();
-        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000_000);
-        writer.print("\nTime taken: {d:.10}s\n", .{elapsed}) catch {};
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
+        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
@@ -53,7 +53,7 @@ pub fn main() !void {
             p1_sum += res;
         }
         early_break = false;
-        const res2 = recurseConcat(allocator, 1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break);
+        const res2 = recurseConcat(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break);
         if (res2 != 0) {
             p2_sum += res2;
         }
@@ -61,7 +61,7 @@ pub fn main() !void {
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn recurseConcat(alloc: Allocator, idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool) u64 {
+fn recurseConcat(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool) u64 {
     if (early_break.* or target_sum < count) return 0;
     if (idx == max_idx) {
         if (target_sum == count) {
@@ -72,14 +72,14 @@ fn recurseConcat(alloc: Allocator, idx: u8, max_idx: u8, target_sum: u64, count:
     }
     const next_idx = idx + 1;
 
-    var res = recurseConcat(alloc, next_idx, max_idx, target_sum, count + values.*[idx], values, early_break);
+    var res = recurseConcat(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break);
     if (res == target_sum) return res;
-    res = recurseConcat(alloc, next_idx, max_idx, target_sum, count * values.*[idx], values, early_break);
+    res = recurseConcat(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break);
     if (res == target_sum) return res;
 
     var buf: [15]u8 = undefined;
     const concat_num = std.fmt.parseInt(@TypeOf(count), std.fmt.bufPrint(&buf, "{}{}", .{ count, values.*[idx] }) catch unreachable, 10) catch unreachable;
-    res = recurseConcat(alloc, next_idx, max_idx, target_sum, concat_num, values, early_break);
+    res = recurseConcat(next_idx, max_idx, target_sum, concat_num, values, early_break);
     if (res == target_sum) return res;
     return 0;
 }
