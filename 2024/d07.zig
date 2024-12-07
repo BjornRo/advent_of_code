@@ -48,12 +48,12 @@ pub fn main() !void {
         const slice = values.items;
 
         var early_break = false;
-        const res = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break);
+        const res = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, false);
         if (res != 0) {
             p1_sum += res;
         }
         early_break = false;
-        const res2 = recurseConcat(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break);
+        const res2 = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, true);
         if (res2 != 0) {
             p2_sum += res2;
         }
@@ -61,7 +61,7 @@ pub fn main() !void {
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn recurseConcat(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool) u64 {
+fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool, part2: bool) u64 {
     if (early_break.* or target_sum < count) return 0;
     if (idx == max_idx) {
         if (target_sum == count) {
@@ -72,31 +72,16 @@ fn recurseConcat(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *con
     }
     const next_idx = idx + 1;
 
-    var res = recurseConcat(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break);
+    var res = recurse(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break, part2);
     if (res == target_sum) return res;
-    res = recurseConcat(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break);
+    res = recurse(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break, part2);
     if (res == target_sum) return res;
 
-    var buf: [15]u8 = undefined;
-    const concat_num = std.fmt.parseInt(@TypeOf(count), std.fmt.bufPrint(&buf, "{}{}", .{ count, values.*[idx] }) catch unreachable, 10) catch unreachable;
-    res = recurseConcat(next_idx, max_idx, target_sum, concat_num, values, early_break);
-    if (res == target_sum) return res;
-    return 0;
-}
-
-fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool) u64 {
-    if (early_break.* or target_sum < count) return 0;
-    if (idx == max_idx) {
-        if (target_sum == count) {
-            early_break.* = true;
-            return count;
-        }
-        return 0;
+    if (part2) {
+        var buf: [15]u8 = undefined;
+        const concat_num = std.fmt.parseInt(@TypeOf(count), std.fmt.bufPrint(&buf, "{}{}", .{ count, values.*[idx] }) catch unreachable, 10) catch unreachable;
+        res = recurse(next_idx, max_idx, target_sum, concat_num, values, early_break, part2);
+        if (res == target_sum) return res;
     }
-    const next_idx = idx + 1;
-    var res = recurse(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break);
-    if (res == target_sum) return res;
-    res = recurse(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break);
-    if (res == target_sum) return res;
     return 0;
 }
