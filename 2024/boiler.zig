@@ -3,6 +3,7 @@ const myf = @import("mylib/myfunc.zig");
 const print = myf.printAny;
 const expect = std.testing.expect;
 const time = std.time;
+const Allocator = std.mem.Allocator;
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
