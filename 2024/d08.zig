@@ -10,10 +10,10 @@ const Point = packed struct {
     col: i8,
 
     const Self = @This();
-    fn delta(self: Self, o: Self) struct { dr: i8, dc: i8 } {
+    fn delta(self: Self, o: Self) [2]i8 {
         return .{
-            .dr = o.row - self.row, // Assuming that o is always after self.
-            .dc = o.col - self.col,
+            o.row - self.row, // Assuming that o is always after self.
+            o.col - self.col,
         };
     }
     fn validCPMove(self: Self, dRow: i8, dCol: i8, neg: bool, rows: i8, cols: i8) ?Self {
@@ -76,20 +76,20 @@ pub fn main() !void {
     while (symbol_iter.next()) |entry| {
         defer entry.value_ptr.*.deinit();
 
-        var points = entry.value_ptr.*.items;
+        const points = entry.value_ptr.*.items;
         for (points[0 .. points.len - 1], 1..) |p0, i| {
             for (points[i..points.len]) |p1| {
-                const d = p0.delta(p1);
+                const dr, const dc = p0.delta(p1);
 
                 for ([_]bool{ true, false }, [_]Point{ p0, p1 }) |b, p| {
                     try unique_points_rep.put(p, {});
 
-                    var new_p = p.validCPMove(d.dr, d.dc, b, rows, cols);
+                    var new_p = p.validCPMove(dr, dc, b, rows, cols);
                     if (new_p) |valid_p| try unique_points.put(valid_p, {}) else continue;
 
                     while (new_p) |valid_p| {
                         try unique_points_rep.put(valid_p, {});
-                        new_p = valid_p.validCPMove(d.dr, d.dc, b, rows, cols);
+                        new_p = valid_p.validCPMove(dr, dc, b, rows, cols);
                     }
                 }
             }
