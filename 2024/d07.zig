@@ -73,9 +73,7 @@ fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u
     if (res == target_sum) return res;
 
     if (part2) {
-        var buf: [15]u8 = undefined;
-        const concat_num = std.fmt.parseInt(@TypeOf(count), std.fmt.bufPrint(&buf, "{}{}", .{ count, values.*[idx] }) catch unreachable, 10) catch unreachable;
-        res = recurse(next_idx, max_idx, target_sum, concat_num, values, early_break, part2);
+        res = recurse(next_idx, max_idx, target_sum, myf.concatInts(@TypeOf(count), count, values.*[idx]), values, early_break, part2);
         if (res == target_sum) return res;
     }
     return 0;

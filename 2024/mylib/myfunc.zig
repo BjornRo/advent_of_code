@@ -105,6 +105,11 @@ pub fn crt(comptime T: type, moduli: []T, remainders: []T) !i128 {
     return @mod(result, product);
 }
 
+pub fn concatInts(comptime T: type, a: T, b: T) T {
+    const digits_b = std.math.log10_int(b) + 1;
+    return a * (std.math.powi(T, 10, digits_b) catch unreachable) + b;
+}
+
 pub fn sortMat(comptime T: type, mat: [][]T, comptime asc: bool) void {
     const Cmp = struct {
         fn lt(_: void, lhs: []T, rhs: []T) bool {
