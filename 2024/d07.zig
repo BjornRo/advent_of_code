@@ -46,15 +46,12 @@ pub fn main() !void {
         const slice = values.items;
 
         var early_break = false;
-        const res = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, false);
-        if (res != 0) {
-            p1_sum += res;
-        }
+        var res = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, false);
+        if (res != 0) p1_sum += res;
+
         early_break = false;
-        const res2 = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, true);
-        if (res2 != 0) {
-            p2_sum += res2;
-        }
+        res = recurse(1, @intCast(slice.len), left_sum, slice[0], &slice, &early_break, true);
+        if (res != 0) p2_sum += res;
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
