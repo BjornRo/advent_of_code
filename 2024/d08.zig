@@ -16,14 +16,12 @@ const Point = packed struct {
             .dc = o.col - self.col,
         };
     }
-    fn cpMove(p: Self, dRow: i8, dCol: i8, neg: bool) Self {
-        return if (neg)
-            .{ .row = p.row - dRow, .col = p.col - dCol }
+    fn validCPMove(self: Self, dRow: i8, dCol: i8, neg: bool, rows: i8, cols: i8) ?Self {
+        const move = if (neg)
+            .{ .row = self.row - dRow, .col = self.col - dCol }
         else
-            .{ .row = p.row + dRow, .col = p.col + dCol };
-    }
-    fn bounds(self: Self, rows: i8, cols: i8) bool {
-        return (0 <= self.row and self.row < rows) and (0 <= self.col and self.col < cols);
+            .{ .row = self.row + dRow, .col = self.col + dCol };
+        return if ((0 <= move.row and move.row < rows) and (0 <= move.col and move.col < cols)) move else null;
     }
 };
 
@@ -38,7 +36,7 @@ pub fn main() !void {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
     // const allocator = gpa.allocator();
-    var buffer: [58_000]u8 = undefined;
+    var buffer: [900_000]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     const allocator = fba.allocator();
 
@@ -86,13 +84,12 @@ pub fn main() !void {
                 for ([_]bool{ true, false }, [_]Point{ p0, p1 }) |b, p| {
                     try unique_points_rep.put(p, {});
 
-                    var new_p = p.cpMove(d.dr, d.dc, b);
-                    if (!new_p.bounds(rows, cols)) continue;
+                    var new_p = p.validCPMove(d.dr, d.dc, b, rows, cols);
+                    if (new_p) |valid_p| try unique_points.put(valid_p, {}) else continue;
 
-                    try unique_points.put(new_p, {});
-                    while (new_p.bounds(rows, cols)) {
-                        try unique_points_rep.put(new_p, {});
-                        new_p = new_p.cpMove(d.dr, d.dc, b);
+                    while (new_p) |valid_p| {
+                        try unique_points_rep.put(valid_p, {});
+                        new_p = valid_p.validCPMove(d.dr, d.dc, b, rows, cols);
                     }
                 }
             }
