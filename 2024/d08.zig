@@ -5,6 +5,28 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
+const Point = packed struct {
+    row: i8,
+    col: i8,
+
+    const Self = @This();
+    fn delta(self: Self, o: Self) struct { dr: i8, dc: i8 } {
+        return .{
+            .dr = o.row - self.row, // Assuming that o is always after self.
+            .dc = o.col - self.col,
+        };
+    }
+    fn cpMove(p: Self, dRow: i8, dCol: i8, neg: bool) Self {
+        return if (neg)
+            .{ .row = p.row - dRow, .col = p.col - dCol }
+        else
+            .{ .row = p.row + dRow, .col = p.col + dCol };
+    }
+    fn bounds(self: Self, rows: i8, cols: i8) bool {
+        return (0 <= self.row and self.row < rows) and (0 <= self.col and self.col < cols);
+    }
+};
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -27,48 +49,22 @@ pub fn main() !void {
     // const input = @embedFile("in/d08.txt");
     // End setup
 
-    var matrix = std.ArrayList([]const u8).init(allocator);
-    defer matrix.deinit();
-
     const input_attributes = try myf.getDelimType(input);
-    var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
-    while (in_iter.next()) |row| try matrix.append(row);
 
-    const Point = packed struct {
-        row: i8,
-        col: i8,
-
-        const Self = @This();
-        fn delta(self: Self, o: Self) struct { dr: i8, dc: i8 } {
-            return .{
-                .dr = o.row - self.row, // Assuming that o is always after self.
-                .dc = o.col - self.col,
-            };
-        }
-        fn cpMove(p: Self, dRow: i8, dCol: i8, neg: bool) Self {
-            return if (neg)
-                .{ .row = p.row - dRow, .col = p.col - dCol }
-            else
-                .{ .row = p.row + dRow, .col = p.col + dCol };
-        }
-        fn bounds(self: Self, rows: i8, cols: i8) bool {
-            return (0 <= self.row and self.row < rows) and (0 <= self.col and self.col < cols);
-        }
-    };
-
-    const mat = matrix.items;
     const cols: i8 = @intCast(input_attributes.row_len);
-    const rows: i8 = @intCast(mat.len);
+    var rows: i8 = 0;
 
     var symbol_points = std.AutoArrayHashMap(u8, std.ArrayList(Point)).init(allocator);
     defer symbol_points.deinit();
 
-    for (mat, 0..) |row, i| {
+    var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
+    while (in_iter.next()) |row| {
+        defer rows += 1;
         for (row, 0..) |elem, j| {
             if (elem == '.') continue;
             const res = try symbol_points.getOrPut(elem);
             if (!res.found_existing) res.value_ptr.* = std.ArrayList(Point).init(allocator);
-            try res.value_ptr.*.append(.{ .row = @intCast(i), .col = @intCast(j) });
+            try res.value_ptr.*.append(.{ .row = rows, .col = @intCast(j) });
         }
     }
 
