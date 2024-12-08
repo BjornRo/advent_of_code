@@ -91,12 +91,12 @@ pub fn main() !void {
                     try unique_points_rep.put(p, {});
 
                     var new_p = p.cpMove(d.dr, d.dc, b);
-                    if (new_p.bounds(rows, cols)) {
-                        try unique_points.put(new_p, {});
-                        while (new_p.bounds(rows, cols)) {
-                            try unique_points_rep.put(new_p, {});
-                            new_p = new_p.cpMove(d.dr, d.dc, b);
-                        }
+                    if (!new_p.bounds(rows, cols)) continue;
+
+                    try unique_points.put(new_p, {});
+                    while (new_p.bounds(rows, cols)) {
+                        try unique_points_rep.put(new_p, {});
+                        new_p = new_p.cpMove(d.dr, d.dc, b);
                     }
                 }
             }
