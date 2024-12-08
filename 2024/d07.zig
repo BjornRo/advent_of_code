@@ -57,7 +57,7 @@ pub fn main() !void {
 }
 
 fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool, part2: bool) u64 {
-    if (early_break.* or target_sum < count) return 0;
+    if (target_sum < count or early_break.*) return 0;
     if (idx == max_idx) {
         if (target_sum == count) {
             early_break.* = true;
@@ -67,9 +67,9 @@ fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u
     }
     const next_idx = idx + 1;
 
-    var res = recurse(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break, part2);
+    var res = recurse(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break, part2);
     if (res == target_sum) return res;
-    res = recurse(next_idx, max_idx, target_sum, count * values.*[idx], values, early_break, part2);
+    res = recurse(next_idx, max_idx, target_sum, count + values.*[idx], values, early_break, part2);
     if (res == target_sum) return res;
 
     if (part2) {
