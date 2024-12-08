@@ -27,12 +27,12 @@ pub fn main() !void {
     // const input = @embedFile("in/d08.txt");
     // End setup
 
-    var matrix = std.ArrayList([]u8).init(allocator);
+    var matrix = std.ArrayList([]const u8).init(allocator);
     defer matrix.deinit();
 
     const input_attributes = try myf.getDelimType(input);
     var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
-    while (in_iter.next()) |row| try matrix.append(@constCast(row));
+    while (in_iter.next()) |row| try matrix.append(row);
 
     const Point = packed struct {
         row: i8,
