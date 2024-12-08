@@ -28,6 +28,7 @@ pub fn main() !void {
     // End setup
 
     var values = std.ArrayList(u64).init(allocator);
+    values.ensureTotalCapacity(15) catch unreachable;
     defer values.deinit();
 
     var p1_sum: u64 = 0;
@@ -41,7 +42,8 @@ pub fn main() !void {
         const colon = std.mem.indexOf(u8, row, ":").?;
         const left_sum = try std.fmt.parseInt(u64, row[0..colon], 10);
         var value_iter = std.mem.tokenizeScalar(u8, row[colon + 1 ..], ' ');
-        while (value_iter.next()) |val| try values.append(try std.fmt.parseInt(u64, val, 10));
+        while (value_iter.next()) |val|
+            values.appendAssumeCapacity(std.fmt.parseInt(u64, val, 10) catch unreachable);
 
         const slice = values.items;
 
@@ -57,7 +59,7 @@ pub fn main() !void {
 }
 
 fn recurse(idx: u8, max_idx: u8, target_sum: u64, count: u64, values: *const []u64, early_break: *bool, part2: bool) u64 {
-    if (target_sum < count or early_break.*) return 0;
+    if (count > target_sum or early_break.*) return 0;
     if (idx == max_idx) {
         if (target_sum == count) {
             early_break.* = true;
