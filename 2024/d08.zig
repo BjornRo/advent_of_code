@@ -53,6 +53,7 @@ pub fn main() !void {
     var rows: i8 = 0;
 
     var symbol_points = std.AutoArrayHashMap(u8, std.ArrayList(Point)).init(allocator);
+    symbol_points.ensureTotalCapacity(2 * 26 + 10) catch unreachable;
     defer symbol_points.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
@@ -60,7 +61,7 @@ pub fn main() !void {
         defer rows += 1;
         for (row, 0..) |elem, j| {
             if (elem == '.') continue;
-            const res = try symbol_points.getOrPut(elem);
+            const res = symbol_points.getOrPutAssumeCapacity(elem);
             if (!res.found_existing) res.value_ptr.* = std.ArrayList(Point).init(allocator);
             try res.value_ptr.*.append(.{ .row = rows, .col = @intCast(j) });
         }
