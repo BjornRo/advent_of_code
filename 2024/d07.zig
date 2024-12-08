@@ -31,9 +31,7 @@ pub fn main() !void {
     defer values.deinit();
 
     var p1_sum: u64 = 0;
-    p1_sum += 0;
     var p2_sum: u64 = 0;
-    p2_sum += 0;
 
     const input_attributes = try myf.getDelimType(input);
     var in_iter = std.mem.tokenizeSequence(u8, input, if (input_attributes.delim == .CRLF) "\r\n" else "\n");
