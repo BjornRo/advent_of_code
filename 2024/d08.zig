@@ -38,7 +38,7 @@ pub fn main() !void {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
     // const allocator = gpa.allocator();
-    var buffer: [60_000]u8 = undefined;
+    var buffer: [58_000]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     const allocator = fba.allocator();
 
