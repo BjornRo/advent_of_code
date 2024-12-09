@@ -28,22 +28,18 @@ pub fn main() !void {
     // var fba = std.heap.FixedBufferAllocator.init(&buffer);
     // const allocator = fba.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // std.debug.print("Input size: {d}\n\n", .{input.len});
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d09.txt");
-    // const input = "2333133121414131402";
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    std.debug.print("Input size: {d}\n\n", .{input.len});
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    // const input = @embedFile("in/d09.txt");
     // End setup
-
-    // alternating: Length of file, length of free.
 
     var fs = std.ArrayList(?Tag).init(allocator);
     defer fs.deinit();
 
     var id: u16 = 0;
-    // var total_size: u64 = 0;
     for (input, 0..) |e, i| {
         if (e == '\n') break;
         const len = e - '0';
@@ -73,173 +69,108 @@ pub fn main() !void {
 
     var p1_sum: u64 = 0;
     for (slice, 0..) |e, i| {
-        if (e) |v| {
-            p1_sum += i * v.id;
-        }
+        if (e) |v| p1_sum += i * v.id;
     }
-    print(p1_sum);
+
+    var tmp: [10]?Tag = undefined;
 
     slice = fs2.items;
-
-    right = slice.len - 1;
-    var tmp: [10]?Tag = .{null} ** 10;
-    tmp[0] = null;
-    var curr_id = Tag{ .id = 0 };
-    var right_start: u64 = 0;
-    var left_end: u64 = 0;
-
-    while (true) {
-        while (slice[right] == null) right -= 1;
-        curr_id = slice[right] orelse unreachable;
-        right_start = right - 1;
-
-        var exit = false;
-        while (slice[right_start] != null and
-            curr_id.eq(slice[right_start] orelse unreachable))
-        {
-            if (right_start == 0) {
-                exit = true;
-                break;
-            }
-            right_start -= 1;
-        }
-        if (exit) break;
-
-        left = 0;
-        const right_size = right - right_start;
-        while (left < right_start) {
-            while (slice[left] != null) {
-                left += 1;
-                // No empty slots, break to outer loop
-                if (left >= right_start) {
-                    right -= right_size;
-                    break;
-                }
-            } else {
-                // We found null, find the range
-                left_end = left + 1;
-                while (slice[left_end] == null) {
-                    left_end += 1;
-                    if (left_end >= right_start) break;
-                } else {
-                    const left_size: u64 = left_end - left;
-                    // No range long enough, continue searching
-
-                    if (left_size < right_size) {
-                        // move left to next position
-                        left += left_size;
-                        continue;
-                    } else {
-                        // We found a range, move the items
-                        const right_slice = slice[right_start + 1 .. right + 1];
-                        const left_slice = slice[left .. left + right_size];
-                        const tmp_slice = tmp[0..right_size];
-                        @memcpy(tmp_slice, right_slice);
-                        @memcpy(right_slice, left_slice);
-                        @memcpy(left_slice, tmp_slice);
-                        left += right_size;
-                        right -= right_size;
-                    }
-                }
-            }
-            break;
-            // No empty slots, we found a spot, or we need to move right slice
-        }
+    var right_iter = RightIterator.init(slice);
+    while (right_iter.next()) |res| {
+        const size: u8 = @intCast(res.partition.len);
+        const found_left = findLeft(res.rest, size);
+        if (found_left == null) continue;
+        @memcpy(tmp[0..size], res.partition);
+        @memcpy(res.partition, found_left.?[0..size]);
+        @memcpy(found_left.?[0..size], tmp[0..size]);
     }
-
     var p2_sum: u64 = 0;
     for (slice, 0..) |e, i| {
-        if (e) |v| {
-            p2_sum += i * v.id;
-        }
+        if (e) |v| p2_sum += i * v.id;
     }
-    print(p2_sum);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn p(slice: []?Tag) void {
-    for (slice) |e| {
-        if (e) |v| {
-            var buf: [4]u8 = undefined;
-            const numAsString = std.fmt.bufPrint(&buf, "{}", .{v.id}) catch unreachable;
-            std.debug.print("{s}", .{numAsString});
+fn findLeft(slice: []?Tag, size: u8) ?[]?Tag {
+    if (slice.len == 0) return null;
+
+    var found_start = false;
+    var start: u32 = 0;
+
+    for (slice, 0..) |t, i| {
+        if (!found_start) {
+            if (t == null) {
+                found_start = true;
+                start = @intCast(i);
+            }
         } else {
-            std.debug.print(".", .{});
+            if (t != null) {
+                const new_slice = slice[start..i];
+                if (new_slice.len >= size) return new_slice;
+                found_start = false;
+            }
         }
     }
-    std.debug.print("\n", .{});
+    if (found_start) {
+        const new_slice = slice[start..slice.len];
+        if (new_slice.len >= size) return new_slice;
+    }
+    return null;
 }
 
-// fn a() void {
-//     const Block = struct {
-//         size: u8,
-//         count: u8,
-//         elems: [9]u16,
+const RightIterator = struct {
+    slice: []?Tag,
+    pointer: u32,
 
-//         const Self = @This();
-//         fn add(self: *Self, o: u8) void {
-//             self.elems[self.count] = o;
-//             self.count += 1;
-//         }
-//     };
+    const Self = @This();
+    fn init(slice: []?Tag) Self {
+        return .{
+            .slice = slice,
+            .pointer = @intCast(slice.len - 1),
+        };
+    }
 
-//     // var total_size: u64 = 0;
-//     for (.{1,2,3}, 0..) |e, i| {
-//         if (e == '\n') break;
-//         const len = e - '0';
-//         var val: ?Tag = null;
-//         var block = Block{ .size = len, .count = 0, .elems = .{0} ** 9 };
-//         if (@mod(i, 2) == 0) {
-//             val = Tag{ .id = @intCast(id) };
-//             for (0..len) |_| block.add(@intCast(id));
-//             id += 1;
-//         }
-//         for (0..len) |_| try fs.append(val);
-//         try fs2.append(block);
-//     }
-// }
+    fn next(self: *Self) ?struct { rest: @TypeOf(self.slice), partition: @TypeOf(self.slice) } {
+        if (self.pointer == 0) return null;
+        var end_idx: u32 = 0;
+        var tag: Tag = Tag{ .id = 0 };
+        while (true) {
+            if (self.slice[self.pointer]) |t| {
+                end_idx = self.pointer + 1;
+                tag = t;
+                break;
+            }
+            if (self.pointer == 0) return null;
+            self.pointer -= 1;
+        }
+        while (true) {
+            const curr = self.slice[self.pointer];
+            if (curr == null or !curr.?.eq(tag)) {
+                self.pointer += 1;
+                break;
+            }
+            if (self.pointer == 0) break;
+            self.pointer -= 1;
+        }
+        defer {
+            if (self.pointer != 0) self.pointer -= 1;
+        }
+        return .{
+            .rest = self.slice[0..self.pointer],
+            .partition = self.slice[self.pointer..end_idx],
+        };
+    }
+};
 
-// {
-//     left_size = left_end - left;
-//     if (left_size >= right_size) {
-//         const right_slice = slice[right_start + 1 .. right + 1];
-//         const left_slice = slice[left .. left + right_size];
-//         const tmp_slice = tmp[0..right_size];
-//         @memcpy(tmp_slice, right_slice);
-//         @memcpy(right_slice, left_slice);
-//         @memcpy(left_slice, tmp_slice);
-//         break;
-//     } else {
-//         left += 1;
-//         right -= right_size;
-//         break;
-//     }
-// }
-
-// var left_size: u64 = 0;
-// while (left_end < right_start) {
-//     while (slice[left] != null) left += 1;
-//     left_end = left + 1;
-//     while (slice[left_end] == null) {
-//         left_end += 1;
-//         if (left_end >= right_start) break;
-//     } else {
-//         left_size = left_end - left;
-//         if (left_size >= right_size) {
-//             const right_slice = slice[right_start + 1 .. right + 1];
-//             const left_slice = slice[left .. left + right_size];
-//             const tmp_slice = tmp[0..right_size];
-//             @memcpy(tmp_slice, right_slice);
-//             @memcpy(right_slice, left_slice);
-//             @memcpy(left_slice, tmp_slice);
-//             break;
+// fn p(slice: []?Tag) void {
+//     for (slice) |e| {
+//         if (e) |v| {
+//             var buf: [4]u8 = undefined;
+//             const numAsString = std.fmt.bufPrint(&buf, "{}", .{v.id}) catch unreachable;
+//             std.debug.print("{s}", .{numAsString});
 //         } else {
-//             left += 1;
-//             right -= right_size;
-//             break;
+//             std.debug.print(".", .{});
 //         }
 //     }
+//     std.debug.print("\n", .{});
 // }
-
-// if (left_size >= right_size) {}
-// left += right_size;
-// right -= right_size;
