@@ -106,9 +106,8 @@ pub fn main() !void {
     if (input[in_len - 1] == '\n') in_len -= 1;
 
     var fs = std.ArrayList(?Tag).initCapacity(allocator, 100_000) catch unreachable;
-    defer fs.deinit();
     var fs2 = std.ArrayList(Block).initCapacity(allocator, in_len) catch unreachable;
-    defer fs2.deinit();
+    inline for (.{ fs, fs2 }) |f| f.deinit();
 
     var id: u16 = 0;
     for (input, 0..in_len) |e, i| {
