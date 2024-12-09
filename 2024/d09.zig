@@ -102,14 +102,16 @@ pub fn main() !void {
     // const input = "2333133121414131402";
     // End setup
 
+    var in_len = input.len;
+    if (input[in_len - 1] == '\n') in_len -= 1;
+
     var fs = std.ArrayList(?Tag).initCapacity(allocator, 100_000) catch unreachable;
     defer fs.deinit();
-    var fs2 = std.ArrayList(Block).initCapacity(allocator, input.len) catch unreachable;
+    var fs2 = std.ArrayList(Block).initCapacity(allocator, in_len) catch unreachable;
     defer fs2.deinit();
 
     var id: u16 = 0;
-    for (input, 0..) |e, i| {
-        if (e == '\n') break;
+    for (input, 0..in_len) |e, i| {
         const len = e - '0';
         var val: ?Tag = null;
         if (@mod(i, 2) == 0) {
