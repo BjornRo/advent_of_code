@@ -28,13 +28,15 @@ pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     const allocator = fba.allocator();
 
-    const filename = try myf.getAppArg(allocator, 1);
-    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    const input = try myf.readFile(allocator, target_file);
-    std.debug.print("Input size: {d}\n\n", .{input.len});
-    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    // const filename = try myf.getAppArg(allocator, 1);
+    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    // const input = try myf.readFile(allocator, target_file);
+    // std.debug.print("Input size: {d}\n\n", .{input.len});
+    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // const input = @embedFile("in/d09.txt");
     // End setup
+
+    const input = "2333133121414131402";
 
     var fs = std.ArrayList(?Tag).init(allocator);
     defer fs.deinit();
@@ -86,7 +88,12 @@ pub fn main() !void {
     }
     var p2_sum: u64 = 0;
     for (slice, 0..) |e, i| {
-        if (e) |v| p2_sum += i * v.id;
+        if (e) |v| {
+            print(e);
+            print(p2_sum);
+
+            p2_sum += i * v.id;
+        }
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
