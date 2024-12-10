@@ -23,6 +23,15 @@ const F = struct {
     }
 };
 
+// const HashCtx = struct {
+//     pub fn hash(self: @This(), key: Coordinates) u64 {
+//         return @as(u64, key.y) * 37 + @as(u64, key.x);
+//     }
+//     pub fn eql(self: @This(), a: Coordinates, b: Coordinates) bool {
+//         return @bitCast(u32, a) == @bitCast(u32, b);
+//     }
+// };
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
