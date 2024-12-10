@@ -8,7 +8,6 @@ const Allocator = std.mem.Allocator;
 const CT = i8;
 const ComplexT = std.math.Complex(CT);
 const F = struct {
-    const rot_right = ComplexT.init(0, -1);
     inline fn inBounds(pos: ComplexT, max_row: CT, max_col: CT) bool {
         return 0 <= pos.re and pos.re < max_row and 0 <= pos.im and pos.im < max_col;
     }
@@ -38,12 +37,12 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    // const allocator = gpa.allocator();
+    var buffer: [5_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -72,8 +71,8 @@ pub fn main() !void {
     }
 
     var trailheads = std.ArrayHashMap(ComplexT, void, HashCtx, true).init(allocator);
-    try trailheads.ensureTotalCapacity(8);
     defer trailheads.deinit();
+    try trailheads.ensureTotalCapacity(8);
 
     var p1_sum: u16 = 0;
     var p2_sum: u16 = 0;
@@ -102,10 +101,11 @@ fn dfsRec(
         return 1;
     }
 
+    const rot_right = ComplexT.init(0, -1);
     var direction = ComplexT.init(0, 1);
     var sum: u8 = dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
     inline for (0..3) |_| {
-        direction = direction.mul(F.rot_right);
+        direction = direction.mul(rot_right);
         sum += dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
     }
     return sum;
