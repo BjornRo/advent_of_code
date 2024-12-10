@@ -8,7 +8,6 @@ const Allocator = std.mem.Allocator;
 const CT = i8;
 const ComplexT = std.math.Complex(CT);
 const F = struct {
-    const rot_right = ComplexT.init(0, -1);
     inline fn inBounds(pos: ComplexT, max_row: CT, max_col: CT) bool {
         return 0 <= pos.re and pos.re < max_row and 0 <= pos.im and pos.im < max_col;
     }
@@ -71,42 +70,80 @@ pub fn main() !void {
         }
     }
 
+    const VisitedT = std.ArrayHashMap(ComplexT, void, HashCtx, true);
+    const rot_right = ComplexT.init(0, -1);
+
+    var states = std.ArrayList(struct { pos: ComplexT, visited: VisitedT, count: u64 }).init(allocator);
+    defer {
+        for (states.items) |*i| i.visited.deinit();
+        states.deinit();
+    }
+
+    const max_dim: i8 = @intCast(dimension);
     var trailheads = std.ArrayHashMap(ComplexT, void, HashCtx, true).init(allocator);
-    try trailheads.ensureTotalCapacity(8);
+    try trailheads.ensureTotalCapacity(10);
     defer trailheads.deinit();
 
+    var direction = ComplexT.init(0, 1);
     var p1_sum: u16 = 0;
     var p2_sum: u16 = 0;
     for (start_pos.items) |s| {
-        p1_sum += dfsRec(matrix, @intCast(dimension), &trailheads, s, '0');
-        p2_sum += @intCast(trailheads.count());
-        trailheads.clearRetainingCapacity();
-    }
+        defer {
+            p1_sum += @intCast(trailheads.count());
+            trailheads.clearRetainingCapacity();
+        }
+        try states.append(.{ .pos = s, .visited = VisitedT.init(allocator), .count = 0 });
+        while (states.items.len != 0) {
+            var state = states.pop();
+            defer state.visited.deinit();
 
+            const row, const col = F.castComplexT(state.pos);
+            if (matrix[row][col] == '9') {
+                trailheads.putAssumeCapacity(state.pos, {});
+                p2_sum += 1;
+                continue;
+            }
+            if (state.visited.get(state.pos) != null) continue;
+            try state.visited.put(state.pos, {});
+
+            for (0..4) |_| {
+                direction = direction.mul(rot_right);
+                const next = state.pos.add(direction);
+                if (!F.inBounds(next, max_dim, max_dim)) continue;
+                const next_row, const next_col = F.castComplexT(next);
+                if ((@as(i8, @intCast(matrix[next_row][next_col])) - @as(i8, @intCast(matrix[row][col]))) == 1)
+                    try states.append(.{
+                        .pos = next,
+                        .visited = try state.visited.clone(),
+                        .count = state.count + 1,
+                    });
+            }
+        }
+    }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn dfsRec(
-    matrix: []const []const u8,
-    dimension: CT,
-    trailheads: *std.ArrayHashMap(ComplexT, void, HashCtx, true),
-    position: ComplexT,
-    current_val: u8,
-) u8 {
-    if (!F.inBounds(position, dimension, dimension)) return 0;
-    const row, const col = F.castComplexT(position);
-    const curr_pos = matrix[row][col];
-    if (curr_pos != current_val) return 0;
-    if (curr_pos == '9') {
-        trailheads.putAssumeCapacity(position, {});
-        return 1;
+pub fn printPath(allocator: Allocator, matrix: [][]const u8, path: []const u16) !void {
+    const stdout = std.io.getStdOut().writer();
+    var result = try allocator.alloc([]u8, matrix.len);
+    for (matrix, 0..) |row, i| {
+        result[i] = @constCast(try allocator.alloc(u8, row.len));
+        @memcpy(result[i], row);
+    }
+    defer {
+        for (result) |r| allocator.free(r);
+        allocator.free(result);
     }
 
-    var direction = ComplexT.init(0, 1);
-    var sum: u8 = dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
-    inline for (0..3) |_| {
-        direction = direction.mul(F.rot_right);
-        sum += dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
+    for (path) |i| {
+        const comp = F.u16_to_complex(i);
+        const r: u8 = @intCast(comp.re);
+        const c: u8 = @intCast(comp.im);
+        result[r][c] = '.';
     }
-    return sum;
+
+    for (result) |arr| {
+        stdout.print("{s}\n", .{arr}) catch {};
+    }
+    stdout.print("\n", .{}) catch {};
 }
