@@ -74,7 +74,7 @@ pub fn main() !void {
     }
 
     const max_dim: i8 = @intCast(dimension);
-    var trailheads = std.AutoArrayHashMap(u16, u64).init(allocator);
+    var trailheads = std.AutoArrayHashMap(u16, void).init(allocator);
     defer trailheads.deinit();
 
     var direction = ComplexT.init(0, 1);
@@ -92,7 +92,7 @@ pub fn main() !void {
 
             const row, const col = F.castComplexT(state.pos);
             if (matrix[row][col] == '9') {
-                try trailheads.put(F.complex_to_u16(state.pos), state.count);
+                try trailheads.put(F.complex_to_u16(state.pos), {});
                 p2_sum += 1;
                 continue;
             }
