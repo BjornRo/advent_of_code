@@ -11,9 +11,6 @@ const F = struct {
     inline fn inBounds(pos: ComplexT, max_row: CT, max_col: CT) bool {
         return 0 <= pos.re and pos.re < max_row and 0 <= pos.im and pos.im < max_col;
     }
-    inline fn complex_to_u16(c: ComplexT) u16 {
-        return @bitCast([2]CT{ c.re, c.im });
-    }
     inline fn u16_to_complex(n: u16) ComplexT {
         const res: [2]CT = @bitCast(n);
         return ComplexT{ .re = res[0], .im = res[1] };
@@ -23,14 +20,14 @@ const F = struct {
     }
 };
 
-// const HashCtx = struct {
-//     pub fn hash(self: @This(), key: Coordinates) u64 {
-//         return @as(u64, key.y) * 37 + @as(u64, key.x);
-//     }
-//     pub fn eql(self: @This(), a: Coordinates, b: Coordinates) bool {
-//         return @bitCast(u32, a) == @bitCast(u32, b);
-//     }
-// };
+const HashCtx = struct {
+    pub fn hash(_: @This(), key: ComplexT) u16 {
+        return @bitCast([2]CT{ key.re, key.im });
+    }
+    pub fn eql(_: @This(), a: ComplexT, b: ComplexT, _: usize) bool {
+        return a.re == b.re and a.im == b.im;
+    }
+};
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
@@ -73,7 +70,7 @@ pub fn main() !void {
         }
     }
 
-    const VisitedT = std.AutoArrayHashMap(u16, void);
+    const VisitedT = std.ArrayHashMap(ComplexT, void, HashCtx, true);
     const rot_right = ComplexT.init(0, -1);
 
     var states = std.ArrayList(struct { pos: ComplexT, visited: VisitedT, count: u64 }).init(allocator);
@@ -83,7 +80,8 @@ pub fn main() !void {
     }
 
     const max_dim: i8 = @intCast(dimension);
-    var trailheads = std.AutoArrayHashMap(u16, void).init(allocator);
+    var trailheads = std.ArrayHashMap(ComplexT, void, HashCtx, true).init(allocator);
+    try trailheads.ensureTotalCapacity(10);
     defer trailheads.deinit();
 
     var direction = ComplexT.init(0, 1);
@@ -101,12 +99,12 @@ pub fn main() !void {
 
             const row, const col = F.castComplexT(state.pos);
             if (matrix[row][col] == '9') {
-                try trailheads.put(F.complex_to_u16(state.pos), {});
+                trailheads.putAssumeCapacity(state.pos, {});
                 p2_sum += 1;
                 continue;
             }
-            if ((try state.visited.getOrPutValue(F.complex_to_u16(state.pos), {})).found_existing)
-                continue;
+            if (state.visited.get(state.pos) != null) continue;
+            try state.visited.put(state.pos, {});
 
             for (0..4) |_| {
                 direction = direction.mul(rot_right);
