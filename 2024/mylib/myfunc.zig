@@ -29,6 +29,19 @@ pub inline fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len
     return error.NoDelimFound;
 }
 
+pub inline fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8, row_len: u32 } {
+    for (1..text.len - 1) |i| {
+        if (text[i] == '\n') {
+            const crlf: bool = text[i - 1] == '\r';
+            return .{
+                .delim = if (crlf) "\r\n" else "\n",
+                .row_len = @intCast(if (crlf) i - 1 else i),
+            };
+        }
+    }
+    return error.NoDelimFound;
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),
@@ -171,7 +184,7 @@ pub fn transpose(allocator: Allocator, matrix: anytype) !void {
     matrix.* = newMatrix;
 }
 
-pub fn printMat(comptime T: type, matrix: [][]T) void {
+pub fn printMat(comptime T: type, matrix: [][]const T, offset: u16) void {
     const stdout = std.io.getStdOut().writer();
     for (matrix) |arr| {
         for (arr) |elem| {
@@ -180,7 +193,8 @@ pub fn printMat(comptime T: type, matrix: [][]T) void {
                 .Enum => @intFromEnum(elem),
                 else => elem,
             };
-            stdout.print("{d} ", .{val}) catch {};
+            // @as(@TypeOf(val), @intCast(offset))
+            stdout.print("{d} ", .{val - offset}) catch {};
         }
         stdout.print("\n", .{}) catch {};
     }
