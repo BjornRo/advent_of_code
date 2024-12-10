@@ -73,86 +73,47 @@ pub fn main() !void {
         states.deinit();
     }
 
-    var max_count = std.ArrayList(u64).init(allocator);
-    defer max_count.deinit();
     const max_dim: i8 = @intCast(dimension);
-    var direction = ComplexT.init(0, 1);
-
     var trailheads = std.AutoArrayHashMap(u16, u64).init(allocator);
     defer trailheads.deinit();
-    var p1_sum: u32 = 0;
-    p1_sum += 0;
-    var p2_sum: u32 = 0;
-    p2_sum += 0;
+
+    var direction = ComplexT.init(0, 1);
+    var p1_sum: u16 = 0;
+    var p2_sum: u16 = 0;
     for (start_pos.items) |s| {
-        // for (0..1) |_| {
-        defer trailheads.clearRetainingCapacity();
-        // const s = start_pos.items[0];
-        try states.append(.{ .pos = s, .visited = VisitedT.init(allocator), .count = 0 });
         defer {
-            // print(trailheads.count());
             p1_sum += @intCast(trailheads.count());
-            p2_sum += @intCast(max_count.items.len);
-            // print(max_count.items.len);
-            // const slice = max_count.items;
-            // std.mem.sort(u64, slice, {}, std.sort.desc(u64));
-            // var local_s: u64 = 0;
-            // for (slice) |e| {
-            //     if (e != slice[0]) break;
-            //     p1_sum += 1;
-            //     local_s += 1;
-            // }
-            // print(max_count.items);
-            // for (visited.keys()) |k| {
-            //     const c = F.u16_to_complex(k);
-            //     std.debug.print("[{d},{d}] ", .{ c.re, c.im });
-            // }
-            // std.debug.print("\n", .{});
-            max_count.clearRetainingCapacity();
+            trailheads.clearRetainingCapacity();
         }
+        try states.append(.{ .pos = s, .visited = VisitedT.init(allocator), .count = 0 });
         while (states.items.len != 0) {
-            const state = states.pop();
-            var visited = state.visited;
-            defer visited.deinit();
+            var state = states.pop();
+            defer state.visited.deinit();
 
             const row, const col = F.castComplexT(state.pos);
             if (matrix[row][col] == '9') {
                 try trailheads.put(F.complex_to_u16(state.pos), state.count);
-                // if (res.found_existing) {
-                //     const prev_value = res.value_ptr.*;
-                //     if (prev_value >= )
-                // }
-                try max_count.append(state.count);
-                if (state.count == 15) {
-                    // for (visited.keys()) |k| {
-                    //     const c = F.u16_to_complex(k);
-                    //     std.debug.print("[{d},{d}] ", .{ c.re, c.im });
-                    // }
-                    // std.debug.print("\n", .{});
-                    try printPath(allocator, matrix, visited.keys());
-                }
+                p2_sum += 1;
                 continue;
             }
-            const res = try visited.getOrPutValue(F.complex_to_u16(state.pos), {});
-            if (res.found_existing) {
+            if ((try state.visited.getOrPutValue(F.complex_to_u16(state.pos), {})).found_existing)
                 continue;
-            }
 
-            const current_value = matrix[row][col];
             for (0..4) |_| {
                 direction = direction.mul(rot_right);
                 const next = state.pos.add(direction);
                 if (!F.inBounds(next, max_dim, max_dim)) continue;
                 const next_row, const next_col = F.castComplexT(next);
-                const next_value = matrix[next_row][next_col];
-                if ((@as(i8, @intCast(next_value)) - @as(i8, @intCast(current_value))) == 1)
-                    try states.append(.{ .pos = next, .visited = try visited.clone(), .count = state.count + 1 });
+                if ((@as(i8, @intCast(matrix[next_row][next_col])) - @as(i8, @intCast(matrix[row][col]))) == 1)
+                    try states.append(.{
+                        .pos = next,
+                        .visited = try state.visited.clone(),
+                        .count = state.count + 1,
+                    });
             }
         }
     }
-    print(p1_sum);
-    print(p2_sum);
-    // myf.printMat(u8, matrix, '0');
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
 pub fn printPath(allocator: Allocator, matrix: [][]const u8, path: []const u16) !void {
