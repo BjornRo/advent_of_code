@@ -110,7 +110,8 @@ pub fn main() !void {
     inline for (.{ fs, fs2 }) |f| f.deinit();
 
     var id: u16 = 0;
-    for (input, 0..in_len) |e, i| {
+    for (input, 0..) |e, i| {
+        if (e == '\n') break;
         const len = e - '0';
         var val: ?Tag = null;
         if (@mod(i, 2) == 0) {
