@@ -6,8 +6,8 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
-const Tuple = struct {
-    value: u64,
+const Tuple = packed struct {
+    value: u40,
     iter: u8,
 };
 
@@ -70,7 +70,7 @@ fn recIter(alloc: Allocator, max_iter: u8, iter: u8, slice: []const u64, memo: *
     var sum: u64 = 0;
     var res: u64 = 0;
     for (slice) |item| {
-        if (memo.get(.{ .iter = iter, .value = item })) |val| {
+        if (memo.get(.{ .iter = iter, .value = @truncate(item) })) |val| {
             sum += val;
             continue;
         }
@@ -86,7 +86,7 @@ fn recIter(alloc: Allocator, max_iter: u8, iter: u8, slice: []const u64, memo: *
             }
         }
         sum += res;
-        memo.*.put(.{ .iter = iter, .value = item }, res) catch unreachable;
+        memo.*.put(.{ .iter = iter, .value = @truncate(item) }, res) catch unreachable;
     }
     return sum;
 }
