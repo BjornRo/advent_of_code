@@ -29,7 +29,7 @@ pub fn main() !void {
     // const input = @embedFile("in/d11.txt");
     // End setup
 
-    const input = "0\r\n";
+    const input = "337 42493\r\n";
     const input_attributes = try myf.getInputAttributes(input);
 
     var list = try std.ArrayList(u64).initCapacity(
@@ -56,7 +56,7 @@ pub fn main() !void {
 
         try deque.pushBack(elem);
         var prev_len = deque.len();
-        for (0..24) |i| {
+        for (0..25) |_| {
             defer list2.clearRetainingCapacity();
             for (0..deque.len()) |_| {
                 const item = deque.popFront().?;
@@ -83,15 +83,15 @@ pub fn main() !void {
             // std.debug.print("{d} = prev: {d} | new: {d} | m: {d}\n", .{ i + 1, prev_len, new_len, new_len - prev_len });
             // print(list2.items);
 
-            std.debug.print("{d} = {d}\n", .{ i + 1, list2.items.len });
+            // std.debug.print("{d} = {d}\n", .{ i + 1, list2.items.len });
             // print(list2.items);
             // std.debug.print("\n", .{});
 
             prev_len = new_len;
         }
         sum += deque.len();
-        break;
     }
+    print(sum);
     // 0 -> 4 cycles until 0 -> 4 items
     // 1 -> 4 cycles until 1 -> 4 items
     // 2 -> 7 cycles until 2 -> 16 items
