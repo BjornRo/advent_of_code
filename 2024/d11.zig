@@ -21,7 +21,6 @@ const HashCtx = struct {
         var _hash: u128 = combined ^ (combined >> 33);
         _hash = _hash * prime;
         _hash = _hash ^ (_hash >> 29);
-        _hash = _hash * prime;
         return @truncate(_hash);
     }
     pub fn eql(_: @This(), a: Tuple, b: Tuple, _: usize) bool {
@@ -47,31 +46,20 @@ pub fn main() !void {
     const input = try myf.readFile(allocator, target_file);
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
 
-    const input_attributes = try myf.getInputAttributes(input);
-
-    var list = try std.ArrayList(u64).initCapacity(
-        allocator,
-        @intCast(1 + std.mem.count(u8, input[0..input_attributes.row_len], " ")),
-    );
+    var list = std.ArrayList(u64).init(allocator);
     defer list.deinit();
 
-    var in_iter = std.mem.splitScalar(u8, input[0..input_attributes.row_len], ' ');
-    while (in_iter.next()) |elem| {
-        list.appendAssumeCapacity(try std.fmt.parseInt(u64, elem, 10));
-    }
+    var in_iter = std.mem.splitScalar(u8, input[0..(try myf.getInputAttributes(input)).row_len], ' ');
+    while (in_iter.next()) |elem| try list.append(try std.fmt.parseInt(u64, elem, 10));
 
     var memo = Map.init(allocator);
     defer memo.deinit();
 
     var p1_sum: u64 = 0;
     var p2_sum: u64 = 0;
-    for (list.items) |item| {
-        p1_sum += recIter(allocator, 25, 0, &.{item}, &memo);
-    }
+    for (list.items) |item| p1_sum += recIter(allocator, 25, 0, &.{item}, &memo);
     memo.clearRetainingCapacity();
-    for (list.items) |item| {
-        p2_sum += recIter(allocator, 75, 0, &.{item}, &memo);
-    }
+    for (list.items) |item| p2_sum += recIter(allocator, 75, 0, &.{item}, &memo);
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
