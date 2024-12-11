@@ -6,20 +6,6 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
-// const Tuple = struct {
-//     value: u64,
-//     iter: u8,
-// };
-
-// const HashCtx = struct {
-//     pub fn hash(_: @This(), key: Tuple) u128 {
-//         return @bitCast([2]u64{ key.value, key.iter });
-//     }
-//     pub fn eql(_: @This(), a: Tuple, b: Tuple, _: usize) bool {
-//         return a.value == b.value and a.iter == b.iter;
-//     }
-// };
-
 const Map = std.AutoArrayHashMap([2]u64, u64);
 
 pub fn main() !void {
@@ -33,7 +19,8 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
     const allocator = gpa.allocator();
-    const input = "337 42493 1891760 351136 2 6932 73 0\r\n";
+    const input = @embedFile("in/d11.txt");
+
     const input_attributes = try myf.getInputAttributes(input);
 
     var list = try std.ArrayList(u64).initCapacity(
@@ -50,13 +37,17 @@ pub fn main() !void {
     var memo = Map.init(allocator);
     defer memo.deinit();
 
-    var sum: u64 = 0;
-    var list2 = std.ArrayList(u64).init(allocator);
-    defer list2.deinit();
+    var p1_sum: u64 = 0;
+    var p2_sum: u64 = 0;
     for (list.items) |item| {
-        sum += recIter(allocator, 75, 0, &.{item}, &memo);
+        p1_sum += recIter(allocator, 25, 0, &.{item}, &memo);
     }
-    print(sum);
+    memo.clearRetainingCapacity();
+    for (list.items) |item| {
+        p2_sum += recIter(allocator, 75, 0, &.{item}, &memo);
+    }
+    print(p1_sum);
+    print(p2_sum);
 }
 
 fn recIter(alloc: Allocator, max_iter: u64, iter: u64, slice: []const u64, memo: *Map) u64 {
