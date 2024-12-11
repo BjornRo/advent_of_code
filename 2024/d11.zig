@@ -18,7 +18,7 @@ const HashCtx = struct {
         const combined = iter_shifted | key.value;
         const prime = 0x9e3779b1;
 
-        var _hash: u128 = combined ^ (combined >> 33);
+        var _hash: u128 = combined ^ (combined >> 32);
         _hash = _hash * prime;
         _hash = _hash ^ (_hash >> 29);
         return @truncate(_hash);
