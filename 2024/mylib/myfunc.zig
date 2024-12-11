@@ -30,7 +30,7 @@ pub inline fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len
 }
 
 pub inline fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8, row_len: u32 } {
-    for (1..text.len - 1) |i| {
+    for (1..text.len) |i| {
         if (text[i] == '\n') {
             const crlf: bool = text[i - 1] == '\r';
             return .{
