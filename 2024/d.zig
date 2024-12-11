@@ -6,6 +6,20 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
+// const Tuple = struct {
+//     value: u64,
+//     iter: u8,
+// };
+
+// const HashCtx = struct {
+//     pub fn hash(_: @This(), key: Tuple) u128 {
+//         return @bitCast([2]u64{ key.value, key.iter });
+//     }
+//     pub fn eql(_: @This(), a: Tuple, b: Tuple, _: usize) bool {
+//         return a.value == b.value and a.iter == b.iter;
+//     }
+// };
+
 const Map = std.AutoArrayHashMap([2]u64, u64);
 
 pub fn main() !void {
