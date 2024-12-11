@@ -72,8 +72,8 @@ pub fn main() !void {
     for (list.items) |item| {
         p2_sum += recIter(allocator, 75, 0, &.{item}, &memo);
     }
-    print(p1_sum);
-    print(p2_sum);
+
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
 fn recIter(alloc: Allocator, max_iter: u8, iter: u8, slice: []const u64, memo: *Map) u64 {
