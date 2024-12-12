@@ -29,7 +29,7 @@ pub fn main() !void {
     // const input = try myf.readFile(allocator, target_file);
     // std.debug.print("Input size: {d}\n\n", .{input.len});
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d12.txt");
+    const input = @embedFile("in/d12t.txt");
     // End setup
     const input_attributes = try myf.getInputAttributes(input);
 
