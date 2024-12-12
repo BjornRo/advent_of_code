@@ -10,22 +10,22 @@ const ComplexT = std.math.Complex(CT);
 const KT = [2]CT;
 const VisitedT = std.AutoArrayHashMap(KT, void);
 
+const pad = '.';
+
 const F = struct {
     inline fn inBounds(pos: ComplexT, max_row: CT, max_col: CT) bool {
         return 0 <= pos.re and pos.re < max_row and 0 <= pos.im and pos.im < max_col;
     }
-    inline fn u16_to_complex(n: u16) ComplexT {
-        const res: [2]CT = @bitCast(n);
-        return ComplexT{ .re = res[0], .im = res[1] };
-    }
-    inline fn castComplexT(c: ComplexT) [2]u8 {
+    inline fn castComplexT(c: ComplexT) KT {
         return .{ @bitCast(c.re), @bitCast(c.im) };
     }
     pub fn eql(a: ComplexT, b: ComplexT) bool {
         return a.re == b.re and a.im == b.im;
     }
 };
-
+// to highj 914493
+// too low 909373
+// too low 909959
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -46,12 +46,12 @@ pub fn main() !void {
     // const input = try myf.readFile(allocator, target_file);
     // std.debug.print("Input size: {d}\n\n", .{input.len});
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d12t.txt");
+    const input = @embedFile("in/d12.txt");
     // End setup
     const input_attributes = try myf.getInputAttributes(input);
 
     // Assuming square matrix
-    const dimension: u8 = @intCast(input_attributes.row_len);
+    const dimension: u16 = @intCast(input_attributes.row_len);
     var matrix = try allocator.alloc([]const u8, dimension);
     defer allocator.free(matrix);
 
@@ -60,47 +60,187 @@ pub fn main() !void {
         if (in_iter.next()) |data| matrix[i] = data;
     }
 
-    var start_pos = std.ArrayList(KT).init(allocator);
-    defer start_pos.deinit();
-
     var visited = VisitedT.init(allocator);
     defer visited.deinit();
 
     var regions = std.ArrayList(std.AutoArrayHashMap(KT, void)).init(allocator);
+    var regions2 = std.ArrayList(std.AutoArrayHashMap(KT, void)).init(allocator);
     defer {
         for (regions.items) |*region| region.deinit();
         regions.deinit();
+        for (regions2.items) |*region| region.deinit();
+        regions2.deinit();
     }
 
-    const max_dim: CT = @intCast(dimension);
+    const exp_mat = try myf.expandMatrix3x(u8, allocator, matrix);
+    const pad_matrix = try myf.padMatScalar(u8, allocator, matrix, pad);
+    const pad_matrix2 = try myf.padMatScalar(u8, allocator, exp_mat, pad);
 
-    for (0..dimension) |i| {
-        for (0..dimension) |j| {
+    defer {
+        for (pad_matrix) |r| allocator.free(r);
+        allocator.free(pad_matrix);
+        for (pad_matrix2) |r| allocator.free(r);
+        allocator.free(pad_matrix2);
+        for (exp_mat) |r| allocator.free(r);
+        allocator.free(exp_mat);
+    }
+
+    for (1..dimension + 1) |i| {
+        for (1..dimension + 1) |j| {
             const coord: KT = .{ @intCast(i), @intCast(j) };
             if (visited.get(coord) != null) continue;
-            const region_key = matrix[i][j];
-            try regions.append(dfs(allocator, matrix, max_dim, region_key, &visited, coord));
+            const region_key = pad_matrix[i][j];
+            try regions.append(dfs(allocator, pad_matrix, region_key, &visited, coord));
         }
     }
 
     var p1_sum: u64 = 0;
     for (regions.items) |region| {
         const area = region.keys().len;
-        const perimeter = calcPerimeter(matrix, max_dim, region.keys());
+        const perimeter = calcPerimeter(pad_matrix, region.keys());
         p1_sum += area * perimeter;
         //
     }
     print(p1_sum);
+
+    visited.clearRetainingCapacity();
+
+    for (1..dimension * 3 + 1) |i| {
+        for (1..dimension * 3 + 1) |j| {
+            const coord: KT = .{ @intCast(i), @intCast(j) };
+            if (visited.get(coord) != null) continue;
+            const region_key = pad_matrix2[i][j];
+            try regions2.append(dfs(allocator, pad_matrix2, region_key, &visited, coord));
+        }
+    }
+
+    var p2_sum: u64 = 0;
+    for (regions2.items, 0..) |region, i| {
+        var border = paintBorders(allocator, pad_matrix2, region);
+        defer border.deinit();
+        const corners = cornerFinder(allocator, border, region);
+        p2_sum += corners * regions.items[i].keys().len;
+    }
+    print(p2_sum);
 }
 
-// fn castAway(matrix: []const []const u8, max_dim: CT, region: []KT) void {
-//     const start_pos = ComplexT.init(region[0][0] - 1, region[0][1] - 1);
-//     var dir = ComplexT.init(0, 1);
-//     var pos = start_pos.add(dir);
+fn paintBorders(alloc: Allocator, matrix: []const []const u8, region: VisitedT) VisitedT {
+    var region_coords = VisitedT.init(alloc);
+    for (region.keys()) |coord| {
+        const row, const col = coord;
+        for (myf.getKernel3x3(CT, row, col)) |next_position| {
+            const next_row, const next_col = next_position;
+            const mat_elem = matrix[@intCast(next_row)][@intCast(next_col)];
+            if (region.get(.{ next_row, next_col }) == null or mat_elem == pad) {
+                region_coords.put(.{ next_row, next_col }, {}) catch unreachable;
+            }
+        }
+    }
+    return region_coords;
+}
+fn cornerFinder(alloc: Allocator, border: VisitedT, region: VisitedT) u64 {
+    var visited = VisitedT.init(alloc);
+    defer visited.deinit();
 
-//     while (F.eql(0, start_pos, pos)) {}
-// }
-fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
+    var list = std.ArrayList(ComplexT).init(alloc);
+    defer list.deinit();
+
+    var borders: u64 = 0;
+
+    const rot_right = ComplexT.init(0, -1);
+    const rot_left = ComplexT.init(0, 1);
+
+    var next_step: ComplexT = undefined;
+
+    for (border.keys()) |position| {
+        if (visited.get(position) != null) continue;
+
+        const row, const col = position;
+        var direction = ComplexT.init(0, 1);
+        var frontier = ComplexT.init(row, col);
+        // Align the frontier, region to the right
+        for (0..4) |_| {
+            direction = direction.mul(rot_right);
+            next_step = frontier.add(direction);
+            if (region.get(.{ next_step.re, next_step.im }) != null) {
+                direction = direction.mul(rot_left);
+                break;
+            }
+        } else {
+            continue;
+        }
+        var stop_pos: ?ComplexT = null;
+        var stop_dir: ?ComplexT = null;
+        while (true) {
+            if (stop_pos == null) {
+                stop_pos = frontier;
+                stop_dir = direction;
+            } else {
+                if (F.eql(stop_pos.?, frontier) and F.eql(stop_dir.?, direction))
+                    break;
+            }
+            // std.debug.print("{any}, dir: {any}\n", .{ frontier, direction });
+
+            const turn_right = direction.mul(rot_right);
+            next_step = frontier.add(turn_right);
+            if (region.get(.{ next_step.re, next_step.im }) == null) {
+                borders += 1;
+                // std.debug.print("{s}\n", .{"turned right"});
+                direction = turn_right;
+                if (F.eql(stop_pos.?, frontier) and F.eql(stop_dir.?, direction))
+                    break;
+                frontier = next_step;
+                visited.put(F.castComplexT(frontier), {}) catch unreachable;
+                // print(borders);
+                continue;
+            }
+
+            next_step = frontier.add(direction);
+            if (region.get(.{ next_step.re, next_step.im }) == null) {
+                if (border.get(.{ next_step.re, next_step.im }) != null) {
+                    frontier = next_step;
+                    visited.put(F.castComplexT(frontier), {}) catch unreachable;
+                    continue;
+                }
+            }
+            const turn_left = direction.mul(rot_left);
+            next_step = frontier.add(turn_left);
+            if (region.get(.{ next_step.re, next_step.im }) == null) {
+                borders += 1;
+                // std.debug.print("{s}\n", .{"turned left"});
+                direction = turn_left;
+                if (F.eql(stop_pos.?, frontier) and F.eql(stop_dir.?, direction))
+                    break;
+                frontier = next_step;
+                visited.put(F.castComplexT(frontier), {}) catch unreachable;
+                // print(borders);
+                continue;
+            }
+
+            const turn_180 = direction.mul(rot_left).mul(rot_left);
+            next_step = frontier.add(turn_180);
+            if (region.get(.{ next_step.re, next_step.im }) == null) {
+                // std.debug.print("{s}\n", .{"turned 180"});
+                if (F.eql(stop_pos.?, frontier) and F.eql(stop_dir.?, direction))
+                    break;
+
+                if (F.eql(stop_pos.?, frontier) and F.eql(stop_dir.?, direction.mul(rot_right).mul(rot_right).mul(rot_right)))
+                    break;
+                borders += 2;
+                direction = turn_180;
+                frontier = next_step;
+                visited.put(F.castComplexT(frontier), {}) catch unreachable;
+                continue;
+            }
+            // We are stuck in a single space
+            borders += 4;
+            break;
+        }
+    }
+    return borders;
+}
+
+fn calcPerimeter(matrix: []const []const u8, region: []KT) u64 {
     const m, const n = region[0];
     const symbol = matrix[@intCast(m)][@intCast(n)];
 
@@ -108,13 +248,10 @@ fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
     for (region) |coord| {
         const row, const col = coord;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
-            if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
-                if (matrix[valid_pos.row][valid_pos.col] != symbol) {
-                    perimeter += 1;
-                }
-            } else {
+            const next_row, const next_col = next_position;
+            const mat_elem = matrix[@intCast(next_row)][@intCast(next_col)];
+            if (mat_elem != symbol or mat_elem == pad) {
                 perimeter += 1;
-                continue;
             }
         }
     }
@@ -124,7 +261,6 @@ fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
 fn dfs(
     alloc: Allocator,
     matrix: []const []const u8,
-    max_dim: CT,
     region_key: u8,
     visited: *VisitedT,
     start_coord: KT,
@@ -145,10 +281,11 @@ fn dfs(
 
         const row, const col = position;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
-            if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
-                if (matrix[valid_pos.row][valid_pos.col] == region_key)
-                    stack.append(next_position) catch unreachable;
-            }
+            const next_row, const next_col = next_position;
+            const mat_elem = matrix[@intCast(next_row)][@intCast(next_col)];
+            if (mat_elem == pad) continue;
+            if (mat_elem != region_key) continue;
+            stack.append(next_position) catch unreachable;
         }
     }
     return region_coords;

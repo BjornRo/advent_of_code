@@ -160,6 +160,23 @@ pub fn concatInts(comptime T: type, a: T, b: T) T {
     return a * (std.math.powi(T, 10, digits_b) catch unreachable) + b;
 }
 
+pub fn expandMatrix3x(comptime T: type, alloc: Allocator, matrix: []const []const T) ![][]T {
+    const row_len = matrix.len;
+    const col_len = matrix[0].len;
+    var new_matrix = try alloc.alloc([]T, row_len * 3);
+
+    for (0..row_len * 3) |i| {
+        new_matrix[i] = try alloc.alloc(T, col_len * 3);
+        const source_row = i / 3;
+        for (0..(col_len * 3)) |j| {
+            const source_col = j / 3;
+            new_matrix[i][j] = matrix[source_row][source_col];
+        }
+    }
+
+    return new_matrix;
+}
+
 pub fn sortMat(comptime T: type, mat: [][]T, comptime asc: bool) void {
     const Cmp = struct {
         fn lt(_: void, lhs: []T, rhs: []T) bool {
