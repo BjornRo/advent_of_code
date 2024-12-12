@@ -6,8 +6,25 @@ const time = std.time;
 const Allocator = std.mem.Allocator;
 
 const CT = i16;
+const ComplexT = std.math.Complex(CT);
 const KT = [2]CT;
 const VisitedT = std.AutoArrayHashMap(KT, void);
+
+const F = struct {
+    inline fn inBounds(pos: ComplexT, max_row: CT, max_col: CT) bool {
+        return 0 <= pos.re and pos.re < max_row and 0 <= pos.im and pos.im < max_col;
+    }
+    inline fn u16_to_complex(n: u16) ComplexT {
+        const res: [2]CT = @bitCast(n);
+        return ComplexT{ .re = res[0], .im = res[1] };
+    }
+    inline fn castComplexT(c: ComplexT) [2]u8 {
+        return .{ @bitCast(c.re), @bitCast(c.im) };
+    }
+    pub fn eql(a: ComplexT, b: ComplexT) bool {
+        return a.re == b.re and a.im == b.im;
+    }
+};
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
@@ -55,9 +72,9 @@ pub fn main() !void {
     var visited = VisitedT.init(allocator);
     defer visited.deinit();
 
-    var regions = std.ArrayList([]KT).init(allocator);
+    var regions = std.ArrayList(std.AutoArrayHashMap(KT, void)).init(allocator);
     defer {
-        for (regions.items) |region| allocator.free(region);
+        for (regions.items) |*region| region.deinit();
         regions.deinit();
     }
 
@@ -74,20 +91,20 @@ pub fn main() !void {
 
     var p1_sum: u64 = 0;
     for (regions.items) |region| {
-        const area = region.len;
-        const perimeter = calcPerimeter(matrix, max_dim, region);
+        const area = region.keys().len;
+        const perimeter = calcPerimeter(matrix, max_dim, region.keys());
         p1_sum += area * perimeter;
         //
     }
     print(p1_sum);
 }
 
-// fn castAway(matrix: []const []const u8, max_dim: CT, region: []ComplexT) void {
-//     for (0..matrix.len) |i| {
-//         for (0..matrix.len) |j| {
-//             //
-//         }
-//     }
+// fn castAway(matrix: []const []const u8, max_dim: CT, region: []KT) void {
+//     const start_pos = ComplexT.init(region[0][0] - 1, region[0][1] - 1);
+//     var dir = ComplexT.init(0, 1);
+//     var pos = start_pos.add(dir);
+
+//     while (F.eql(0, start_pos, pos)) {}
 // }
 fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
     const m, const n = region[0];
@@ -117,13 +134,12 @@ fn dfs(
     region_key: u8,
     visited: *VisitedT,
     start_coord: KT,
-) []KT {
+) std.AutoArrayHashMap(KT, void) {
     var stack = std.ArrayList(KT).init(alloc);
     defer stack.deinit();
 
     // Returns
-    var region_coords = std.ArrayList(KT).init(alloc);
-    defer region_coords.deinit();
+    var region_coords = std.AutoArrayHashMap(KT, void).init(alloc);
 
     stack.append(start_coord) catch unreachable;
     while (stack.items.len != 0) {
@@ -131,7 +147,7 @@ fn dfs(
 
         if (visited.get(position) != null) continue;
         visited.put(position, {}) catch unreachable;
-        region_coords.append(position) catch unreachable;
+        region_coords.put(position, {}) catch unreachable;
 
         const row, const col = position;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
@@ -141,7 +157,7 @@ fn dfs(
             }
         }
     }
-    return region_coords.toOwnedSlice() catch unreachable;
+    return region_coords;
 }
 
 pub fn printRegion(allocator: Allocator, matrix: [][]const u8, region: []const KT) void {
