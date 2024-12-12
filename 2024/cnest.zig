@@ -11,5 +11,5 @@ pub fn main() !void {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    print(myf.getNextPositions(i8, 2, 1));
+    print(myf.getNextPositions(i8, 1, 0));
 }
