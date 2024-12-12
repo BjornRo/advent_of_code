@@ -52,22 +52,16 @@ pub fn main() !void {
 
     // Assuming square matrix
     const dimension: u8 = @intCast(input_attributes.row_len);
-    var matrix = try allocator.alloc([]u8, dimension);
-    defer {
-        for (matrix) |row| allocator.free(row);
-        allocator.free(matrix);
+    var matrix = try allocator.alloc([]const u8, dimension);
+    defer allocator.free(matrix);
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    for (0..matrix.len) |i| {
+        if (in_iter.next()) |data| matrix[i] = data;
     }
 
     var start_pos = std.ArrayList(KT).init(allocator);
     defer start_pos.deinit();
-
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    for (0..matrix.len) |i| {
-        if (in_iter.next()) |data| {
-            matrix[i] = try allocator.alloc(u8, dimension);
-            @memcpy(matrix[i], data[0..dimension]);
-        }
-    }
 
     var visited = VisitedT.init(allocator);
     defer visited.deinit();

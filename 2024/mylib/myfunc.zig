@@ -61,6 +61,17 @@ pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     return @as([4][2]T, @bitCast(res));
 }
 
+pub inline fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int, .ComptimeInt => {},
+        else => unreachable,
+    };
+    const a = @Vector(16, T){ row, col, row, col, row, col, row, col, row, col, row, col, row, col, row, col };
+    const b = @Vector(16, T){ 1, 0, 0, 1, -1, 0, 0, -1, -1, -1, -1, 1, 1, -1, 1, 1 };
+    const res: [16]T = a + b;
+    return @as([8][2]T, @bitCast(res));
+}
+
 pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struct { row: usize, col: usize } {
     const row, const col = pos;
     if (0 <= row and row < max_row and 0 <= col and col < max_col)
@@ -208,6 +219,25 @@ pub fn transpose(allocator: Allocator, matrix: anytype) !void {
         allocator.free(row);
     }
     matrix.* = newMatrix;
+}
+
+pub fn padMatScalar(comptime T: type, alloc: Allocator, matrix: []const []const T, pad: T) ![][]T {
+    const row_len = matrix.len;
+    const col_len = matrix[0].len;
+    var new_matrix = try alloc.alloc([]T, row_len + 2);
+
+    for (1..row_len + 1) |i| {
+        new_matrix[i] = try alloc.alloc(T, col_len + 2);
+        @memcpy(new_matrix[i][1 .. col_len + 1], matrix[i - 1][0..col_len]);
+        new_matrix[i][0] = pad;
+        new_matrix[i][col_len + 1] = pad;
+    }
+
+    inline for (.{ 0, col_len + 1 }) |i| {
+        new_matrix[i] = try alloc.alloc(T, col_len + 2);
+        for (0..col_len + 2) |j| new_matrix[i][j] = pad;
+    }
+    return new_matrix;
 }
 
 pub fn printMat(comptime T: type, matrix: [][]const T, offset: u16) void {
