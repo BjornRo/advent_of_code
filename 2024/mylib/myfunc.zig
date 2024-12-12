@@ -50,6 +50,17 @@ pub inline fn getNeighborOffset(comptime T: type) [4][2]T {
     return [4][2]T{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
+pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int, .ComptimeInt => {},
+        else => unreachable,
+    };
+    const a = @Vector(8, T){ row, row, row, row, col, col, col, col };
+    const b = @Vector(8, T){ 1, 0, -1, 0, 0, 1, 0, -1 };
+    const res: [8]T = a + b;
+    return @as([4][2]T, @bitCast(res));
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),
