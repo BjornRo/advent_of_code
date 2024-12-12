@@ -29,7 +29,7 @@ pub fn main() !void {
     // const input = try myf.readFile(allocator, target_file);
     // std.debug.print("Input size: {d}\n\n", .{input.len});
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d12t.txt");
+    const input = @embedFile("in/d12.txt");
     // End setup
     const input_attributes = try myf.getInputAttributes(input);
 
@@ -69,13 +69,7 @@ pub fn main() !void {
             if (visited.get(coord) != null) continue;
             const region_key = matrix[i][j];
             try regions.append(dfs(allocator, matrix, max_dim, region_key, &visited, coord));
-            break;
         }
-        break;
-    }
-    for (regions.items) |region| {
-        printRegion(allocator, matrix, region);
-        break;
     }
 
     var p1_sum: u64 = 0;
