@@ -104,7 +104,7 @@ fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
         const row, const col = coord;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
             if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
-                if (matrix[valid_pos[0]][valid_pos[1]] != symbol) {
+                if (matrix[valid_pos.row][valid_pos.col] != symbol) {
                     perimeter += 1;
                 }
             } else {
@@ -142,7 +142,7 @@ fn dfs(
         const row, const col = position;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
             if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
-                if (matrix[valid_pos[0]][valid_pos[1]] == region_key)
+                if (matrix[valid_pos.row][valid_pos.col] == region_key)
                     stack.append(next_position) catch unreachable;
             }
         }

@@ -61,10 +61,10 @@ pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     return @as([4][2]T, @bitCast(res));
 }
 
-pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?[2]usize {
+pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struct { row: usize, col: usize } {
     const row, const col = pos;
     if (0 <= row and row < max_row and 0 <= col and col < max_col)
-        return .{ @intCast(row), @intCast(col) };
+        return .{ .row = @intCast(row), .col = @intCast(col) };
     return null;
 }
 
