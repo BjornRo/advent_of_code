@@ -103,13 +103,13 @@ fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []KT) u64 {
     for (region) |coord| {
         const row, const col = coord;
         for (myf.getNextPositions(CT, row, col)) |next_position| {
-            const next_row, const next_col = next_position;
-            if (!myf.checkInBounds(CT, next_row, next_col, max_dim, max_dim)) {
+            if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
+                if (matrix[valid_pos[0]][valid_pos[1]] != symbol) {
+                    perimeter += 1;
+                }
+            } else {
                 perimeter += 1;
                 continue;
-            }
-            if (matrix[@intCast(next_row)][@intCast(next_col)] != symbol) {
-                perimeter += 1;
             }
         }
     }
@@ -140,11 +140,9 @@ fn dfs(
         region_coords.append(position) catch unreachable;
 
         const row, const col = position;
-        print(myf.getNextPositions(CT, row, col));
         for (myf.getNextPositions(CT, row, col)) |next_position| {
-            const next_row, const next_col = next_position;
-            if (myf.checkInBounds(CT, next_row, next_col, max_dim, max_dim)) {
-                if (matrix[@intCast(next_row)][@intCast(next_col)] == region_key)
+            if (myf.checkInBounds(CT, next_position, max_dim, max_dim)) |valid_pos| {
+                if (matrix[valid_pos[0]][valid_pos[1]] == region_key)
                     stack.append(next_position) catch unreachable;
             }
         }

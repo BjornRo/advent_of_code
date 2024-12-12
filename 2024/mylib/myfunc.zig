@@ -61,8 +61,11 @@ pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     return @as([4][2]T, @bitCast(res));
 }
 
-pub inline fn checkInBounds(comptime T: type, row: T, col: T, max_row: T, max_col: T) bool {
-    return 0 <= row and row < max_row and 0 <= col and col < max_col;
+pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?[2]usize {
+    const row, const col = pos;
+    if (0 <= row and row < max_row and 0 <= col and col < max_col)
+        return .{ @intCast(row), @intCast(col) };
+    return null;
 }
 
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
