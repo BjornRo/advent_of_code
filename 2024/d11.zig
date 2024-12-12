@@ -9,26 +9,25 @@ const Allocator = std.mem.Allocator;
 const Tuple = packed struct {
     value: u40,
     iter: u8,
+    // max value 409526509568, 39 bits
+    const HashCtx = struct {
+        pub fn hash(_: @This(), key: Tuple) u32 {
+            const iter_shifted = @as(u64, @intCast(key.iter)) << 32;
+            const combined = iter_shifted | key.value;
+            const prime = 0x9e3779b1;
+
+            var _hash: u128 = combined ^ (combined >> 32);
+            _hash = _hash * prime;
+            _hash = _hash ^ (_hash >> 29);
+            return @truncate(_hash);
+        }
+        pub fn eql(_: @This(), a: Tuple, b: Tuple, _: usize) bool {
+            return a.value == b.value and a.iter == b.iter;
+        }
+    };
 };
 
-// max value 409526509568, 39 bits
-const HashCtx = struct {
-    pub fn hash(_: @This(), key: Tuple) u32 {
-        const iter_shifted = @as(u64, @intCast(key.iter)) << 32;
-        const combined = iter_shifted | key.value;
-        const prime = 0x9e3779b1;
-
-        var _hash: u128 = combined ^ (combined >> 32);
-        _hash = _hash * prime;
-        _hash = _hash ^ (_hash >> 29);
-        return @truncate(_hash);
-    }
-    pub fn eql(_: @This(), a: Tuple, b: Tuple, _: usize) bool {
-        return a.value == b.value and a.iter == b.iter;
-    }
-};
-
-const Map = std.ArrayHashMap(Tuple, u64, HashCtx, true);
+const Map = std.ArrayHashMap(Tuple, u64, Tuple.HashCtx, true);
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
