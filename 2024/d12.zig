@@ -5,7 +5,7 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
-const CT = i8;
+const CT = i16;
 const ComplexT = std.math.Complex(CT);
 const VisitedT = std.ArrayHashMap(ComplexT, void, HashCtx, true);
 const F = struct {
@@ -16,13 +16,13 @@ const F = struct {
         const res: [2]CT = @bitCast(n);
         return ComplexT{ .re = res[0], .im = res[1] };
     }
-    inline fn castComplexT(c: ComplexT) [2]u8 {
+    inline fn castComplexT(c: ComplexT) [2]u16 {
         return .{ @bitCast(c.re), @bitCast(c.im) };
     }
 };
 
 const HashCtx = struct {
-    pub fn hash(_: @This(), key: ComplexT) u16 {
+    pub fn hash(_: @This(), key: ComplexT) u32 {
         return @bitCast([2]CT{ key.re, key.im });
     }
     pub fn eql(_: @This(), a: ComplexT, b: ComplexT, _: usize) bool {
@@ -50,7 +50,7 @@ pub fn main() !void {
     // const input = try myf.readFile(allocator, target_file);
     // std.debug.print("Input size: {d}\n\n", .{input.len});
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d12t.txt");
+    const input = @embedFile("in/d12.txt");
     // End setup
     const input_attributes = try myf.getInputAttributes(input);
 
@@ -76,22 +76,52 @@ pub fn main() !void {
         regions.deinit();
     }
 
+    const max_dim: CT = @intCast(dimension);
+
     for (0..dimension) |i| {
         for (0..dimension) |j| {
             const coord = ComplexT.init(@intCast(i), @intCast(j));
             if (visited.get(coord) != null) continue;
             const region_key = matrix[i][j];
-            try regions.append(bfs(allocator, matrix, @intCast(dimension), region_key, &visited, coord));
-            break;
+            try regions.append(dfs(allocator, matrix, max_dim, region_key, &visited, coord));
         }
-        break;
     }
-    printRegion(allocator, matrix, regions.items[0]);
+    // for (regions.items) |region| printRegion(allocator, matrix, region);
+
+    var p1_sum: u64 = 0;
+    for (regions.items) |region| {
+        const area = region.len;
+        const perimeter = calcPerimeter(matrix, max_dim, region);
+        p1_sum += area * perimeter;
+        //
+    }
+    print(p1_sum);
 }
 
 // https://www.geeksforgeeks.org/find-perimeter-shapes-formed-1s-binary-matrix/
 
-fn bfs(
+fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []ComplexT) u64 {
+    const m, const n = F.castComplexT(region[0]);
+    const symbol = matrix[m][n];
+
+    var perimeter: u64 = 0;
+    for (region) |coord| {
+        for ([_][2]CT{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } }) |offset| {
+            const off_coord = coord.add(ComplexT.init(offset[0], offset[1]));
+            if (!F.inBounds(off_coord, max_dim, max_dim)) {
+                perimeter += 1;
+                continue;
+            }
+            const i, const j = F.castComplexT(off_coord);
+            if (matrix[i][j] != symbol) {
+                perimeter += 1;
+            }
+        }
+    }
+    return perimeter;
+}
+
+fn dfs(
     alloc: Allocator,
     matrix: []const []const u8,
     max_dim: CT,
