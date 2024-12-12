@@ -42,6 +42,14 @@ pub inline fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8
     return error.NoDelimFound;
 }
 
+pub inline fn getNeighborOffset(comptime T: type) [4][2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int, .ComptimeInt => {},
+        else => unreachable,
+    };
+    return [4][2]T{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),

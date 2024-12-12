@@ -56,15 +56,21 @@ pub fn main() !void {
 
     // Assuming square matrix
     const dimension: u8 = @intCast(input_attributes.row_len);
-    const matrix = try allocator.alloc([]const u8, dimension);
-    defer allocator.free(matrix);
+    var matrix = try allocator.alloc([]u8, dimension);
+    defer {
+        for (matrix) |row| allocator.free(row);
+        allocator.free(matrix);
+    }
 
     var start_pos = std.ArrayList(ComplexT).init(allocator);
     defer start_pos.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    for (matrix) |*row| {
-        if (in_iter.next()) |data| row.* = data;
+    for (0..matrix.len) |i| {
+        if (in_iter.next()) |data| {
+            matrix[i] = try allocator.alloc(u8, dimension);
+            @memcpy(matrix[i], data[0..dimension]);
+        }
     }
 
     var visited = VisitedT.init(allocator);
@@ -98,15 +104,20 @@ pub fn main() !void {
     print(p1_sum);
 }
 
-// https://www.geeksforgeeks.org/find-perimeter-shapes-formed-1s-binary-matrix/
-
+// fn castAway(matrix: []const []const u8, max_dim: CT, region: []ComplexT) void {
+//     for (0..matrix.len) |i| {
+//         for (0..matrix.len) |j| {
+//             //
+//         }
+//     }
+// }
 fn calcPerimeter(matrix: []const []const u8, max_dim: CT, region: []ComplexT) u64 {
     const m, const n = F.castComplexT(region[0]);
     const symbol = matrix[m][n];
 
     var perimeter: u64 = 0;
     for (region) |coord| {
-        for ([_][2]CT{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } }) |offset| {
+        for (myf.getNeighborOffset(CT)) |offset| {
             const off_coord = coord.add(ComplexT.init(offset[0], offset[1]));
             if (!F.inBounds(off_coord, max_dim, max_dim)) {
                 perimeter += 1;
@@ -155,7 +166,7 @@ fn dfs(
             }
         }
     }
-    return region_coords.toOwnedSlice() catch unreachable;
+    return region_coords.items;
 }
 
 pub fn printRegion(allocator: Allocator, matrix: [][]const u8, region: []const ComplexT) void {
