@@ -23,9 +23,6 @@ const F = struct {
         return a.re == b.re and a.im == b.im;
     }
 };
-// to highj 914493
-// too low 909373
-// too low 909959
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
