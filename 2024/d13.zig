@@ -65,13 +65,14 @@ fn solveEquation(a_xy: Vec2, b_xy: Vec2, XY: Vec2) Vec2 {
     const a2 = a_xy[1];
     const b1 = b_xy[0];
     const b2 = b_xy[1];
-    const X, const Y = XY;
 
     const det = a1 * b2 - a2 * b1;
-    return Vec2{
-        X * b2 - Y * b1,
-        a1 * Y - a2 * X,
-    } / Vec2{ det, det };
+    const X, const Y = XY;
+
+    const x = (X * b2 - Y * b1) / det;
+    const y = (a1 * Y - a2 * X) / det;
+
+    return Vec2{ x, y };
 }
 
 fn getRowXY(row: []const u8) Vec2 {
