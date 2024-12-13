@@ -236,8 +236,13 @@ pub fn printRegion(allocator: Allocator, matrix: [][]const u8, region: []const K
         result[r][c] = '#';
     }
 
-    for (result) |arr| {
-        stdout.print("{s}\n", .{arr}) catch unreachable;
+    var columns = allocator.alloc(u8, matrix[0].len) catch unreachable;
+    defer allocator.free(columns);
+
+    for (0..columns.len) |i| columns[i] = '0' + @as(u8, @intCast(i));
+    stdout.print(" {s}\n", .{columns}) catch unreachable;
+    for (result, 0..) |arr, i| {
+        stdout.print("{d}{s}\n", .{ @mod(i, 10), arr }) catch unreachable;
     }
     stdout.print("\n", .{}) catch unreachable;
 }

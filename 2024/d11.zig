@@ -57,36 +57,30 @@ pub fn main() !void {
 
     var p1_sum: u64 = 0;
     var p2_sum: u64 = 0;
-    for (list.items) |item| p1_sum += recIter(25, 0, &.{item}, &memo);
+    for (list.items) |item| p1_sum += recIter(25, item, &memo);
     memo.clearRetainingCapacity();
-    for (list.items) |item| p2_sum += recIter(75, 0, &.{item}, &memo);
+    for (list.items) |item| p2_sum += recIter(75, item, &memo);
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn recIter(max_iter: u8, iter: u8, slice: []const u64, memo: *Map) u64 {
-    if (max_iter == iter) return slice.len;
+fn recIter(iter: u8, item: u64, memo: *Map) u64 {
+    if (iter == 0) return 1;
+    if (memo.get(.{ .iter = iter, .value = @truncate(item) })) |val| return val;
 
-    var sum: u64 = 0;
     var res: u64 = 0;
-    for (slice) |item| {
-        if (memo.get(.{ .iter = iter, .value = @truncate(item) })) |val| {
-            sum += val;
-            continue;
-        }
-        if (item == 0) {
-            res = recIter(max_iter, iter + 1, &.{1}, memo);
+    if (item == 0) {
+        res = recIter(iter - 1, 1, memo);
+    } else {
+        const digits = std.math.log10_int(item);
+        if (@mod(digits, 2) == 1) { // Add 1 digit later, "optimization"
+            const pow = std.math.powi(u64, 10, @divExact(digits + 1, 2)) catch unreachable;
+            res = recIter(iter - 1, @mod(item, pow), memo) +
+                recIter(iter - 1, @divFloor(item, pow), memo);
         } else {
-            const digits = std.math.log10_int(item);
-            if (@mod(digits, 2) == 1) { // Add 1 digit later, "optimization"
-                const pow = std.math.powi(u64, 10, @divExact(digits + 1, 2)) catch unreachable;
-                res = recIter(max_iter, iter + 1, &.{ @divFloor(item, pow), @mod(item, pow) }, memo);
-            } else {
-                res = recIter(max_iter, iter + 1, &.{item * 2024}, memo);
-            }
+            res = recIter(iter - 1, item * 2024, memo);
         }
-        sum += res;
-        memo.*.putAssumeCapacity(.{ .iter = iter, .value = @truncate(item) }, res);
     }
-    return sum;
+    memo.*.putAssumeCapacity(.{ .iter = iter, .value = @truncate(item) }, res);
+    return res;
 }
