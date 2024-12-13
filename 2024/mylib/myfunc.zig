@@ -47,7 +47,7 @@ pub inline fn getNeighborOffset(comptime T: type) [4][2]T {
         .Int, .ComptimeInt => {},
         else => unreachable,
     };
-    return [4][2]T{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
+    return .{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
 pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
@@ -58,7 +58,7 @@ pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
     const b = @Vector(8, T){ 1, 0, 0, 1, -1, 0, 0, -1 };
     const res: [8]T = a + b;
-    return @as([4][2]T, @bitCast(res));
+    return @bitCast(res);
 }
 
 pub inline fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
@@ -69,7 +69,7 @@ pub inline fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
     const a = @Vector(16, T){ row, col, row, col, row, col, row, col, row, col, row, col, row, col, row, col };
     const b = @Vector(16, T){ 1, 0, 0, 1, -1, 0, 0, -1, -1, -1, -1, 1, 1, -1, 1, 1 };
     const res: [16]T = a + b;
-    return @as([8][2]T, @bitCast(res));
+    return @bitCast(res);
 }
 
 pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struct { row: usize, col: usize } {
