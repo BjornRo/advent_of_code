@@ -278,3 +278,8 @@ pub inline fn printAny(n: anytype) void {
     const stdout = std.io.getStdOut().writer();
     stdout.print("{any}\n", .{n}) catch {};
 }
+
+pub inline fn printStr(n: anytype) void {
+    const stdout = std.io.getStdOut().writer();
+    stdout.print("{s}\n", .{n}) catch {};
+}

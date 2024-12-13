@@ -1,6 +1,7 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
 const print = myf.printAny;
+const prints = myf.printStr;
 const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
@@ -20,12 +21,13 @@ pub fn main() !void {
     // var fba = std.heap.FixedBufferAllocator.init(&buffer);
     // const allocator = fba.allocator();
 
-    const filename = try myf.getAppArg(allocator, 1);
-    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    const input = try myf.readFile(allocator, target_file);
-    std.debug.print("Input size: {d}\n\n", .{input.len});
-    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input = @embedFile("in/d06t.txt");
+    // const filename = try myf.getAppArg(allocator, 1);
+    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    // const input = try myf.readFile(allocator, target_file);
+    // std.debug.print("Input size: {d}\n\n", .{input.len});
+    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input = @embedFile("in/d06t.txt");
+    const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
     std.debug.print("{s}\n", .{input});
