@@ -47,23 +47,18 @@ pub fn main() !void {
         const b_xy: Vec2 = getRowXY(game_iter.next().?);
         const XY = getPriceXY(game_iter.next().?);
 
-        const AB_X = Vec2{ a_xy[0], b_xy[0] };
-        const AB_Y = Vec2{ a_xy[1], b_xy[1] };
-
-        p1_sum += solve(a_xy, b_xy, AB_X, AB_Y, XY, 0);
-        p2_sum += solve(a_xy, b_xy, AB_X, AB_Y, XY, 10000000000000);
+        if (solve(a_xy, b_xy, XY, 0)) |res| p1_sum += res;
+        if (solve(a_xy, b_xy, XY, 10_000_000_000_000)) |res| p2_sum += res;
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
 }
 
-fn solve(a: Vec2, b: Vec2, ab_x: Vec2, ab_y: Vec2, XY: Vec2, offset: T) u64 {
+fn solve(a: Vec2, b: Vec2, XY: Vec2, offset: T) ?u64 {
     const TokenCost = Vec2{ 3, 1 };
     const X, const Y = XY + Vec2{ offset, offset };
-    const res = @floor(solveEquation(a, b, X, Y));
-    if (@reduce(Op.Add, ab_x * res) == X and @reduce(Op.Add, ab_y * res) == Y) {
-        return @intFromFloat(@reduce(Op.Add, res * TokenCost));
-    }
-    return 0;
+    const res = solveEquation(a, b, X, Y);
+    inline for (@as([2]bool, res == @floor(res))) |i| if (!i) return null;
+    return @intFromFloat(@reduce(Op.Add, res * TokenCost));
 }
 
 fn solveEquation(a_xy: Vec2, b_xy: Vec2, X: T, Y: T) Vec2 {
