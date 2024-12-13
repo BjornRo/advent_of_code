@@ -44,7 +44,7 @@ pub fn main() !void {
     // const input = try myf.readFile(allocator, target_file);
     // std.debug.print("Input size: {d}\n\n", .{input.len});
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d12.txt");
+    const input = @embedFile("in/d12t.txt");
     // End setup
     const input_attributes = try myf.getInputAttributes(input);
 
@@ -95,9 +95,10 @@ pub fn main() !void {
     for (regions.items, 0..) |region, i| {
         var border = paintBorders(allocator, pad_matrix, region);
         defer border.deinit();
+        printRegion(allocator, pad_matrix, border.keys());
         const corners = cornerFinder(allocator, border, region);
+        if (corners == 21) break;
         p2_sum += corners * regions.items[i].keys().len;
-        // break;
     }
     print(p2_sum);
 }
@@ -116,83 +117,53 @@ fn paintBorders(alloc: Allocator, matrix: []const []const u8, region: VisitedT) 
     }
     return region_coords;
 }
-fn cornerFinder(alloc: Allocator, border: VisitedT, _: VisitedT) u64 {
-    var visited = VisitedT.init(alloc);
-    defer visited.deinit();
-
-    var list = std.ArrayList(ComplexT).init(alloc);
-    defer list.deinit();
-
+fn cornerFinder(_: Allocator, border: VisitedT, _: VisitedT) u64 {
     var borders: u64 = 0;
-
-    var frontier_vis = std.AutoArrayHashMap(u64, void).init(alloc);
-    defer frontier_vis.deinit();
-
-    const rot_right = ComplexT.init(0, -1);
-    const rot_left = ComplexT.init(0, 1);
-
-    var next_step: ComplexT = undefined;
-
+    defer print(borders);
     for (border.keys()) |position| {
-        if (visited.get(position) != null) continue;
-
         const row, const col = position;
-        var direction = ComplexT.init(0, 1);
-        var frontier = ComplexT.init(row, col);
-        // // Align the frontier, region to the right
-        // for (0..4) |_| {
-        //     direction = direction.mul(rot_right);
-        //     next_step = frontier.add(direction);
-        //     if (region.get(.{ next_step.re, next_step.im }) != null) {
-        //         direction = direction.mul(rot_left);
-        //         break;
-        //     }
-        // } else {
-        //     continue;
-        // }
-        while (true) {
-            const key = complexTo64(frontier, direction);
-            visited.put(castComplexT(frontier), {}) catch unreachable;
-            if (frontier_vis.get(key) != null) break;
-            frontier_vis.put(key, {}) catch unreachable;
-
-            // std.debug.print("{any}, dir: {any}\n", .{ frontier, direction });
-
-            const turn_left = direction.mul(rot_left);
-            next_step = frontier.add(turn_left);
-            if (border.get(.{ next_step.re, next_step.im }) != null) {
-                borders += 1;
-                direction = turn_left;
-                frontier = next_step;
-                // std.debug.print("turned left\n", .{});
-                continue;
+        const left = border.get(.{ row, col - 1 });
+        const right = border.get(.{ row, col + 1 });
+        const up = border.get(.{ row - 1, col });
+        const down = border.get(.{ row + 1, col });
+        const old_borders = borders;
+        defer {
+            if (old_borders != borders) {
+                // std.debug.print("{d}\n", .{position});
+                // std.debug.print("{d},{d}\n", .{ old_borders, borders });
             }
-            const turn_right = direction.mul(rot_right);
-            next_step = frontier.add(turn_right);
-            if (border.get(.{ next_step.re, next_step.im }) != null) {
-                borders += 1;
-                // std.debug.print("turned right\n", .{});
-                direction = turn_right;
-                frontier = next_step;
-                continue;
-            }
-            next_step = frontier.add(direction);
-            if (border.get(.{ next_step.re, next_step.im }) != null) {
-                frontier = next_step;
-                continue;
-            }
-
-            // const turn_180 = direction.mul(rot_left).mul(rot_left);
-            // next_step = frontier.add(turn_180);
-            // if (border.get(.{ next_step.re, next_step.im }) != null) {
-            //     // std.debug.print("{s}\n", .{"turned 180"});
-            //     borders += 2;
-            //     direction = turn_180;
-            //     continue;
-            // }
         }
+        // 01, left null, up+right || // 14 down null, right+up
+        if ((left == null and up != null and right != null) or
+            (down == null and right != null and up != null)) borders += 1;
+        // std.debug.print("{d},{d}\n", .{ 1, borders });
+        if (old_borders != borders) continue;
+        // 02 up null, right+down || // 13 left null, down+right
+        if ((up == null and right != null and down != null) or
+            (left == null and down != null and right != null)) borders += 1;
+        // std.debug.print("{d},{d}\n", .{ 2, borders });
+        if (old_borders != borders) continue;
+        // 03 right null, down+left || // 12 up null, left+down
+        if ((right == null and down != null and left != null) or
+            (up == null and left != null and down != null)) borders += 1;
+        // std.debug.print("{d},{d}\n", .{ 3, borders });
+        if (old_borders != borders) continue;
+        // 04 down null, left+up || // 11 right null, up+left
+        if ((down == null and left != null and up != null) or
+            (right == null and up != null and left != null)) borders += 1;
+        // std.debug.print("{d},{d}\n", .{ 4, borders });
+        if (old_borders != borders) continue;
+        if (left == null and up == null and right == null and down == null) {
+            borders += 4;
+            continue;
+        }
+
+        // Dead ends
+        if (left == null and up == null and right == null) borders += 2;
+        if (up == null and right == null and down == null) borders += 2;
+        if (right == null and down == null and left == null) borders += 2;
+        if (down == null and left == null and up == null) borders += 2;
     }
-    // print(borders);
     return borders;
 }
 
