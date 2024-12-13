@@ -55,24 +55,23 @@ pub fn main() !void {
 
 fn solve(a: Vec2, b: Vec2, XY: Vec2, offset: T) ?u64 {
     const TokenCost = Vec2{ 3, 1 };
-    const X, const Y = XY + Vec2{ offset, offset };
-    const res = solveEquation(a, b, X, Y);
+    const res = solveEquation(a, b, XY + Vec2{ offset, offset });
     inline for (@as([2]bool, res == @floor(res))) |i| if (!i) return null;
     return @intFromFloat(@reduce(Op.Add, res * TokenCost));
 }
 
-fn solveEquation(a_xy: Vec2, b_xy: Vec2, X: T, Y: T) Vec2 {
+fn solveEquation(a_xy: Vec2, b_xy: Vec2, XY: Vec2) Vec2 {
     const a1 = a_xy[0];
     const a2 = a_xy[1];
     const b1 = b_xy[0];
     const b2 = b_xy[1];
+    const X, const Y = XY;
 
     const det = a1 * b2 - a2 * b1;
-
-    const x = (X * b2 - Y * b1) / det;
-    const y = (a1 * Y - a2 * X) / det;
-
-    return Vec2{ x, y };
+    return Vec2{
+        X * b2 - Y * b1,
+        a1 * Y - a2 * X,
+    } / Vec2{ det, det };
 }
 
 fn getRowXY(row: []const u8) Vec2 {
