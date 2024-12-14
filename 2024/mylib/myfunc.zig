@@ -205,13 +205,13 @@ pub fn egcd(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
 
 pub fn modInverse(comptime T: type, a: T, m: T) !T {
     const res = egcd(T, a, m);
-    if (res[0] == 1) {
-        return @mod(res[1], m);
+    if (res.gcd == 1) {
+        return @mod(res.u, m);
     }
     return error.NoInverseExist;
 }
 
-pub fn crt(comptime T: type, moduli: []T, remainders: []T) !i128 {
+pub fn crt(comptime T: type, moduli: []const T, remainders: []const T) !i128 {
     comptime switch (@typeInfo(T)) {
         .Int => |int| std.debug.assert(int.signedness == .signed),
         else => unreachable,
@@ -229,6 +229,27 @@ pub fn crt(comptime T: type, moduli: []T, remainders: []T) !i128 {
         result += remainders[i] * (try modInverse(i128, bi, mi)) * bi;
     }
     return @mod(result, product);
+}
+
+pub fn variance(comptime T: type, slice: []const T) T {
+    comptime switch (@typeInfo(T)) {
+        .Float => {},
+        else => unreachable,
+    };
+
+    const n: T = @floatFromInt(slice.len);
+    if (n == 0) return 0.0;
+
+    var sum: T = 0.0;
+    for (slice) |value| sum += value;
+    const mean = sum / n;
+
+    var sqDiff: T = 0.0;
+    for (slice) |value| {
+        const diff = value - mean;
+        sqDiff += diff * diff;
+    }
+    return sqDiff / n;
 }
 
 pub fn concatInts(comptime T: type, a: T, b: T) T {
@@ -290,7 +311,7 @@ pub fn flip(matrix: anytype) void {
     }
 }
 
-pub fn transpose(allocator: Allocator, matrix: anytype) !void {
+pub fn transpose_mut(allocator: Allocator, matrix: anytype) !void {
     if (@typeInfo(@TypeOf(matrix)).Pointer.size != Type.Pointer.Size.One and
         @typeInfo(@TypeOf(matrix[0])) != .Pointer)
     {
@@ -312,6 +333,20 @@ pub fn transpose(allocator: Allocator, matrix: anytype) !void {
         allocator.free(row);
     }
     matrix.* = newMatrix;
+}
+
+pub fn transpose(comptime T: type, allocator: Allocator, matrix: []const []const T) ![][]T {
+    const numRows = matrix.len;
+    const numCols = matrix[0].len;
+    printAny(numCols);
+    printAny(numRows);
+    var newMatrix = try allocator.alloc([]T, numCols);
+    for (newMatrix) |*row| row.* = try allocator.alloc(T, numRows);
+
+    for (matrix, 0..) |row, i| {
+        for (row, 0..) |value, j| newMatrix[j][i] = value;
+    }
+    return newMatrix;
 }
 
 pub fn padMatScalar(comptime T: type, alloc: Allocator, matrix: []const []const T, pad: T) ![][]T {

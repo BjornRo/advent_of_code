@@ -53,23 +53,20 @@ pub fn main() !void {
         try list.append(robot);
         idx += 1;
 
-        const robot_row, const robot_col = part1_robot(100, robot, rows, cols);
+        const robot_row, const robot_col = moveRobot(100, robot, rows, cols);
         if (robot_row != hori_line and robot_col != vert_line)
             quad[@mod(robot_row / (hori_line + 1), 2)][@mod(robot_col / (vert_line + 1), 2)] += 1;
     }
 
     var p2_sum: ResT = 0;
 
-    var next_map = std.AutoArrayHashMap(Vec2, void).init(allocator);
-    try next_map.ensureTotalCapacity(list.items.len);
-    defer next_map.deinit();
-    for (1..1_000_000_000) |i| {
-        next_map.clearRetainingCapacity();
-        for (list.items) |*robot| {
-            part2_robot(robot, rows, cols);
-            next_map.putAssumeCapacity(robot.*[0], {});
-        }
-        if (next_map.count() == list.items.len) {
+    var map = std.AutoArrayHashMap([2]ResT, void).init(allocator);
+    try map.ensureTotalCapacity(list.items.len);
+    defer map.deinit();
+    for (1..10000) |i| {
+        map.clearRetainingCapacity();
+        for (list.items) |robot| map.putAssumeCapacity(moveRobot(@intCast(i), robot, rows, cols), {});
+        if (map.count() == list.items.len) {
             printRobotsRoom(allocator, rows, cols, list.items);
             p2_sum = @intCast(i);
             break;
@@ -90,7 +87,7 @@ pub fn main() !void {
     });
 }
 
-fn part1_robot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
+fn moveRobot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
     var pos, const dir = robot;
     pos = pos + Vec2{ steps, steps } * dir;
 
@@ -99,12 +96,6 @@ fn part1_robot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
 
     const row, const col = pos;
     return .{ @intCast(row), @intCast(col) };
-}
-
-fn part2_robot(robot: *[2]Vec2, rows: u8, cols: u8) void {
-    robot.*[0] = robot.*[0] + robot.*[1];
-    robot.*[0][0] = @mod(robot.*[0][0], rows);
-    robot.*[0][1] = @mod(robot.*[0][1], cols);
 }
 
 fn dfs(allocator: Allocator, map: std.AutoArrayHashMap(Vec2, void)) bool {
