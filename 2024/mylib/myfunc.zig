@@ -50,9 +50,9 @@ pub fn getNeighborOffset(comptime T: type) [4][2]T {
     return .{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
-pub fn ValidNeighborsIterator(comptime T: type, comptime P: type) type {
+pub fn ValidNeighborsIterator(comptime T: type) type {
     return struct {
-        positions: P,
+        positions: []const [2]T,
         min_pos: T,
         max_row: T,
         max_col: T,
@@ -80,9 +80,9 @@ pub fn validNeighborsIter(
     min_pos: @TypeOf(slice[0][0]),
     max_row: @TypeOf(slice[0][0]),
     max_col: @TypeOf(slice[0][0]),
-) ValidNeighborsIterator(@TypeOf(slice[0][0]), @TypeOf(slice)) {
+) ValidNeighborsIterator(@TypeOf(slice[0][0])) {
     return .{
-        .positions = slice,
+        .positions = &slice,
         .min_pos = min_pos,
         .max_row = max_row,
         .max_col = max_col,
