@@ -8,7 +8,7 @@ const Allocator = std.mem.Allocator;
 const Op = std.builtin.ReduceOp;
 
 const T = i32;
-const ResT = u64;
+const ResT = u32;
 const Vec2 = @Vector(2, T);
 
 const IDVec2 = packed struct { id: u16, robot: Vec2 };
@@ -47,7 +47,7 @@ pub fn main() !void {
     defer list.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    var idx: u16 = 0;
+    var idx: ResT = 0;
     while (in_iter.next()) |row| {
         const robot = getPosDir(row);
         try list.append(robot);
@@ -58,7 +58,7 @@ pub fn main() !void {
             quad[@mod(robot_row / (hori_line + 1), 2)][@mod(robot_col / (vert_line + 1), 2)] += 1;
     }
 
-    var p2_sum: u16 = 0;
+    var p2_sum: ResT = 0;
 
     var next_map = std.AutoArrayHashMap(Vec2, void).init(allocator);
     try next_map.ensureTotalCapacity(list.items.len);
@@ -84,14 +84,13 @@ pub fn main() !void {
     });
 }
 
-fn part1_robot(steps: ResT, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
+fn part1_robot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
     var pos, const dir = robot;
+    pos = pos + Vec2{ steps, steps } * dir;
 
-    for (0..steps) |_| {
-        pos = pos + dir;
-        pos[0] = @mod(pos[0], rows);
-        pos[1] = @mod(pos[1], cols);
-    }
+    pos[0] = @mod(pos[0], rows);
+    pos[1] = @mod(pos[1], cols);
+
     const row, const col = pos;
     return .{ @intCast(row), @intCast(col) };
 }
