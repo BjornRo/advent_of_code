@@ -102,8 +102,8 @@ fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8,
     defer x.deinit();
     defer y.deinit();
 
-    var var_x: f32 = 10000;
-    var var_y: f32 = 10000;
+    var var_x: f64 = 10000;
+    var var_y: f64 = 10000;
     var remx: T = 0;
     var remy: T = 0;
 
@@ -118,13 +118,13 @@ fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8,
             y.appendAssumeCapacity(@floatFromInt(yy));
             map.putAssumeCapacity(res, {});
         }
-        const var_x_res = myf.variance(f32, x.items);
+        const var_x_res = myf.variance(x.items);
         if (var_x_res < var_x) {
             var_x = var_x_res;
             remx = @intCast(i);
             printRobotsRoom(allocator, rows, cols, map.keys());
         }
-        const var_y_res = myf.variance(f32, y.items);
+        const var_y_res = myf.variance(y.items);
         if (var_y_res < var_y) {
             var_y = var_y_res;
             remy = @intCast(i);

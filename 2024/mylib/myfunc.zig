@@ -120,21 +120,44 @@ pub fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struc
 }
 
 pub fn all(slice: []const bool) bool {
-    switch (@typeInfo(@TypeOf(slice))) {
-        .Pointer => {},
-        else => @compileError("Not a slice"),
-    }
     for (slice) |v| if (!v) return false;
     return true;
 }
 
 pub fn any(slice: []const bool) bool {
+    for (slice) |v| if (v) return true;
+    return false;
+}
+
+pub fn sum(slice: anytype) @TypeOf(slice[0]) {
     switch (@typeInfo(@TypeOf(slice))) {
         .Pointer => {},
         else => @compileError("Not a slice"),
     }
-    for (slice) |v| if (v) return true;
-    return false;
+    var total: @TypeOf(slice[0]) = 0;
+    for (slice) |v| total += v;
+    return total;
+}
+
+pub fn average(slice: anytype) f64 {
+    switch (@typeInfo(@TypeOf(slice))) {
+        .Pointer => {},
+        else => @compileError("Not a slice"),
+    }
+    const N: f64 = @floatFromInt(slice.len);
+    var total: f64 = 0;
+    for (slice) |v| total += v;
+    return total / N;
+}
+
+pub fn product(slice: anytype) @TypeOf(slice[0]) {
+    switch (@typeInfo(@TypeOf(slice))) {
+        .Pointer => {},
+        else => @compileError("Not a slice"),
+    }
+    var total: @TypeOf(slice[0]) = 1;
+    for (slice) |v| total *= v;
+    return total;
 }
 
 pub fn rotateRight(comptime T: type, v: [2]T) [2]T {
@@ -219,32 +242,29 @@ pub fn crt(comptime T: type, remainders: []const T, moduli: []const T) !i128 {
     if (moduli.len != remainders.len) {
         return error.LengthMisMatch;
     }
-    var product: i128 = 1;
+    var prod: i128 = 1;
     for (moduli) |m| {
-        product *= m;
+        prod *= m;
     }
     var result: i128 = 0;
     for (moduli, 0..) |mi, i| {
-        const bi = @divExact(product, mi);
+        const bi = @divExact(prod, mi);
         result += remainders[i] * (try modInverse(i128, bi, mi)) * bi;
     }
-    return @mod(result, product);
+    return @mod(result, prod);
 }
 
-pub fn variance(comptime T: type, slice: []const T) T {
-    comptime switch (@typeInfo(T)) {
-        .Float => {},
-        else => unreachable,
-    };
-
-    const n: T = @floatFromInt(slice.len);
+pub fn variance(slice: anytype) f64 {
+    switch (@typeInfo(@TypeOf(slice))) {
+        .Pointer => {},
+        else => @compileError("Not a slice"),
+    }
+    const n: f64 = @floatFromInt(slice.len);
     if (n == 0) return 0.0;
 
-    var sum: T = 0.0;
-    for (slice) |value| sum += value;
-    const mean = sum / n;
+    const mean = average(slice);
 
-    var sqDiff: T = 0.0;
+    var sqDiff: f64 = 0.0;
     for (slice) |value| {
         const diff = value - mean;
         sqDiff += diff * diff;
