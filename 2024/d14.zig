@@ -86,7 +86,37 @@ pub fn main() !void {
         p2_sum,
     });
 
-    try crt_p2_solution(allocator, list, rows, cols);
+    // try crt_p2_solution(allocator, list, rows, cols);
+    try wc_p2_solution(allocator, list, rows, cols);
+}
+
+fn wc_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8, cols: u8) !void {
+    var map = std.AutoArrayHashMap([2]ResT, void).init(allocator);
+    try map.ensureTotalCapacity(list.items.len);
+    defer map.deinit();
+
+    var score: f64 = 1_000_000_000;
+    var idx: u16 = 0;
+
+    for (0..10_000) |i| {
+        defer map.clearRetainingCapacity();
+        var iter_score: f64 = 0;
+
+        for (list.items) |robot| map.putAssumeCapacity(moveRobot(@intCast(i), robot, rows, cols), {});
+        const slice = map.keys();
+        for (slice[slice.len - 50 ..]) |e1| {
+            for (slice[slice.len - 49 ..]) |e2| {
+                iter_score += myf.euclidean(e1, e2);
+            }
+        }
+        if (iter_score < score) {
+            score = iter_score;
+            idx = @intCast(i);
+        }
+    }
+    for (list.items) |robot| map.putAssumeCapacity(moveRobot(@intCast(idx), robot, rows, cols), {});
+    printRobotsRoom(allocator, rows, cols, map.keys());
+    printA(idx);
 }
 
 fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8, cols: u8) !void {

@@ -160,6 +160,40 @@ pub fn product(slice: anytype) @TypeOf(slice[0]) {
     return total;
 }
 
+pub fn manhattan(a: anytype, b: anytype) @TypeOf(a[0], b[0]) {
+    switch (@typeInfo(@TypeOf(a, b))) {
+        .Int => |int| {
+            if (int.signedness == .unsigned) {
+                const x1: i32 = @intCast(a[0]);
+                const y1: i32 = @intCast(a[1]);
+                const x2: i32 = @intCast(b[0]);
+                const y2: i32 = @intCast(b[1]);
+                return @abs(x1 - y1) + @abs(x2 - y2);
+            }
+        },
+        else => @compileError("Not a slice"),
+    }
+    return @abs(a[0] - b[0]) + @abs(a[1] - b[1]);
+}
+
+pub fn euclidean(a: anytype, b: anytype) f64 {
+    const T = @TypeOf(a[0], b[0]);
+    switch (@typeInfo(T)) {
+        .Float => {},
+        .Int => {
+            const x1: f64 = @floatFromInt(a[0]);
+            const y1: f64 = @floatFromInt(a[1]);
+            const x2: f64 = @floatFromInt(b[0]);
+            const y2: f64 = @floatFromInt(b[1]);
+            return @sqrt(std.math.pow(f64, x1 - y1, 2) +
+                std.math.pow(f64, x2 - y2, 2));
+        },
+        else => @compileError("Not a slice"),
+    }
+
+    return @sqrt(std.math.pow(T, a[0] - b[0], 2) + std.math.pow(T, a[1] - b[1], 2));
+}
+
 pub fn rotateRight(comptime T: type, v: [2]T) [2]T {
     comptime switch (@typeInfo(T)) {
         .Int => |int| std.debug.assert(int.signedness == .signed),
