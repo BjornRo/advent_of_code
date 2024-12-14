@@ -91,6 +91,10 @@ pub fn main() !void {
 
 fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8, cols: u8) !void {
     // https://www.reddit.com/r/adventofcode/comments/1hdvhvu/2024_day_14_solutions/m1zws1g/
+    var map = std.AutoArrayHashMap([2]ResT, void).init(allocator);
+    try map.ensureTotalCapacity(list.items.len);
+    defer map.deinit();
+
     var x = std.ArrayList(f32).init(allocator);
     var y = std.ArrayList(f32).init(allocator);
     try x.ensureTotalCapacity(list.items.len);
@@ -104,25 +108,33 @@ fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8,
     var remy: T = 0;
 
     for (0..@max(rows, cols)) |i| {
-        x.clearRetainingCapacity();
-        y.clearRetainingCapacity();
+        defer x.clearRetainingCapacity();
+        defer y.clearRetainingCapacity();
+        defer map.clearRetainingCapacity();
         for (list.items) |robot| {
-            const xx, const yy = moveRobot(@intCast(i), robot, rows, cols);
+            const res = moveRobot(@intCast(i), robot, rows, cols);
+            const xx, const yy = res;
             x.appendAssumeCapacity(@floatFromInt(xx));
             y.appendAssumeCapacity(@floatFromInt(yy));
+            map.putAssumeCapacity(res, {});
         }
         const var_x_res = myf.variance(f32, x.items);
         if (var_x_res < var_x) {
             var_x = var_x_res;
             remx = @intCast(i);
+            printRobotsRoom(allocator, rows, cols, map.keys());
         }
         const var_y_res = myf.variance(f32, y.items);
         if (var_y_res < var_y) {
             var_y = var_y_res;
             remy = @intCast(i);
+            printRobotsRoom(allocator, rows, cols, map.keys());
         }
     }
-    printA(try myf.crt(T, &[_]T{ remx, remy }, &[_]T{ rows, cols }));
+    const answer = try myf.crt(T, &[_]T{ remx, remy }, &[_]T{ rows, cols });
+    for (list.items) |robot| map.putAssumeCapacity(moveRobot(@intCast(answer), robot, rows, cols), {});
+    printRobotsRoom(allocator, rows, cols, map.keys());
+    printA(answer);
 }
 
 fn moveRobot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
