@@ -114,6 +114,42 @@ pub fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struc
     return null;
 }
 
+pub fn all(slice: []const bool) bool {
+    switch (@typeInfo(@TypeOf(slice))) {
+        .Pointer => {},
+        else => @compileError("Not a slice"),
+    }
+    for (slice) |v| if (!v) return false;
+    return true;
+}
+
+pub fn any(slice: []const bool) bool {
+    // switch (@typeInfo(@TypeOf(slice))) {
+    //     .Pointer => {},
+    //     else => @compileError("Not a slice"),
+    // }
+    for (slice) |v| if (v) return true;
+    return false;
+}
+
+pub fn rotateRight(comptime T: type, v: [2]T) [2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int => |int| std.debug.assert(int.signedness == .signed),
+        .ComptimeInt => {},
+        else => unreachable,
+    };
+    return .{ v[1], -v[0] };
+}
+
+pub fn rotateLeft(comptime T: type, v: [2]T) [2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int => |int| std.debug.assert(int.signedness == .signed),
+        .ComptimeInt => {},
+        else => unreachable,
+    };
+    return .{ -v[1], v[0] };
+}
+
 pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     comptime switch (@typeInfo(@TypeOf(a, b))) {
         .Int => |int| std.debug.assert(int.signedness == .unsigned),

@@ -17,4 +17,21 @@ pub fn main() !void {
     print(neighbors.next());
     print(neighbors.next());
     print(neighbors.next());
+    const pos = [2]i8{ 1, 2 };
+    print(
+        myf.rotateRight(
+            @TypeOf(pos[0]),
+            myf.rotateRight(
+                @TypeOf(pos[0]),
+                myf.rotateRight(
+                    @TypeOf(pos[0]),
+                    myf.rotateRight(
+                        @TypeOf(pos[0]),
+                        pos,
+                    ),
+                ),
+            ),
+        ),
+    );
+    print(myf.rotateLeft(@TypeOf(pos[0]), pos));
 }
