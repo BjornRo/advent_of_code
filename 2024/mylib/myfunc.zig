@@ -4,7 +4,7 @@ const Type = std.builtin.Type;
 
 const DelimType = enum { CRLF, LF };
 
-pub inline fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
+pub fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
     const file_size = (try file.stat()).size;
@@ -13,13 +13,13 @@ pub inline fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     return buffer;
 }
 
-pub inline fn getAppArg(allocator: Allocator, index: usize) ![]u8 {
+pub fn getAppArg(allocator: Allocator, index: usize) ![]u8 {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
     return try std.mem.Allocator.dupe(allocator, u8, args[index]);
 }
 
-pub inline fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len: u32 } {
+pub fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len: u32 } {
     for (1..text.len - 1) |i| {
         if (text[i] == '\n') {
             const delim = if (text[i - 1] == '\r') DelimType.CRLF else DelimType.LF;
@@ -29,7 +29,7 @@ pub inline fn getDelimType(text: []const u8) !struct { delim: DelimType, row_len
     return error.NoDelimFound;
 }
 
-pub inline fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8, row_len: u32 } {
+pub fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8, row_len: u32 } {
     for (1..text.len) |i| {
         if (text[i] == '\n') {
             const crlf: bool = text[i - 1] == '\r';
@@ -42,7 +42,7 @@ pub inline fn getInputAttributes(text: []const u8) !struct { delim: [:0]const u8
     return error.NoDelimFound;
 }
 
-pub inline fn getNeighborOffset(comptime T: type) [4][2]T {
+pub fn getNeighborOffset(comptime T: type) [4][2]T {
     comptime switch (@typeInfo(T)) {
         .Int, .ComptimeInt => {},
         else => unreachable,
@@ -50,7 +50,7 @@ pub inline fn getNeighborOffset(comptime T: type) [4][2]T {
     return .{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
-pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
+pub fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     comptime switch (@typeInfo(T)) {
         .Int, .ComptimeInt => {},
         else => unreachable,
@@ -61,7 +61,42 @@ pub inline fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     return @bitCast(res);
 }
 
-pub inline fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
+pub fn ValidNeighborsIterator(comptime T: type) type {
+    return struct {
+        positions: [4][2]T,
+        min_pos: T,
+        max_row: T,
+        max_col: T,
+        index: usize,
+
+        const Self = @This();
+
+        pub fn next(self: *Self) ?[2]T {
+            while (self.index < self.positions.len) {
+                const nrow, const ncol = self.positions[self.index];
+                if (self.min_pos <= nrow and nrow < self.max_row and
+                    self.min_pos <= ncol and ncol < self.max_col)
+                {
+                    defer self.index += 1;
+                    return self.positions[self.index];
+                }
+                self.index += 1;
+            }
+            return null;
+        }
+    };
+}
+pub fn validNeighborsIter(comptime T: type, row: T, col: T, min_pos: T, max_row: T, max_col: T) ValidNeighborsIterator(T) {
+    return .{
+        .positions = getNextPositions(T, row, col),
+        .min_pos = min_pos,
+        .max_row = max_row,
+        .max_col = max_col,
+        .index = 0,
+    };
+}
+
+pub fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
     comptime switch (@typeInfo(T)) {
         .Int, .ComptimeInt => {},
         else => unreachable,
@@ -72,7 +107,7 @@ pub inline fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
     return @bitCast(res);
 }
 
-pub inline fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struct { row: usize, col: usize } {
+pub fn checkInBounds(comptime T: type, pos: [2]T, max_row: T, max_col: T) ?struct { row: usize, col: usize } {
     const row, const col = pos;
     if (0 <= row and row < max_row and 0 <= col and col < max_col)
         return .{ .row = @intCast(row), .col = @intCast(col) };
@@ -97,7 +132,7 @@ pub fn egcd(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
         else => unreachable,
     };
     const F = struct {
-        inline fn f(x: *T, y: *T, xu: *T, xv: *T, yu: *T, yv: *T) void {
+        fn f(x: *T, y: *T, xu: *T, xv: *T, yu: *T, yv: *T) void {
             const Vec3 = @Vector(3, T);
             const new_vec_x = Vec3{ y.*, yu.*, yv.* } - Vec3{ x.*, xu.*, xv.* };
             y.* = x.*;
