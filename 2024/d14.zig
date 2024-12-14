@@ -85,6 +85,44 @@ pub fn main() !void {
         @reduce(Op.Mul, @as(@Vector(4, ResT), @bitCast(quad))),
         p2_sum,
     });
+
+    try crt_p2_solution(allocator, list, rows, cols);
+}
+
+fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8, cols: u8) !void {
+    // https://www.reddit.com/r/adventofcode/comments/1hdvhvu/2024_day_14_solutions/m1zws1g/
+    var x = std.ArrayList(f32).init(allocator);
+    var y = std.ArrayList(f32).init(allocator);
+    try x.ensureTotalCapacity(list.items.len);
+    try y.ensureTotalCapacity(list.items.len);
+    defer x.deinit();
+    defer y.deinit();
+
+    var var_x: f32 = 10000;
+    var var_y: f32 = 10000;
+    var remx: T = 0;
+    var remy: T = 0;
+
+    for (0..@max(rows, cols)) |i| {
+        x.clearRetainingCapacity();
+        y.clearRetainingCapacity();
+        for (list.items) |robot| {
+            const xx, const yy = moveRobot(@intCast(i), robot, rows, cols);
+            x.appendAssumeCapacity(@floatFromInt(xx));
+            y.appendAssumeCapacity(@floatFromInt(yy));
+        }
+        const var_x_res = myf.variance(f32, x.items);
+        if (var_x_res < var_x) {
+            var_x = var_x_res;
+            remx = @intCast(i);
+        }
+        const var_y_res = myf.variance(f32, y.items);
+        if (var_y_res < var_y) {
+            var_y = var_y_res;
+            remy = @intCast(i);
+        }
+    }
+    printA(try myf.crt(T, &[_]T{ rows, cols }, &[_]T{ remx, remy }));
 }
 
 fn moveRobot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
