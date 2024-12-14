@@ -11,7 +11,7 @@ pub fn main() !void {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    print(try myf.crt(i32, &[_]i32{ 101, 103 }, &[_]i32{ 52, 27 }));
+    print(try myf.crt(i32, &[_]i32{ 52, 27 }, &[_]i32{ 101, 103 }));
     // print(try myf.modInverse(i128, 4, 4));
 
     // print(@typeInfo(@TypeOf(myf.getNextPositions)).Fn.return_type.?);

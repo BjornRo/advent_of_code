@@ -67,7 +67,7 @@ pub fn main() !void {
         map.clearRetainingCapacity();
         for (list.items) |robot| map.putAssumeCapacity(moveRobot(@intCast(i), robot, rows, cols), {});
         if (map.count() == list.items.len) {
-            printRobotsRoom(allocator, rows, cols, list.items);
+            printRobotsRoom(allocator, rows, cols, map.keys());
             p2_sum = @intCast(i);
             break;
         }
@@ -122,7 +122,7 @@ fn crt_p2_solution(allocator: Allocator, list: std.ArrayList([2]Vec2), rows: u8,
             remy = @intCast(i);
         }
     }
-    printA(try myf.crt(T, &[_]T{ rows, cols }, &[_]T{ remx, remy }));
+    printA(try myf.crt(T, &[_]T{ remx, remy }, &[_]T{ rows, cols }));
 }
 
 fn moveRobot(steps: T, robot: [2]Vec2, rows: u8, cols: u8) [2]ResT {
@@ -189,7 +189,7 @@ fn getPosDir(row: []const u8) [2]Vec2 {
     return .{ pos, dir };
 }
 
-pub fn printRobotsRoom(allocator: Allocator, rows: u8, cols: u8, robots: [][2]Vec2) void {
+pub fn printRobotsRoom(allocator: Allocator, rows: u8, cols: u8, positions: anytype) void {
     const stdout = std.io.getStdOut().writer();
     var matrix = allocator.alloc([]u8, rows) catch unreachable;
     for (matrix) |*row| {
@@ -201,13 +201,8 @@ pub fn printRobotsRoom(allocator: Allocator, rows: u8, cols: u8, robots: [][2]Ve
         allocator.free(matrix);
     }
 
-    for (robots) |robot| {
-        const pos = robot[0];
-        matrix[@intCast(pos[0])][@intCast(pos[1])] = 'X';
-    }
-    for (matrix) |arr| {
-        stdout.print("{s}\n", .{arr}) catch unreachable;
-    }
+    for (positions) |pos| matrix[@intCast(pos[0])][@intCast(pos[1])] = 'X';
+    for (matrix) |arr| stdout.print("{s}\n", .{arr}) catch unreachable;
     stdout.print("\n", .{}) catch unreachable;
 }
 
