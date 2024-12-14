@@ -31,7 +31,7 @@ pub fn main() !void {
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
     const input = try myf.readFile(allocator, target_file);
-    std.debug.print("Input size: {d}\n\n", .{input.len});
+    // std.debug.print("Input size: {d}\n\n", .{input.len});
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // const input = @embedFile("in/d14.txt");
     const input_attributes = try myf.getInputAttributes(input);
@@ -71,7 +71,7 @@ pub fn main() !void {
         }
         if (next_map.count() != list.items.len) continue;
         if (dfs(allocator, next_map)) {
-            // printRobotsRoom(allocator, rows, cols, list.items);
+            printRobotsRoom(allocator, rows, cols, list.items);
             p2_sum = @intCast(i);
             p2_sum += 1;
             break;
