@@ -63,7 +63,7 @@ pub fn main() !void {
     var next_map = std.AutoArrayHashMap(Vec2, void).init(allocator);
     try next_map.ensureTotalCapacity(list.items.len);
     defer next_map.deinit();
-    for (0..1_000_000_000) |i| {
+    for (1..1_000_000_000) |i| {
         next_map.clearRetainingCapacity();
         for (list.items) |*robot| {
             part2_robot(robot, rows, cols);
@@ -72,7 +72,6 @@ pub fn main() !void {
         if (next_map.count() == list.items.len) {
             printRobotsRoom(allocator, rows, cols, list.items);
             p2_sum = @intCast(i);
-            p2_sum += 1;
             break;
         }
 
@@ -81,7 +80,6 @@ pub fn main() !void {
         // if (dfs(allocator, next_map)) {
         //     printRobotsRoom(allocator, rows, cols, list.items);
         //     p2_sum = @intCast(i);
-        //     p2_sum += 1;
         //     break;
         // }
     }
