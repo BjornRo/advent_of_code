@@ -11,8 +11,13 @@ pub fn main() !void {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    print(myf.getNextPositions(i8, 3, 3));
-    var neighbors = myf.validNeighborsIter(i8, 5, 4, 0, 5, 5);
+    // print(@typeInfo(@TypeOf(myf.getNextPositions)).Fn.return_type.?);
+    // print(myf.getNextPositions(i8, 3, 3));
+    var neighbors = myf.validNeighborsIter(myf.getKernel3x3(i8, 3, 3), 0, 5, 5);
+    // _ = myf.validNeighborsIter(i8, myf.getKernel3x3, 5, 4, 0, 5, 5);
+    print(neighbors.next());
+    print(neighbors.next());
+    print(neighbors.next());
     print(neighbors.next());
     print(neighbors.next());
     print(neighbors.next());

@@ -50,20 +50,9 @@ pub fn getNeighborOffset(comptime T: type) [4][2]T {
     return .{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
-pub fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
-    comptime switch (@typeInfo(T)) {
-        .Int, .ComptimeInt => {},
-        else => unreachable,
-    };
-    const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
-    const b = @Vector(8, T){ 1, 0, 0, 1, -1, 0, 0, -1 };
-    const res: [8]T = a + b;
-    return @bitCast(res);
-}
-
-pub fn ValidNeighborsIterator(comptime T: type) type {
+pub fn ValidNeighborsIterator(comptime T: type, comptime P: type) type {
     return struct {
-        positions: [4][2]T,
+        positions: P,
         min_pos: T,
         max_row: T,
         max_col: T,
@@ -86,14 +75,30 @@ pub fn ValidNeighborsIterator(comptime T: type) type {
         }
     };
 }
-pub fn validNeighborsIter(comptime T: type, row: T, col: T, min_pos: T, max_row: T, max_col: T) ValidNeighborsIterator(T) {
+pub fn validNeighborsIter(
+    comptime slice: anytype,
+    min_pos: @TypeOf(slice[0][0]),
+    max_row: @TypeOf(slice[0][0]),
+    max_col: @TypeOf(slice[0][0]),
+) ValidNeighborsIterator(@TypeOf(slice[0][0]), @TypeOf(slice)) {
     return .{
-        .positions = getNextPositions(T, row, col),
+        .positions = slice,
         .min_pos = min_pos,
         .max_row = max_row,
         .max_col = max_col,
         .index = 0,
     };
+}
+
+pub fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
+    comptime switch (@typeInfo(T)) {
+        .Int, .ComptimeInt => {},
+        else => unreachable,
+    };
+    const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
+    const b = @Vector(8, T){ 1, 0, 0, 1, -1, 0, 0, -1 };
+    const res: [8]T = a + b;
+    return @bitCast(res);
 }
 
 pub fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
@@ -124,10 +129,10 @@ pub fn all(slice: []const bool) bool {
 }
 
 pub fn any(slice: []const bool) bool {
-    // switch (@typeInfo(@TypeOf(slice))) {
-    //     .Pointer => {},
-    //     else => @compileError("Not a slice"),
-    // }
+    switch (@typeInfo(@TypeOf(slice))) {
+        .Pointer => {},
+        else => @compileError("Not a slice"),
+    }
     for (slice) |v| if (v) return true;
     return false;
 }
