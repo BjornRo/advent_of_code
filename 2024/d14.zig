@@ -69,13 +69,21 @@ pub fn main() !void {
             part2_robot(robot, rows, cols);
             next_map.putAssumeCapacity(robot.*[0], {});
         }
-        if (next_map.count() != list.items.len) continue;
-        if (dfs(allocator, next_map)) {
+        if (next_map.count() == list.items.len) {
             printRobotsRoom(allocator, rows, cols, list.items);
             p2_sum = @intCast(i);
             p2_sum += 1;
             break;
         }
+
+        // Old solution:
+        // if (next_map.count() != list.items.len) continue;
+        // if (dfs(allocator, next_map)) {
+        //     printRobotsRoom(allocator, rows, cols, list.items);
+        //     p2_sum = @intCast(i);
+        //     p2_sum += 1;
+        //     break;
+        // }
     }
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
