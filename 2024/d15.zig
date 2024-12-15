@@ -36,7 +36,7 @@ pub fn main() !void {
 
     var grid_movement_iter = std.mem.tokenizeSequence(u8, input, double_delim);
 
-    const input_matrix = try allocator.alloc([]const u8, dim);
+    var input_matrix = try allocator.alloc([]u8, dim);
     defer allocator.free(input_matrix);
     var grid_iter = std.mem.tokenizeSequence(u8, grid_movement_iter.next().?, input_attributes.delim);
     const movement = grid_movement_iter.next().?;
@@ -44,30 +44,28 @@ pub fn main() !void {
     var start_row: u8 = 0;
     var start_col: u8 = 0;
     for (input_matrix, 0..) |*row, i| {
-        row.* = grid_iter.next().?;
+        row.* = @constCast(grid_iter.next().?);
         if (std.mem.indexOfScalar(u8, row.*, '@')) |j| {
             start_row = @intCast(i);
             start_col = @intCast(j);
         }
     }
-
-    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try part1(allocator, input_matrix, movement, start_row, start_col, false),
-        try part2(allocator, input_matrix, movement, start_row, start_col, false),
-    });
+    const p2 = try part2(allocator, input_matrix, movement, start_row, start_col, false);
+    const p1 = part1(&input_matrix, movement, start_row, start_col, false); // has to be after p2
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
 }
 
 fn part1(
-    allocator: Allocator,
-    input_matrix: []const []const u8,
+    input_matrix: *[][]u8,
     movement: []const u8,
     start_row: u8,
     start_col: u8,
     print_final_grid: bool,
-) !u64 {
-    var matrix = try myf.copyMatrix(allocator, input_matrix);
+) u64 {
+    var matrix = input_matrix.*;
+    // var matrix = try myf.copyMatrix(allocator, input_matrix);
+    // defer myf.freeMatrix(allocator, matrix);
     matrix[start_row][start_col] = '.'; // Totally uneccessary, but nicer prints
-    defer myf.freeMatrix(allocator, matrix);
 
     var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col) };
 
@@ -77,10 +75,8 @@ fn part1(
 
         const next_step: Vec2 = curr + dir;
         switch (getMatrixElem(matrix, next_step)) {
-            '#' => continue,
             'O' => {
-                const box = next_step;
-                var find_empty = box + dir;
+                var find_empty = next_step + dir;
                 while (true) {
                     switch (getMatrixElem(matrix, find_empty)) {
                         'O' => find_empty = find_empty + dir,
@@ -94,6 +90,7 @@ fn part1(
                     }
                 }
             },
+            '#' => continue,
             else => curr = next_step,
         }
     }
@@ -142,7 +139,8 @@ fn part2(
                     else
                         .{ next_step + Vec2{ 0, -1 }, next_step };
 
-                    if (canMoveChildren(matrix, dir, box)) {
+                    var early_exit = false;
+                    if (canMoveChildren(matrix, dir, box, &early_exit)) {
                         moveBoxUD(&matrix, dir, box);
                         curr = next_step;
                     }
@@ -182,6 +180,7 @@ fn moveBoxUD(matrix: *[][]u8, dir: Vec2, curr_box: [2]Vec2) void {
 
     const left_child_box = .{ left_child + getDir('<'), left_child };
     const right_child_box = .{ right_child, right_child + getDir('>') };
+
     if (left_child_elem == ']' and right_child_elem == '[') {
         moveBoxUD(matrix, dir, left_child_box);
         moveBoxUD(matrix, dir, right_child_box);
@@ -198,7 +197,8 @@ fn moveBoxUD(matrix: *[][]u8, dir: Vec2, curr_box: [2]Vec2) void {
     setMatrixelem(matrix, right_par, '.');
 }
 
-fn canMoveChildren(matrix: [][]u8, dir: Vec2, curr_box: [2]Vec2) bool {
+fn canMoveChildren(matrix: [][]u8, dir: Vec2, curr_box: [2]Vec2, early_exit: *bool) bool {
+    if (early_exit.*) return true;
     // Find all children, then move then in the direction.
     // A box can only have 1 or 2 childrens.
     const left_par, const right_par = curr_box;
@@ -207,22 +207,24 @@ fn canMoveChildren(matrix: [][]u8, dir: Vec2, curr_box: [2]Vec2) bool {
     const left_child_elem = getMatrixElem(matrix, left_child);
     const right_child_elem = getMatrixElem(matrix, right_child);
 
-    if (left_child_elem == '#' or right_child_elem == '#') return false;
+    if (left_child_elem == '#' or right_child_elem == '#') {
+        early_exit.* = true;
+        return false;
+    }
+    if (left_child_elem == '.' and right_child_elem == '.') return true;
 
     const left_child_box = .{ left_child + getDir('<'), left_child };
     const right_child_box = .{ right_child, right_child + getDir('>') };
 
     if (left_child_elem == ']' and right_child_elem == '[') {
-        return canMoveChildren(matrix, dir, left_child_box) and
-            canMoveChildren(matrix, dir, right_child_box);
+        return canMoveChildren(matrix, dir, left_child_box, early_exit) and
+            canMoveChildren(matrix, dir, right_child_box, early_exit);
     } else if (left_child_elem == ']' and right_child_elem != '[') {
-        return canMoveChildren(matrix, dir, left_child_box);
+        return canMoveChildren(matrix, dir, left_child_box, early_exit);
     } else if (left_child_elem != ']' and right_child_elem == '[') {
-        return canMoveChildren(matrix, dir, right_child_box);
-    } else if (left_child_elem == '[' and right_child_elem == ']') {
-        return canMoveChildren(matrix, dir, .{ left_child, right_child });
-    }
-    return true;
+        return canMoveChildren(matrix, dir, right_child_box, early_exit);
+    } // else if (left_child_elem == '[' and right_child_elem == ']') {
+    return canMoveChildren(matrix, dir, .{ left_child, right_child }, early_exit);
 }
 
 fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
