@@ -42,7 +42,7 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d15ttt.txt");
+    const input = @embedFile("in/d15.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     const dim: u8 = @intCast(input_attributes.row_len);
@@ -67,7 +67,7 @@ test "example" {
     }
     try expect(start_row != 0 and start_col != 0);
 
-    const matrix = try expandMatrixWidth(allocator, input_matrix);
+    var matrix = try expandMatrixWidth(allocator, input_matrix);
     matrix[start_row][start_col * 2] = '.';
     matrix[start_row][start_col * 2 + 1] = '.';
     defer myf.freeMatrix(allocator, matrix);
@@ -82,9 +82,8 @@ test "example" {
         }
     }
 
-    const curr: Vec2 = .{ @intCast(start_row), @intCast(start_col * 2) };
+    var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col * 2) };
 
-    printRobotMat(matrix, curr);
     const movement = grid_movement_iter.next().?;
     for (movement, 0..) |arrow, i| {
         _ = i;
@@ -105,35 +104,101 @@ test "example" {
             curr = next_step;
             continue;
         }
-
         // Either [,]
-
-        const box = next_step;
-        var find_empty = box + dir;
-        while (true) {
-            switch (getMatrixElem(matrix, find_empty)) {
-                '.' => {
-                    setMatrixelem(&matrix, find_empty, 'O');
-                    setMatrixelem(&matrix, next_step, '.');
-                    curr = next_step;
-                    break;
-                },
-                'O' => {
-                    find_empty = find_empty + dir;
-                },
-                else => break,
+        var box: [2]Vec2 = undefined;
+        if (arrow == '^' or arrow == 'v') {
+            if (elem == '[') {
+                box = .{ next_step, next_step + Vec2{ 0, 1 } };
+            } else {
+                box = .{ next_step + Vec2{ 0, -1 }, next_step };
             }
+            if (canMoveChildren(matrix, dir, box)) {
+                moveBoxUD(&matrix, dir, box);
+                curr = next_step;
+            }
+            continue;
         }
 
-        // myf.waitForInput();
-        // printRobotMat(matrix, curr);
-        // prints([_]u8{arrow});
+        if (moveBoxLR(&matrix, dir, next_step)) {
+            curr = next_step;
+        }
     }
     printRobotMat(matrix, curr);
-    printa(boxValues(matrix));
+    printa(boxValues(matrix, '['));
 }
 
-pub fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
+fn moveBoxLR(matrix: *[][]u8, dir: Vec2, curr_step: Vec2) bool {
+    const curr_elem = getMatrixElem(matrix.*, curr_step);
+    if (curr_elem == '.') return true;
+    if (curr_elem == '#') return false;
+
+    const half_step = curr_step + dir; // Half box
+    const next_step = half_step + dir; // Full box
+    if (moveBoxLR(matrix, dir, next_step)) {
+        // Curr step is either [,]. Does not matter which, just naive swap.
+        const half_box_elem = getMatrixElem(matrix.*, half_step);
+        const curr_box_elem = getMatrixElem(matrix.*, curr_step);
+        setMatrixelem(matrix, next_step, half_box_elem);
+        setMatrixelem(matrix, half_step, curr_box_elem);
+        setMatrixelem(matrix, curr_step, '.');
+        return true;
+    }
+    return false;
+}
+
+fn moveBoxUD(matrix: *[][]u8, dir: Vec2, curr_box: [2]Vec2) void {
+    const left_par, const right_par = curr_box;
+    const left_child = left_par + dir;
+    const right_child = right_par + dir;
+    const left_child_elem = getMatrixElem(matrix.*, left_child);
+    const right_child_elem = getMatrixElem(matrix.*, right_child);
+
+    const left_child_box = .{ left_child + Vec2{ 0, -1 }, left_child };
+    const right_child_box = .{ right_child, right_child + Vec2{ 0, 1 } };
+    if (left_child_elem == ']' and right_child_elem == '[') {
+        moveBoxUD(matrix, dir, left_child_box);
+        moveBoxUD(matrix, dir, right_child_box);
+    } else if (left_child_elem == ']' and right_child_elem != '[') {
+        moveBoxUD(matrix, dir, left_child_box);
+    } else if (left_child_elem != ']' and right_child_elem == '[') {
+        moveBoxUD(matrix, dir, right_child_box);
+    } else if (left_child_elem == '[' and right_child_elem == ']') {
+        moveBoxUD(matrix, dir, .{ left_child, right_child });
+    }
+    setMatrixelem(matrix, left_child, '[');
+    setMatrixelem(matrix, right_child, ']');
+    setMatrixelem(matrix, left_par, '.');
+    setMatrixelem(matrix, right_par, '.');
+}
+
+fn canMoveChildren(matrix: [][]u8, dir: Vec2, curr_box: [2]Vec2) bool {
+    // Find all children, then move then in the direction.
+    // A box can only have 1 or 2 childrens.
+    const left_par, const right_par = curr_box;
+    const left_child = left_par + dir;
+    const right_child = right_par + dir;
+    const left_child_elem = getMatrixElem(matrix, left_child);
+    const right_child_elem = getMatrixElem(matrix, right_child);
+
+    if (left_child_elem == '#' or right_child_elem == '#') return false;
+
+    const left_child_box = .{ left_child + Vec2{ 0, -1 }, left_child };
+    const right_child_box = .{ right_child, right_child + Vec2{ 0, 1 } };
+
+    if (left_child_elem == ']' and right_child_elem == '[') {
+        return canMoveChildren(matrix, dir, left_child_box) and
+            canMoveChildren(matrix, dir, right_child_box);
+    } else if (left_child_elem == ']' and right_child_elem != '[') {
+        return canMoveChildren(matrix, dir, left_child_box);
+    } else if (left_child_elem != ']' and right_child_elem == '[') {
+        return canMoveChildren(matrix, dir, right_child_box);
+    } else if (left_child_elem == '[' and right_child_elem == ']') {
+        return canMoveChildren(matrix, dir, .{ left_child, right_child });
+    }
+    return true;
+}
+
+fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
     const T = @TypeOf(matrix[0][0]);
 
     const row_len = matrix.len;
@@ -149,6 +214,47 @@ pub fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[
     }
 
     return new_matrix;
+}
+
+fn boxValues(matrix: []const []const u8, scalar: u8) u64 {
+    const col_len = matrix[0].len - 1;
+    var sum: u64 = 0;
+    for (1..matrix.len - 1) |i| {
+        for (1..col_len) |j| {
+            if (matrix[i][j] == scalar) {
+                sum += 100 * i + j;
+            }
+        }
+    }
+    return sum;
+}
+
+fn setMatrixelem(matrix: *[][]u8, robot: Vec2, elem: u8) void {
+    const r, const c = vec2ToCoord(robot);
+    matrix.*[r][c] = elem;
+}
+
+fn getMatrixElem(matrix: anytype, robot: Vec2) u8 {
+    const r, const c = vec2ToCoord(robot);
+    return matrix[r][c];
+}
+
+fn vec2ToCoord(robot: Vec2) [2]u8 {
+    const i, const j = robot;
+    return .{ @intCast(i), @intCast(j) };
+}
+
+fn printRobotMat(matrix: anytype, robot: ?Vec2) void {
+    if (robot) |rb| {
+        const i, const j = vec2ToCoord(rb);
+        const elem = &matrix[i][j];
+        const tmp = elem.*;
+        elem.* = '@';
+        defer elem.* = tmp;
+        myf.printMatStr(matrix);
+    } else {
+        myf.printMatStr(matrix);
+    }
 }
 
 // test "part1" {
@@ -229,44 +335,3 @@ pub fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[
 //     printRobotMat(matrix, curr);
 //     printa(boxValues(matrix, 'O'));
 // }
-
-fn boxValues(matrix: []const []const u8, scalar: u8) u64 {
-    const col_len = matrix[0].len - 1;
-    var sum: u64 = 0;
-    for (1..matrix.len - 1) |i| {
-        for (1..col_len) |j| {
-            if (matrix[i][j] == scalar) {
-                sum += 100 * i + j;
-            }
-        }
-    }
-    return sum;
-}
-
-fn setMatrixelem(matrix: *[][]u8, robot: Vec2, elem: u8) void {
-    const r, const c = vec2ToCoord(robot);
-    matrix.*[r][c] = elem;
-}
-
-fn getMatrixElem(matrix: anytype, robot: Vec2) u8 {
-    const r, const c = vec2ToCoord(robot);
-    return matrix[r][c];
-}
-
-fn vec2ToCoord(robot: Vec2) [2]u8 {
-    const i, const j = robot;
-    return .{ @intCast(i), @intCast(j) };
-}
-
-fn printRobotMat(matrix: anytype, robot: ?Vec2) void {
-    if (robot) |rb| {
-        const i, const j = vec2ToCoord(rb);
-        const elem = &matrix[i][j];
-        const tmp = elem.*;
-        elem.* = '@';
-        defer elem.* = tmp;
-        myf.printMatStr(matrix);
-    } else {
-        myf.printMatStr(matrix);
-    }
-}
