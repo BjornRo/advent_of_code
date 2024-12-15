@@ -347,6 +347,24 @@ pub fn concatInts(comptime T: type, a: T, b: T) T {
     return a * (std.math.powi(T, 10, digits_b) catch unreachable) + b;
 }
 
+pub fn scaleMatrix(alloc: Allocator, matrix: anytype, scale: u8) ![][]@TypeOf(matrix[0][0]) {
+    const T = @TypeOf(matrix[0][0]);
+    const row_len = matrix.len;
+    const col_len = matrix[0].len;
+    var new_matrix = try alloc.alloc([]T, row_len * scale);
+
+    for (0..row_len * scale) |i| {
+        new_matrix[i] = try alloc.alloc(T, col_len * scale);
+        const source_row = i / scale;
+        for (0..(col_len * scale)) |j| {
+            const source_col = j / scale;
+            new_matrix[i][j] = matrix[source_row][source_col];
+        }
+    }
+
+    return new_matrix;
+}
+
 pub fn expandMatrix3x(comptime T: type, alloc: Allocator, matrix: []const []const T) ![][]T {
     const row_len = matrix.len;
     const col_len = matrix[0].len;
@@ -458,6 +476,23 @@ pub fn padMatScalar(comptime T: type, alloc: Allocator, matrix: []const []const 
     return new_matrix;
 }
 
+pub fn copyMatrix(allocator: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
+    const T = @TypeOf(matrix[0][0]);
+    const row_len = matrix[0].len;
+    const new_matrix = try allocator.alloc([]T, matrix.len);
+    for (matrix, 0..) |row, i| {
+        new_matrix[i] = try allocator.alloc(T, row_len);
+        @memcpy(new_matrix[i], row);
+    }
+
+    return new_matrix;
+}
+
+pub fn freeMatrix(allocator: Allocator, matrix: anytype) void {
+    for (matrix) |row| allocator.free(row);
+    allocator.free(matrix);
+}
+
 pub fn printMat(comptime T: type, matrix: [][]const T, offset: u16) void {
     const stdout = std.io.getStdOut().writer();
     for (matrix) |arr| {
@@ -489,4 +524,12 @@ pub inline fn printAny(n: anytype) void {
 pub inline fn printStr(n: anytype) void {
     const stdout = std.io.getStdOut().writer();
     stdout.print("{s}\n", .{n}) catch {};
+}
+
+pub fn waitForInput() void {
+    const stdin = std.io.getStdIn().reader();
+    while (true) {
+        const res = stdin.readByte() catch return;
+        if (res == '\n') return;
+    }
 }
