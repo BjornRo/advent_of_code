@@ -28,21 +28,14 @@ pub fn main() !void {
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
-
-    const dim: u8 = @intCast(input_attributes.row_len);
-
-    const double_delim = try std.mem.concat(allocator, u8, &.{ input_attributes.delim, input_attributes.delim });
-    defer allocator.free(double_delim);
-
-    var grid_movement_iter = std.mem.tokenizeSequence(u8, input, double_delim);
-
-    var input_matrix = try allocator.alloc([]u8, dim);
+    var input_matrix = try allocator.alloc([]u8, input_attributes.row_len);
     defer allocator.free(input_matrix);
-    var grid_iter = std.mem.tokenizeSequence(u8, grid_movement_iter.next().?, input_attributes.delim);
-    const movement = grid_movement_iter.next().?;
+
+    const split = std.mem.indexOf(u8, input, "\n\n").?;
 
     var start_row: u8 = 0;
     var start_col: u8 = 0;
+    var grid_iter = std.mem.tokenizeScalar(u8, input[0..split], '\n');
     for (input_matrix, 0..) |*row, i| {
         row.* = @constCast(grid_iter.next().?);
         if (std.mem.indexOfScalar(u8, row.*, '@')) |j| {
@@ -50,6 +43,7 @@ pub fn main() !void {
             start_col = @intCast(j);
         }
     }
+    const movement = input[split + 2 .. input.len - 1];
     const p2 = try part2(allocator, input_matrix, movement, start_row, start_col, false);
     const p1 = part1(&input_matrix, movement, start_row, start_col, false); // has to be after p2
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
@@ -70,7 +64,7 @@ fn part1(
     var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col) };
 
     for (movement) |arrow| {
-        if (arrow == '\n' or arrow == '\r') continue;
+        if (arrow == '\n') continue;
         const dir = getDir(arrow);
 
         const next_step: Vec2 = curr + dir;
@@ -123,7 +117,7 @@ fn part2(
     var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col * 2) };
 
     for (movement) |arrow| {
-        if (arrow == '\n' or arrow == '\r') continue;
+        if (arrow == '\n') continue;
         const dir = getDir(arrow);
 
         const next_step: Vec2 = curr + dir;
