@@ -66,18 +66,16 @@ fn part1(
     print_final_grid: bool,
 ) !u64 {
     var matrix = try myf.copyMatrix(allocator, input_matrix);
-    matrix[start_row][start_col] = '.';
+    matrix[start_row][start_col] = '.'; // Totally uneccessary, but nicer prints
     defer myf.freeMatrix(allocator, matrix);
 
     var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col) };
 
-    for (movement, 0..) |arrow, i| {
-        _ = i;
+    for (movement) |arrow| {
         if (arrow == '\n' or arrow == '\r') continue;
-        var next_step: Vec2 = undefined;
         const dir = getDir(arrow);
 
-        next_step = curr + dir;
+        const next_step: Vec2 = curr + dir;
         switch (getMatrixElem(matrix, next_step)) {
             '#' => continue,
             'O' => {
@@ -85,13 +83,13 @@ fn part1(
                 var find_empty = box + dir;
                 while (true) {
                     switch (getMatrixElem(matrix, find_empty)) {
+                        'O' => find_empty = find_empty + dir,
                         '.' => {
                             setMatrixelem(&matrix, find_empty, 'O');
                             setMatrixelem(&matrix, next_step, '.');
                             curr = next_step;
                             break;
                         },
-                        'O' => find_empty = find_empty + dir,
                         else => break,
                     }
                 }
@@ -127,30 +125,28 @@ fn part2(
     }
     var curr: Vec2 = .{ @intCast(start_row), @intCast(start_col * 2) };
 
-    for (movement, 0..) |arrow, i| {
-        _ = i;
+    for (movement) |arrow| {
         if (arrow == '\n' or arrow == '\r') continue;
-        var next_step: Vec2 = undefined;
         const dir = getDir(arrow);
 
-        next_step = curr + dir;
+        const next_step: Vec2 = curr + dir;
         switch (getMatrixElem(matrix, next_step)) {
             '#' => continue,
             '.' => curr = next_step,
             else => |elem| {
                 if (arrow == '<' or arrow == '>') {
                     if (moveBoxLR(&matrix, dir, next_step)) curr = next_step;
-                    continue;
+                } else {
+                    const box: [2]Vec2 = if (elem == '[')
+                        .{ next_step, next_step + Vec2{ 0, 1 } }
+                    else
+                        .{ next_step + Vec2{ 0, -1 }, next_step };
+
+                    if (canMoveChildren(matrix, dir, box)) {
+                        moveBoxUD(&matrix, dir, box);
+                        curr = next_step;
+                    }
                 }
-
-                const box: [2]Vec2 = if (elem == '[')
-                    .{ next_step, next_step + Vec2{ 0, 1 } }
-                else
-                    .{ next_step + Vec2{ 0, -1 }, next_step };
-
-                if (!canMoveChildren(matrix, dir, box)) continue;
-                moveBoxUD(&matrix, dir, box);
-                curr = next_step;
             },
         }
     }
