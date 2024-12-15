@@ -90,6 +90,42 @@ pub fn validNeighborsIter(
     };
 }
 
+pub fn ValidScalarNeighborsIterator(comptime T: type, comptime S: type) type {
+    return struct {
+        invalid_scalar: S,
+        matrix: []const []const S,
+        index: usize,
+        positions: []const [2]T,
+
+        const Self = @This();
+
+        pub fn next(self: *Self) ?struct { pos: [2]T, elem: S } {
+            while (self.index < self.positions.len) {
+                const nrow, const ncol = self.positions[self.index];
+                const elem = self.matrix[@intCast(nrow)][@intCast(ncol)];
+                if (elem != self.invalid_scalar) {
+                    defer self.index += 1;
+                    return .{ .pos = self.positions[self.index], .elem = elem };
+                }
+                self.index += 1;
+            }
+            return null;
+        }
+    };
+}
+pub fn validScalarNeighborsIterator(
+    comptime slice: anytype,
+    invalid_scalar: anytype,
+    matrix: anytype,
+) ValidNeighborsIterator(@TypeOf(slice[0][0]), @TypeOf(invalid_scalar)) {
+    return .{
+        .invalid_scalar = invalid_scalar,
+        .matrix = matrix,
+        .index = 0,
+        .positions = &slice,
+    };
+}
+
 pub fn getNextPositions(comptime T: type, row: T, col: T) [4][2]T {
     comptime switch (@typeInfo(T)) {
         .Int, .ComptimeInt => {},
@@ -436,6 +472,12 @@ pub fn printMat(comptime T: type, matrix: [][]const T, offset: u16) void {
         }
         stdout.print("\n", .{}) catch {};
     }
+    stdout.print("\n", .{}) catch {};
+}
+
+pub fn printMatStr(matrix: []const []const u8) void {
+    const stdout = std.io.getStdOut().writer();
+    for (matrix) |row| stdout.print("{s}\n", .{row}) catch {};
     stdout.print("\n", .{}) catch {};
 }
 
