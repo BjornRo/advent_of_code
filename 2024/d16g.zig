@@ -162,7 +162,7 @@ pub fn main() !void {
         graph.deinit();
     }
     printSitMap(allocator, matrix, graph);
-    printa(graph.count());
+    printa(graph.get(.{ .re = 7, .im = 9 }).?.values());
 }
 
 fn getDirection(dir: Direction) ComplexT {
@@ -180,8 +180,6 @@ const Graph = std.ArrayHashMap(ComplexT, GraphKey, HashCtx, true);
 fn matrixToGraph(allocator: Allocator, matrix: []const []const u8, start_pos: ComplexT, end_pos: ComplexT) !Graph {
     var graph = Graph.init(allocator);
 
-    // try graph.put(end_pos, GraphKey.init(allocator));
-
     var next_crossings = std.ArrayList(ComplexT).init(allocator);
     defer next_crossings.deinit();
     try next_crossings.append(start_pos);
@@ -198,7 +196,7 @@ fn matrixToGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Co
             direction = direction.mul(rot_right);
             const next_step = current_pos.add(direction);
             if (!inBounds(matrix, next_step)) continue;
-            if (traversePath(allocator, matrix, next_step, direction, current_pos)) |result| {
+            if (traversePath(allocator, matrix, next_step, direction, current_pos, end_pos)) |result| {
                 try graph_key.put(direction, result);
                 try next_crossings.append(result.position);
             }
@@ -216,19 +214,19 @@ fn matrixToGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Co
     return graph;
 }
 
-fn traversePath(allocator: Allocator, matrix: []const []const u8, start: ComplexT, start_dir: ComplexT, start_crossing: ComplexT) ?Tuple {
+fn traversePath(allocator: Allocator, matrix: []const []const u8, start: ComplexT, start_dir: ComplexT, start_crossing: ComplexT, end_pos: ComplexT) ?Tuple {
     var visited = SetT.init(allocator);
     defer visited.deinit();
     visited.put(start_crossing, {}) catch unreachable;
 
-    var cost: u32 = 0;
+    var cost: u32 = 1; // We start one step from the crossing
     var direction = start_dir;
     var position = start;
     while (true) {
         if (visited.get(position) != null) return null;
         visited.put(position, {}) catch unreachable;
 
-        if (isCrossing(matrix, position)) {
+        if (isCrossing(matrix, position) or eql(position, end_pos)) {
             return Tuple{ .value = cost, .position = position };
         }
 
