@@ -154,10 +154,8 @@ fn moveBoxLR(matrix: *[][]u8, dir: Vec2, curr_step: Vec2) bool {
     const next_step = half_step + dir; // Full box
     if (moveBoxLR(matrix, dir, next_step)) {
         // Curr step is either [,]. Does not matter which, just naive swap.
-        const half_box_elem = getMatrixElem(matrix.*, half_step);
-        const curr_box_elem = getMatrixElem(matrix.*, curr_step);
-        setMatrixElem(matrix, next_step, half_box_elem);
-        setMatrixElem(matrix, half_step, curr_box_elem);
+        setMatrixElem(matrix, next_step, getMatrixElem(matrix.*, half_step));
+        setMatrixElem(matrix, half_step, getMatrixElem(matrix.*, curr_step));
         setMatrixElem(matrix, curr_step, '.');
         return true;
     }
