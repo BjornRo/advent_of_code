@@ -42,6 +42,10 @@ const State = struct {
     }
 };
 
+fn complexToUInt(c: ComplexT) [2]u16 {
+    return .{ @bitCast(c.re), @bitCast(c.im) };
+}
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -66,7 +70,7 @@ pub fn main() !void {
     // End setup
 
     // std.debug.print("{s}\n", .{input});
-    const input = @embedFile("in/d16t.txt");
+    const input = @embedFile("in/d16.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     const matrix = try allocator.alloc([]const u8, input_attributes.row_len);
@@ -161,9 +165,41 @@ pub fn main() !void {
         for (graph.values()) |*gkeys| gkeys.*.deinit();
         graph.deinit();
     }
-    printSitMap(allocator, matrix, graph);
-    printa(graph.get(.{ .re = 7, .im = 9 }).?.values());
+    // printSitMap(allocator, matrix, graph);
+    // printa(graph.get(.{ .re = 7, .im = 9 }).?.values());
+
+    var set = SetT.init(allocator);
+    defer set.deinit();
+    const res = try dfs(
+        allocator,
+        graph,
+        &set,
+        .{ .re = @intCast(matrix.len - 2), .im = 1 },
+        // .{ .re = 15, .im = 5 },
+        .{ .re = 1, .im = @intCast(matrix.len - 2) },
+        // .{ .re = 15, .im = 5 },
+        ComplexT.init(0, 1),
+        0,
+        min_distance,
+    );
+    // _ = res;
+    printa(res);
+    //     printa(graph.get(.{ .re = @intCast(matrix.len - 2), .im = 1 }).?.get(.{ .re = -1, .im = 0 }));
+    //     printa(graph.get(.{ .re = 5, .im = 1 }).?.get(.{ .re = 0, .im = 1 }));
+    //     printa(graph.get(.{ .re = 5, .im = 3 }).?.get(.{ .re = 1, .im = 0 }));
+    //     printa(graph.get(.{ .re = 7, .im = 3 }).?.get(.{ .re = 1, .im = 0 }));
+    //     printa(graph.get(.{ .re = 15, .im = 5 }).?.get(.{ .re = -1, .im = 0 }));
+    //     printa(graph.get(.{ .re = 13, .im = 5 }).?.get(.{ .re = -1, .im = 0 }));
+    //     printa(graph.get(.{ .re = 9, .im = 7 }).?.get(.{ .re = 0, .im = 1 }));
+    //     printa(graph.get(.{ .re = 9, .im = 9 }).?.get(.{ .re = -1, .im = 0 }));
 }
+
+const PathState = struct {
+    count: u32,
+    pos: ComplexT,
+    dir: ComplexT,
+    visit: SetT,
+};
 
 fn getDirection(dir: Direction) ComplexT {
     return switch (dir) {
@@ -173,9 +209,6 @@ fn getDirection(dir: Direction) ComplexT {
         .right => ComplexT.init(0, 1),
     };
 }
-// Graph :: Crossing -> {Direction: (next crossing, cost)}
-const GraphKey = std.ArrayHashMap(ComplexT, Tuple, HashCtx, true);
-const Graph = std.ArrayHashMap(ComplexT, GraphKey, HashCtx, true);
 
 fn matrixToGraph(allocator: Allocator, matrix: []const []const u8, start_pos: ComplexT, end_pos: ComplexT) !Graph {
     var graph = Graph.init(allocator);
@@ -220,6 +253,7 @@ fn traversePath(allocator: Allocator, matrix: []const []const u8, start: Complex
     visited.put(start_crossing, {}) catch unreachable;
 
     var cost: u32 = 1; // We start one step from the crossing
+    var steps: u32 = 1;
     var direction = start_dir;
     var position = start;
     while (true) {
@@ -227,7 +261,7 @@ fn traversePath(allocator: Allocator, matrix: []const []const u8, start: Complex
         visited.put(position, {}) catch unreachable;
 
         if (isCrossing(matrix, position) or eql(position, end_pos)) {
-            return Tuple{ .value = cost, .position = position };
+            return Tuple{ .value = cost, .position = position, .steps = steps, .direction = direction };
         }
 
         for (rotations) |rot| {
@@ -236,6 +270,7 @@ fn traversePath(allocator: Allocator, matrix: []const []const u8, start: Complex
             if (!inBounds(matrix, next_step)) continue;
             position = next_step;
             cost += 1;
+            steps += 1;
             if (!eql(rot, rotations[0])) {
                 cost += 1000;
                 direction = new_rotation;
@@ -257,46 +292,13 @@ fn isCrossing(matrix: []const []const u8, position: ComplexT) bool {
     }
     return false;
 }
-// def dfs_rec(graph: Graph, node: Node2D, visited=set(), steps=0):
-//     if node is END:
-//         return steps
-//     visited.add(node)
-//     max_steps = 0
-//     for next_node, weight in graph[node].items():
-//         if next_node not in visited:
-//             if (result := dfs_rec(graph, next_node, visited, steps + weight)) > max_steps:
-//                 max_steps = result
-//     visited.remove(node)
-//     return max_steps
-
-// fn dfs(
-//     matrix: []const []const u8,
-//     position: ComplexT,
-//     max_val: u32,
-//     current_val: u8,
-// ) u8 {
-//     if (!F.inBounds(position, dimension, dimension)) return 0;
-//     const row, const col = F.castComplexT(position);
-//     const curr_pos = matrix[row][col];
-//     if (curr_pos != current_val) return 0;
-//     if (curr_pos == '9') {
-//         trailheads.putAssumeCapacity(position, {});
-//         return 1;
-//     }
-
-//     const rot_right = ComplexT.init(0, -1);
-//     var direction = ComplexT.init(0, 1);
-//     var sum: u8 = dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
-//     inline for (0..3) |_| {
-//         direction = direction.mul(rot_right);
-//         sum += dfsRec(matrix, dimension, trailheads, position.add(direction), current_val + 1);
-//     }
-//     return sum;
-// }
+// Graph :: Crossing -> {Direction: (next crossing, cost)}
 
 const Tuple = struct {
     position: ComplexT,
+    direction: ComplexT,
     value: u32,
+    steps: u32,
 
     const Self = @This();
 
@@ -304,6 +306,47 @@ const Tuple = struct {
         return a.value < b.value;
     }
 };
+const GraphKey = std.ArrayHashMap(ComplexT, Tuple, HashCtx, true);
+const Graph = std.ArrayHashMap(ComplexT, GraphKey, HashCtx, true);
+
+fn dfs(
+    allocator: Allocator,
+    graph: Graph,
+    visit: *SetT,
+    curr_node: ComplexT,
+    end_node: ComplexT,
+    direction: ComplexT,
+    cost: u32,
+    target_cost: u32,
+) !?u32 {
+    if (cost > target_cost) return null;
+    if (eql(curr_node, end_node)) {
+        if (cost == target_cost) return 1;
+        return null;
+    }
+    try visit.*.put(curr_node, {});
+    defer _ = visit.*.orderedRemove(curr_node);
+
+    var paths: u32 = 0;
+    if (graph.get(curr_node)) |graph_key| {
+        for (rotations) |rot| {
+            const new_direction = direction.mul(rot);
+            if (graph_key.get(new_direction)) |tup| {
+                if (visit.*.get(tup.position) != null) continue;
+                var new_cost = cost + tup.value;
+
+                if (!eql(rot, rotations[0])) {
+                    new_cost += 1000;
+                }
+
+                if (try dfs(allocator, graph, visit, tup.position, end_node, tup.direction, new_cost, target_cost)) |res| {
+                    paths += res;
+                }
+            }
+        }
+    }
+    return paths;
+}
 
 fn printCostMap(alloc: Allocator, matrix: []const []const u8, visited: VisitedT) void {
     // var new_matrix = myf.copyMatrix(alloc, matrix) catch unreachable;
@@ -363,32 +406,6 @@ fn finishSymbol(matrix: []const []const u8, complex: ComplexT, scalar: u8) bool 
     return matrix[row][col] == scalar;
 }
 
-fn complexToUInt(c: ComplexT) [2]u16 {
-    return .{ @bitCast(c.re), @bitCast(c.im) };
-}
-
 pub fn eql(a: ComplexT, b: ComplexT) bool {
     return a.re == b.re and a.im == b.im;
 }
-
-// fn printPath(alloc: Allocator, matrix: []const []const u8, visited: VisitedT) void {
-//     var new_matrix = myf.copyMatrix(alloc, matrix) catch unreachable;
-//     defer myf.freeMatrix(alloc, new_matrix);
-
-//     for (visited.keys()) |key| {
-//         const pos = u32ToComplex(key);
-//         const dir = visited.get(key).?;
-//         const row, const col = complexToUInt(pos);
-//         const arrow: u8 = if (eql(dir, ComplexT.init(0, 1)))
-//             '>'
-//         else if (eql(dir, ComplexT.init(0, -1)))
-//             '<'
-//         else if (eql(dir, ComplexT.init(-1, 0)))
-//             '^'
-//         else
-//             'v';
-//         new_matrix[row][col] = arrow;
-//     }
-
-//     myf.printMatStr(new_matrix);
-// }
