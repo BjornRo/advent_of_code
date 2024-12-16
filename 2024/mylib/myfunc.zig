@@ -488,6 +488,17 @@ pub fn copyMatrix(allocator: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][
     return new_matrix;
 }
 
+pub fn initValueMatrix(allocator: Allocator, rows: usize, cols: usize, value: anytype) ![][]@TypeOf(value) {
+    const T = @TypeOf(value);
+    const matrix = try allocator.alloc([]T, rows);
+    for (matrix) |*row| {
+        row.* = try allocator.alloc(T, cols);
+        for (row.*) |*c| c.* = value;
+    }
+
+    return matrix;
+}
+
 pub fn freeMatrix(allocator: Allocator, matrix: anytype) void {
     for (matrix) |row| allocator.free(row);
     allocator.free(matrix);
