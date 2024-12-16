@@ -193,10 +193,8 @@ fn canMoveChildren(matrix: [][]u8, dir: Vec2, half_box: Vec2, early_exit: *bool)
 }
 
 fn genBox(elem: u8, step: Vec2) [2]Vec2 {
-    return if (elem == '[')
-        .{ step, step + getDir('>') }
-    else
-        .{ step + getDir('<'), step };
+    if (elem == '[') return .{ step, step + getDir('>') };
+    return .{ step + getDir('<'), step };
 }
 
 fn expandMatrixWidth(alloc: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
