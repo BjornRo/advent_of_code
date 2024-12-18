@@ -12,6 +12,10 @@ pub fn main() !void {
     defer list.deinit();
 
     print(try myf.crt(i32, &[_]i32{ 52, 27 }, &[_]i32{ 101, 103 }));
+
+    const a: u64 = 1;
+    // const b: u32 = 33;
+    print(myf.concatInts(u64, a, 0));
     // print(try myf.modInverse(i128, 4, 4));
 
     // print(@typeInfo(@TypeOf(myf.getNextPositions)).Fn.return_type.?);

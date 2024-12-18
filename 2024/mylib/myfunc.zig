@@ -4,6 +4,44 @@ const Type = std.builtin.Type;
 
 const DelimType = enum { CRLF, LF };
 
+pub fn FixedBuffer(comptime T: type, size: u8) type {
+    return struct {
+        buf: [size]T,
+        len: u8,
+
+        const Self = @This();
+
+        pub fn initDefaultValue(value: T) Self {
+            var item = Self{ .len = 0, .buf = undefined };
+            for (0..size) |i| item.buf[i] = value;
+            return item;
+        }
+        pub fn init() Self {
+            return .{ .len = 0, .buf = undefined };
+        }
+        pub fn append(self: *Self, item: T) !void {
+            if (self.len >= size) return error.Full;
+            self.buf[self.len] = item;
+            self.len += 1;
+        }
+        pub fn getSlice(self: *Self) []T {
+            return self.buf[0..self.len];
+        }
+        pub fn get(self: *Self, index: u8) !T {
+            if (index >= size) return error.OutOfBounds;
+            return self.buf[index];
+        }
+        pub fn pop(self: *Self) ?T {
+            if (self.len == 0) return null;
+            defer self.len -= 1;
+            return self.buf[self.len];
+        }
+        pub fn set(self: *Self, index: u8, value: T) !void {
+            if (index >= size) return error.OutOfBounds;
+            self.buf[index] = value;
+        }
+    };
+}
 pub fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
@@ -343,7 +381,7 @@ pub fn variance(slice: anytype) f64 {
 }
 
 pub fn concatInts(comptime T: type, a: T, b: T) T {
-    const digits_b = std.math.log10_int(b) + 1;
+    const digits_b = if (b == 0) 1 else std.math.log10_int(b) + 1;
     return a * (std.math.powi(T, 10, digits_b) catch unreachable) + b;
 }
 
