@@ -18,6 +18,17 @@ pub fn main() !void {
     print(myf.concatInts(u64, a, 0));
     // print(try myf.modInverse(i128, 4, 4));
 
+    var b = try allocator.alloc(u8, 16);
+    for (0..16) |i| b[i] = @intCast(i);
+    const data = @as(*[4][4]u8, @ptrCast(b)).*; // deref copies?
+    std.debug.print("{*}\n", .{&data});
+    std.debug.print("{*}\n", .{&b});
+    print(data);
+    allocator.free(b);
+    print(data);
+    std.debug.print("{*}\n", .{&data});
+    std.debug.print("{*}\n", .{&b});
+
     // print(@typeInfo(@TypeOf(myf.getNextPositions)).Fn.return_type.?);
     // print(myf.getNextPositions(i8, 3, 3));
     // var neighbors = myf.validNeighborsIter(myf.getKernel3x3(i8, 3, 3), 0, 5, 5);
