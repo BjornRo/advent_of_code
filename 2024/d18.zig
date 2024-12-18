@@ -176,13 +176,11 @@ pub fn main() !void {
     // 3036
 
     lower += 1;
-    var upper = size;
-    upper = upper;
     var mid_point: usize = undefined;
     const all_keys = map.keys();
     while (true) {
-        mid_point = lower + (upper - lower) / 2;
-        std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, upper });
+        defer sub_map.clearRetainingCapacity();
+        mid_point = lower + (size - lower) / 2;
 
         for (all_keys[0..mid_point]) |key| sub_map.putAssumeCapacity(key, {});
         const last_point = all_keys[mid_point - 1];
@@ -200,11 +198,10 @@ pub fn main() !void {
                 p2_result = last_point;
                 break;
             }
-            lower = lower + (mid_point - lower) / 2;
-            prints("inside");
+            size = mid_point + (size - mid_point) / 2;
             continue;
         }
-        lower = mid_point;
+        lower = mid_point + 1;
     }
     try writer.print("Part 1: {d}\nPart 2: {d},{d}\n", .{
         p1_result,
