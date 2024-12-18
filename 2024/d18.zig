@@ -143,7 +143,7 @@ pub fn main() !void {
     // End setup
 
     const dimension: CT = 70 + 1;
-    const max_bytes = 1024;
+    var lower: usize = 1024;
 
     var map = Set.init(allocator);
     defer map.deinit();
@@ -152,41 +152,59 @@ pub fn main() !void {
     var p1_result: u32 = 0;
     var p2_result = Point.init(-1, -1);
 
-    var found_results: u8 = 0;
+    // var found_results: u8 = 0;
 
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     var size: usize = 0;
-    // 3034 p2
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |raw_point| {
         var point_iter = std.mem.tokenizeScalar(u8, raw_point, ',');
         const left = std.fmt.parseInt(CT, point_iter.next().?, 10) catch unreachable;
         const right = std.fmt.parseInt(CT, point_iter.next().?, 10) catch unreachable;
         const point = Point.init(right, left);
         map.putAssumeCapacity(point, {});
-        if (size == max_bytes) {
-            p1_result = try part1(allocator, map, dimension, Point.init(dimension - 1, dimension - 1));
-            found_results |= 1;
-        }
-        if (size > max_bytes) {
-            var neighbors: u8 = 0;
-            const row, const col = point.toArr();
-            for (myf.getNextPositions(row, col)) |neighbor| {
-                const new_point = Point.init(neighbor[0], neighbor[1]);
-                if (!inBounds(new_point, dimension) or
-                    map.contains(new_point)) neighbors += 1;
-                if (neighbors == 2) break;
-            }
-
-            if (neighbors == 2) {
-                if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
-                    p2_result = point;
-                    printa(size);
-                    found_results |= 2;
-                }
-            }
-        }
-        if (found_results == 3) break;
         size += 1;
+        if (size == lower) {
+            p1_result = try part1(allocator, map, dimension, Point.init(dimension - 1, dimension - 1));
+        }
+    }
+
+    var sub_map = Set.init(allocator);
+    defer sub_map.deinit();
+    try sub_map.ensureTotalCapacity(size);
+
+    printa(p1_result);
+    // 3036
+
+    lower += 1;
+    var upper = size;
+    upper = upper;
+    var mid_point: usize = undefined;
+    const all_keys = map.keys();
+    while (true) {
+        mid_point = lower + (upper - lower) / 2;
+        std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, upper });
+
+        for (all_keys[0..mid_point]) |key| sub_map.putAssumeCapacity(key, {});
+        const last_point = all_keys[mid_point - 1];
+
+        var neighbors: u8 = 0;
+        const row, const col = last_point.toArr();
+        for (myf.getNextPositions(row, col)) |neighbor| {
+            const new_point = Point.init(neighbor[0], neighbor[1]);
+            if (!inBounds(new_point, dimension) or
+                map.contains(new_point)) neighbors += 1;
+            if (neighbors == 2) break;
+        }
+        if (!try part2(allocator, sub_map, dimension, Point.init(dimension - 1, dimension - 1))) {
+            if (lower == mid_point) {
+                p2_result = last_point;
+                break;
+            }
+            lower = lower + (mid_point - lower) / 2;
+            prints("inside");
+            continue;
+        }
+        lower = mid_point;
     }
     try writer.print("Part 1: {d}\nPart 2: {d},{d}\n", .{
         p1_result,
