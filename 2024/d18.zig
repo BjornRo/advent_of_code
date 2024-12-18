@@ -109,6 +109,17 @@ fn part2(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !bool {
     return false;
 }
 
+pub fn printGrid(allocator: Allocator, dimension: u8, positions: []const Point, point: ?Point) void {
+    const stdout = std.io.getStdOut().writer();
+    var matrix = myf.initValueMatrix(allocator, dimension, dimension, @as(u8, '.')) catch unreachable;
+    defer myf.freeMatrix(allocator, matrix);
+
+    for (positions) |pos| matrix[@intCast(pos.row)][@intCast(pos.col)] = '#';
+    if (point) |p| matrix[@intCast(p.row)][@intCast(p.col)] = 'O';
+    for (matrix) |arr| stdout.print("{s}\n", .{arr}) catch unreachable;
+    stdout.print("\n", .{}) catch unreachable;
+}
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -156,10 +167,20 @@ pub fn main() !void {
             found_results |= 1;
         }
         if (size > max_bytes) {
-            if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
-                p2_result = point;
-                found_results |= 2;
-                printa(size);
+            var neighbors: u8 = 0;
+            const row, const col = point.toArr();
+            for (myf.getNextPositions(row, col)) |neighbor| {
+                const new_point = Point.init(neighbor[0], neighbor[1]);
+                if (!inBounds(new_point, dimension) or
+                    map.contains(new_point)) neighbors += 1;
+                if (neighbors == 2) break;
+            }
+
+            if (neighbors == 2) {
+                if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
+                    p2_result = point;
+                    found_results |= 2;
+                }
             }
         }
         if (found_results == 3) break;
