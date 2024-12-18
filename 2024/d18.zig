@@ -191,13 +191,15 @@ pub fn main() !void {
                 map.contains(new_point)) neighbors += 1;
             if (neighbors == 2) break;
         }
-        if (!try part2(allocator, sub_map, dimension, Point.init(dimension - 1, dimension - 1))) {
-            if (lower == mid_point) {
-                p2_result = last_point;
-                break;
+        if (neighbors == 2) {
+            if (!try part2(allocator, sub_map, dimension, Point.init(dimension - 1, dimension - 1))) {
+                if (lower == mid_point) {
+                    p2_result = last_point;
+                    break;
+                }
+                size = mid_point + (size - mid_point) / 2;
+                continue;
             }
-            size = mid_point + (size - mid_point) / 2;
-            continue;
         }
         lower = mid_point + 1;
     }
