@@ -50,7 +50,7 @@ fn inBounds(point: Point, dimension: CT) bool {
         0 <= point.col and point.col < dimension);
 }
 
-fn part1(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !u32 {
+fn part1(allocator: Allocator, map: []const []const bool, dimension: CT, end_pos: Point) !u32 {
     var visited = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
     defer myf.freeMatrix(allocator, visited);
 
@@ -74,15 +74,16 @@ fn part1(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !u32 {
 
         for (myf.getNextPositions(@as(i16, @intCast(row)), @as(i16, @intCast(col)))) |next_position_coords| {
             const next_position = Point.init(next_position_coords[0], next_position_coords[1]);
-            if (map.get(next_position) != null) continue;
             if (!inBounds(next_position, dimension)) continue;
+            const nrow, const ncol = next_position.as();
+            if (map[nrow][ncol]) continue;
             try queue.pushBack(.{ .steps = state.steps + 1, .position = next_position });
         }
     }
     return min_steps;
 }
 
-fn part2(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !bool {
+fn part2(allocator: Allocator, map: []const []const bool, dimension: CT, end_pos: Point) !bool {
     var visited = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
     defer myf.freeMatrix(allocator, visited);
 
@@ -100,8 +101,9 @@ fn part2(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !bool {
 
         for (myf.getNextPositions(@as(i16, @intCast(row)), @as(i16, @intCast(col)))) |next_position_coords| {
             const next_position = Point.init(next_position_coords[0], next_position_coords[1]);
-            if (map.get(next_position) != null) continue;
             if (!inBounds(next_position, dimension)) continue;
+            const nrow, const ncol = next_position.as();
+            if (map[nrow][ncol]) continue;
             try stack.append(.{ .steps = state.steps + 1, .position = next_position });
         }
     }
@@ -141,9 +143,10 @@ pub fn main() !void {
     const dimension: CT = 70 + 1;
     var lower: usize = 1024;
 
-    var map = Set.init(allocator);
-    defer map.deinit();
-    try map.ensureTotalCapacity(@intCast(dimension * dimension));
+    var map = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
+    var list = std.ArrayList(Point).init(allocator);
+    try list.ensureTotalCapacity(@intCast(dimension * dimension));
+    defer list.deinit();
 
     var p1_result: u32 = 0;
     var p2_result = Point.init(-1, -1);
@@ -154,39 +157,42 @@ pub fn main() !void {
         var point_iter = std.mem.tokenizeScalar(u8, raw_point, ',');
         const left = std.fmt.parseInt(CT, point_iter.next().?, 10) catch unreachable;
         const right = std.fmt.parseInt(CT, point_iter.next().?, 10) catch unreachable;
-        const point = Point.init(right, left);
-        map.putAssumeCapacity(point, {});
+        list.appendAssumeCapacity(Point.init(right, left));
         size += 1;
-        if (size == lower) {
-            p1_result = try part1(allocator, map, dimension, Point.init(dimension - 1, dimension - 1));
+        if (size <= lower) {
+            map[@intCast(right)][@intCast(left)] = true;
+            if (size == lower) {
+                p1_result = try part1(allocator, map, dimension, Point.init(dimension - 1, dimension - 1));
+            }
         }
     }
-
-    var sub_map = Set.init(allocator);
-    defer sub_map.deinit();
-    try sub_map.ensureTotalCapacity(size);
+    myf.freeMatrix(allocator, map);
 
     lower += 1;
     var mid_point: usize = undefined;
-    const all_keys = map.keys();
     while (true) {
-        defer sub_map.clearRetainingCapacity();
-        // std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, size });
         mid_point = lower + (size - lower) / 2;
+        // std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, size });
 
-        for (all_keys[0..mid_point]) |key| sub_map.putAssumeCapacity(key, {});
-        const last_point = all_keys[mid_point - 1];
+        map = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
+        defer myf.freeMatrix(allocator, map);
+
+        for (list.items[0..mid_point]) |key| {
+            const krow, const kcol = key.as();
+            map[krow][kcol] = true;
+        }
+        const last_point = list.items[mid_point - 1];
 
         var neighbors: u8 = 0;
         const row, const col = last_point.toArr();
         for (myf.getNextPositions(row, col)) |neighbor| {
             const new_point = Point.init(neighbor[0], neighbor[1]);
-            if (!inBounds(new_point, dimension) or
-                map.contains(new_point)) neighbors += 1;
+            const nrow, const ncol = new_point.toArr();
+            if (!inBounds(new_point, dimension) or map[@intCast(nrow)][@intCast(ncol)]) neighbors += 1;
             if (neighbors == 2) break;
         }
         if (neighbors == 2) {
-            if (!try part2(allocator, sub_map, dimension, Point.init(dimension - 1, dimension - 1))) {
+            if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
                 if (lower == mid_point) {
                     p2_result = last_point;
                     break;
