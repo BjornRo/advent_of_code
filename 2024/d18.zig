@@ -180,6 +180,7 @@ pub fn main() !void {
     const all_keys = map.keys();
     while (true) {
         defer sub_map.clearRetainingCapacity();
+        // std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, size });
         mid_point = lower + (size - lower) / 2;
 
         for (all_keys[0..mid_point]) |key| sub_map.putAssumeCapacity(key, {});
