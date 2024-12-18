@@ -51,9 +51,8 @@ fn inBounds(point: Point, dimension: CT) bool {
 }
 
 fn part1(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !u32 {
-    var visited = Set.init(allocator);
-    defer visited.deinit();
-    try visited.ensureTotalCapacity(@intCast(dimension * dimension));
+    var visited = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
+    defer myf.freeMatrix(allocator, visited);
 
     var queue = try Deque(State).initCapacity(allocator, @intCast(dimension * dimension));
     defer queue.deinit();
@@ -64,16 +63,16 @@ fn part1(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !u32 {
         const state = queue.popFront().?;
 
         if (state.steps >= min_steps) continue;
-
         if (state.position.eq(end_pos)) {
             if (state.steps < min_steps) min_steps = state.steps;
+            continue;
         }
 
-        if ((try visited.getOrPutValue(state.position, {})).found_existing)
-            continue;
+        const row, const col = state.position.as();
+        if (visited[row][col]) continue;
+        visited[row][col] = true;
 
-        const row, const col = state.position.toArr();
-        for (myf.getNextPositions(row, col)) |next_position_coords| {
+        for (myf.getNextPositions(@as(i16, @intCast(row)), @as(i16, @intCast(col)))) |next_position_coords| {
             const next_position = Point.init(next_position_coords[0], next_position_coords[1]);
             if (map.get(next_position) != null) continue;
             if (!inBounds(next_position, dimension)) continue;
@@ -84,9 +83,8 @@ fn part1(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !u32 {
 }
 
 fn part2(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !bool {
-    var visited = Set.init(allocator);
-    defer visited.deinit();
-    try visited.ensureTotalCapacity(@intCast(dimension * dimension));
+    var visited = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
+    defer myf.freeMatrix(allocator, visited);
 
     var stack = std.ArrayList(State).init(allocator);
     defer stack.deinit();
@@ -96,10 +94,11 @@ fn part2(allocator: Allocator, map: Set, dimension: CT, end_pos: Point) !bool {
         const state = stack.pop();
 
         if (state.position.eq(end_pos)) return true;
-        if ((try visited.getOrPutValue(state.position, {})).found_existing) continue;
+        const row, const col = state.position.as();
+        if (visited[row][col]) continue;
+        visited[row][col] = true;
 
-        const row, const col = state.position.toArr();
-        for (myf.getNextPositions(row, col)) |next_position_coords| {
+        for (myf.getNextPositions(@as(i16, @intCast(row)), @as(i16, @intCast(col)))) |next_position_coords| {
             const next_position = Point.init(next_position_coords[0], next_position_coords[1]);
             if (map.get(next_position) != null) continue;
             if (!inBounds(next_position, dimension)) continue;
@@ -128,12 +127,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var buffer: [350_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
