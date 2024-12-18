@@ -152,8 +152,6 @@ pub fn main() !void {
     var p1_result: u32 = 0;
     var p2_result = Point.init(-1, -1);
 
-    // var found_results: u8 = 0;
-
     var size: usize = 0;
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |raw_point| {
