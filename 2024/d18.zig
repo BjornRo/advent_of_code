@@ -155,9 +155,12 @@ pub fn main() !void {
             p1_result = try part1(allocator, map, dimension, Point.init(dimension - 1, dimension - 1));
             found_results |= 1;
         }
-        if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
-            p2_result = point;
-            found_results |= 2;
+        if (size > max_bytes) {
+            if (!try part2(allocator, map, dimension, Point.init(dimension - 1, dimension - 1))) {
+                p2_result = point;
+                found_results |= 2;
+                printa(size);
+            }
         }
         if (found_results == 3) break;
         size += 1;
