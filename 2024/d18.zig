@@ -170,7 +170,6 @@ pub fn main() !void {
 
     var sub_map = Set.init(allocator);
     defer sub_map.deinit();
-    printa(size);
     try sub_map.ensureTotalCapacity(size);
 
     printa(p1_result);
@@ -193,7 +192,8 @@ pub fn main() !void {
             if (!inBounds(new_point, dimension) or
                 map.contains(new_point)) neighbors += 1;
             if (neighbors == 2) {
-                upper = mid_point - 1;
+                lower = mid_point + 1;
+                upper = upper - ((upper - mid_point) / 2) | 0;
                 continue :outer;
             }
         }
@@ -201,7 +201,9 @@ pub fn main() !void {
             p2_result = last_point;
             break;
         }
-        lower = mid_point + 1;
+        prints("here");
+        upper = mid_point - 1;
+        lower = lower + (mid_point - lower) / 2;
     }
     try writer.print("Part 1: {d}\nPart 2: {d},{d}\n", .{
         p1_result,
