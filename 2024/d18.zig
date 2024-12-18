@@ -172,9 +172,6 @@ pub fn main() !void {
     defer sub_map.deinit();
     try sub_map.ensureTotalCapacity(size);
 
-    printa(p1_result);
-    // 3036
-
     lower += 1;
     var mid_point: usize = undefined;
     const all_keys = map.keys();
