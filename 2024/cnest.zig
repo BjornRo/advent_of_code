@@ -20,12 +20,12 @@ pub fn main() !void {
 
     var b = try allocator.alloc(u8, 16);
     for (0..16) |i| b[i] = @intCast(i);
-    const data = @as(*[4][4]u8, @ptrCast(b)); // deref copies?
+    const data = @as(*[4][4]u8, @ptrCast(b)).*; // deref copies?
     std.debug.print("{*}\n", .{&data});
     std.debug.print("{*}\n", .{&b});
     b[0] = 4;
     print(b);
-    print(data.*);
+    print(data);
     allocator.free(b);
     std.debug.print("{*}\n", .{&data});
     std.debug.print("{*}\n", .{&b});
