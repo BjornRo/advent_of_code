@@ -41,7 +41,7 @@ test "example" {
     var desire_iter = std.mem.tokenizeSequence(u8, raw_desire, input_attributes.delim);
     while (desire_iter.next()) |desire| {
         sum2 += try nfa(allocator, desire, patterns);
-        // break;
+        break;
     }
     printa(sum2);
 }
@@ -71,21 +71,25 @@ fn nfa(allocator: Allocator, desire: []const u8, patterns: Patterns) !u64 {
 
     _ = patterns.get(desire);
 
-    try curr_state.put(.{ .index = 0, .offset = 1 }, 0);
+    try curr_state.put(.{ .index = 0, .offset = 1 }, 1);
     while (curr_state.count() != 0) {
         var states_iter = curr_state.iterator();
         // prints("new loop");
         // for (curr_state.keys(), curr_state.values()) |k, v| {
         //     std.debug.print("{any}, {any}\n", .{ k, v });
+        //     prints(desire[0 .. k.index + k.offset - 1]);
         // }
         while (states_iter.next()) |item| {
             var key = item.key_ptr.*;
             const value = item.value_ptr.*;
             const index, const offset = key.arr();
 
-            if (index + offset >= len) {
-                if (patterns.contains(desire[index .. index + offset - 1]))
-                    sum += item.value_ptr.*;
+            if (index + offset > len) {
+                if (patterns.contains(desire[index .. index + offset - 1])) {
+                    sum += value;
+                    // prints(desire[index .. index + offset - 1]);
+                    // printa(value);
+                }
                 continue;
             }
             const slice = desire[index .. index + offset];
@@ -93,9 +97,9 @@ fn nfa(allocator: Allocator, desire: []const u8, patterns: Patterns) !u64 {
                 const new_key: State = .{ .index = index + offset, .offset = 1 };
                 // printa(new_key);
                 if (next_state.get(new_key)) |result| {
-                    try next_state.put(new_key, result + value + 1);
+                    try next_state.put(new_key, result + 1);
                 } else {
-                    try next_state.put(new_key, 1);
+                    try next_state.put(new_key, value);
                 }
                 // const result = next_state.get(key) orelse 1;
                 // try next_state.put(key, result + item.value_ptr.*);
