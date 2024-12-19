@@ -97,7 +97,8 @@ pub fn main() !void {
         if (part1(desire, &[0]u8{}, patterns, @truncate(0), @truncate(desire.len), &early_exit)) {
             p1_sum += 1;
         }
-        const res = try part2(desire, &[0]u8{}, patterns, @truncate(0), @truncate(desire.len), &mmemo.*);
+        var memo = mmemo.*;
+        const res = try part2(desire, &[0]u8{}, patterns, @truncate(0), @truncate(desire.len), &memo);
         p2_sum += res;
     }
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
