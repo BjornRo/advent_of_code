@@ -164,6 +164,12 @@ pub fn getNeighborOffset(comptime T: type) [4][2]T {
 //     };
 // }
 
+pub fn collect(comptime T: type, allocator: Allocator, iter_ptr: anytype) !std.ArrayList(T) {
+    var list = std.ArrayList(T).init(allocator);
+    while (iter_ptr.*.next()) |val| try list.append(val);
+    return list;
+}
+
 pub fn getNextPositions(row: anytype, col: anytype) [4][2]@TypeOf(row, col) {
     const T = @TypeOf(row, col);
     comptime switch (@typeInfo(T)) {
