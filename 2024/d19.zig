@@ -51,8 +51,12 @@ pub fn main() !void {
     var sum: u64 = 0;
     var sum2: u64 = 0;
 
-    var memo = Memo.init(allocator);
-    defer memo.deinit();
+    // var memo = Memo.init(allocator);
+    // defer memo.deinit();
+
+    const raw_memo = try myf.initValueSlice(allocator, 61 * 61, @as(?u64, null));
+    defer allocator.free(raw_memo);
+    const mmemo = @as(*[61][61]?u64, @ptrCast(raw_memo));
 
     var desire_iter = std.mem.tokenizeSequence(u8, raw_desire, input_attributes.delim);
     while (desire_iter.next()) |desire| {
@@ -60,7 +64,7 @@ pub fn main() !void {
         if (part1(desire, &[0]u8{}, patterns, @truncate(0), @truncate(desire.len), &early_exit)) {
             sum += 1;
         }
-        defer memo.clearRetainingCapacity();
+        var memo = mmemo.*;
         const res = try part2(desire, &[0]u8{}, patterns, @truncate(0), @truncate(desire.len), &memo);
         // printa(res);
         sum2 += res;
@@ -103,15 +107,16 @@ fn part1(str: []const u8, built_towel: []const u8, patterns: Patterns, index: u8
     var disjunct: bool = false;
     for (index + 1..max_len + 1) |i| {
         if (patterns.contains(str[index..i])) {
-            disjunct = disjunct or part1(str, str[0..i], patterns, @intCast(i), max_len, early_exit);
+            const res = part1(str, str[0..i], patterns, @intCast(i), max_len, early_exit);
+            if (res) return true;
+            disjunct = disjunct or res;
         }
     }
-
     return disjunct;
 }
 
-fn part2(str: []const u8, built_towel: []const u8, patterns: Patterns, index: u8, max_len: u8, memo: *Memo) !u64 {
-    if (index == max_len) {
+fn part2(str: []const u8, built_towel: []const u8, patterns: Patterns, index: u8, max_len: u8, memo: *[61][61]?u64) !u64 {
+    if (index >= max_len) {
         if (std.mem.eql(u8, str, built_towel)) {
             return 1;
         }
@@ -119,14 +124,14 @@ fn part2(str: []const u8, built_towel: []const u8, patterns: Patterns, index: u8
     }
     var sum: u64 = 0;
     for (index + 1..max_len + 1) |i| {
-        const key: Key = .{ .index = index, .strlen = @intCast(i - index) };
-        if (memo.*.get(key)) |res| {
-            sum += res;
+        const value = memo[index][@intCast(i - index)];
+        if (value) |result| {
+            sum += result;
             continue;
         }
         if (patterns.contains(str[index..i])) {
             const res = try part2(str, str[0..i], patterns, @intCast(i), max_len, memo);
-            try memo.*.put(key, res);
+            memo[index][@intCast(i - index)] = res;
             sum += res;
         }
     }

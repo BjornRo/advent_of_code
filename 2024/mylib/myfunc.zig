@@ -527,6 +527,13 @@ pub fn copyMatrix(allocator: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][
     return new_matrix;
 }
 
+pub fn initValueSlice(allocator: Allocator, length: usize, value: anytype) ![]@TypeOf(value) {
+    const T = @TypeOf(value);
+    const slice = try allocator.alloc(T, length);
+    for (slice) |*c| c.* = value;
+    return slice;
+}
+
 pub fn initValueMatrix(allocator: Allocator, rows: usize, cols: usize, value: anytype) ![][]@TypeOf(value) {
     const T = @TypeOf(value);
     const matrix = try allocator.alloc([]T, rows);
