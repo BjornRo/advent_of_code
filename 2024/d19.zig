@@ -30,8 +30,7 @@ fn part2(str: []const u8, patterns: Patterns, index: u8, max_len: u8, memo: *[61
 
     var sum: u64 = 0;
     for (index + 1..max_len + 1) |i| {
-        const value = memo[index][@intCast(i - index)];
-        if (value) |result| {
+        if (memo[index][@intCast(i - index)]) |result| {
             sum += result;
             continue;
         }
