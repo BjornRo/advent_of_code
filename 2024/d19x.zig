@@ -74,11 +74,15 @@ fn nfa(allocator: Allocator, desire: []const u8, patterns: Patterns) !u64 {
     try curr_state.put(.{ .index = 0, .offset = 1 }, 1);
     while (curr_state.count() != 0) {
         var states_iter = curr_state.iterator();
-        // prints("new loop");
-        // for (curr_state.keys(), curr_state.values()) |k, v| {
-        //     std.debug.print("{any}, {any}\n", .{ k, v });
-        //     prints(desire[0 .. k.index + k.offset - 1]);
-        // }
+        prints("new loop");
+        for (curr_state.keys(), curr_state.values()) |k, v| {
+            std.debug.print("{any}, {any}\n", .{ k, v });
+            if (len < k.index + k.offset) {
+                prints(desire[k.index .. k.index + k.offset - 1]);
+            } else {
+                prints(desire[k.index .. k.index + k.offset]);
+            }
+        }
         while (states_iter.next()) |item| {
             var key = item.key_ptr.*;
             const value = item.value_ptr.*;
@@ -104,7 +108,7 @@ fn nfa(allocator: Allocator, desire: []const u8, patterns: Patterns) !u64 {
                 // const result = next_state.get(key) orelse 1;
                 // try next_state.put(key, result + item.value_ptr.*);
             }
-            if (key.offset == 8) continue;
+            // if (key.offset == 8) continue;
 
             key.offset += 1;
 
