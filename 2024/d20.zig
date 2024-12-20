@@ -77,64 +77,6 @@ const manhattan_circle = blk: {
     break :blk circle.*;
 };
 
-pub fn main() !void {
-    const start = time.nanoTimestamp();
-    const writer = std.io.getStdOut().writer();
-    defer {
-        const end = time.nanoTimestamp();
-        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
-        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
-    }
-    var buffer: [70_000]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
-
-    const filename = try myf.getAppArg(allocator, 1);
-    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    const input = try myf.readFile(allocator, target_file);
-    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input_attributes = try myf.getInputAttributes(input);
-    // End setup
-
-    const dim: u8 = @intCast(input_attributes.row_len);
-
-    const matrix = try allocator.alloc([]u8, dim);
-    defer allocator.free(matrix);
-
-    var start_point: Point = undefined;
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    for (matrix, 0..) |*row, i| {
-        row.* = @constCast(in_iter.next().?);
-        if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
-    }
-
-    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
-    defer myf.freeMatrix(allocator, count_matrix);
-    var frontier = start_point;
-    var steps: u16 = 0;
-    var visited = frontier;
-    while (true) {
-        const row, const col = frontier.cast();
-        if (matrix[row][col] == 'E') break;
-
-        for (getNextPositions(frontier)) |next_pos| {
-            const next_row, const next_col = next_pos.cast();
-            if (matrix[next_row][next_col] == '#') continue;
-            if (visited.eq(next_pos)) continue;
-            steps += 1;
-            visited = frontier;
-            frontier = next_pos;
-            count_matrix[next_row][next_col] = steps;
-            break;
-        }
-    }
-
-    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-        fast_part1(matrix, count_matrix, start_point),
-        solver(matrix, count_matrix, start_point),
-    });
-}
-
 fn fast_part1(
     matrix: []const []const u8,
     count_matrix: []const []const u16,
@@ -249,4 +191,62 @@ pub fn validNeighborsIter(
         .product = kernel * kernel,
         .index = 0,
     };
+}
+
+pub fn main() !void {
+    const start = time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
+    defer {
+        const end = time.nanoTimestamp();
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
+        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
+    }
+    var buffer: [70_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
+
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input_attributes = try myf.getInputAttributes(input);
+    // End setup
+
+    const dim: u8 = @intCast(input_attributes.row_len);
+
+    const matrix = try allocator.alloc([]u8, dim);
+    defer allocator.free(matrix);
+
+    var start_point: Point = undefined;
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    for (matrix, 0..) |*row, i| {
+        row.* = @constCast(in_iter.next().?);
+        if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
+    }
+
+    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
+    defer myf.freeMatrix(allocator, count_matrix);
+    var frontier = start_point;
+    var steps: u16 = 0;
+    var visited = frontier;
+    while (true) {
+        const row, const col = frontier.cast();
+        if (matrix[row][col] == 'E') break;
+
+        for (getNextPositions(frontier)) |next_pos| {
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+            if (visited.eq(next_pos)) continue;
+            steps += 1;
+            visited = frontier;
+            frontier = next_pos;
+            count_matrix[next_row][next_col] = steps;
+            break;
+        }
+    }
+
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+        fast_part1(matrix, count_matrix, start_point),
+        solver(matrix, count_matrix, start_point),
+    });
 }
