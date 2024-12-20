@@ -41,7 +41,7 @@ text = ex_result.text
 start_pre = text.find("<pre>") + 5
 end_pre = text.find("</pre>")
 
-example_block = text[start_pre:end_pre].replace("<code>", "").replace("</code>", "")
+example_block = text[start_pre:end_pre].replace("<code>", "", 1).replace("</code>", "", 1)
 
 with open(example_file, "wt") as f:
     f.write(example_block)
