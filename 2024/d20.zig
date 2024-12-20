@@ -33,7 +33,7 @@ const Point = struct {
 fn inBounds(p: Point, dim: anytype) bool {
     const r, const c = p.toArr();
     const tdim: @TypeOf(r) = @intCast(dim);
-    return 0 < r and 0 < c and r < tdim and c < tdim;
+    return 0 <= r and 0 <= c and r < tdim and c < tdim;
 }
 
 fn getOffset2Pos(point: Point) [4]Point {
@@ -203,26 +203,16 @@ test "example" {
         if (matrix[row][col] == 'E') break;
 
         // count cheats
-        const kernel = 40;
-        const half_kernel = kernel / 2; // Calculate half the kernel size
-        for (0..kernel + 1) |i| {
-            for (0..kernel + 1) |j| {
-                const i_: CT = @intCast(i);
-                const j_: CT = @intCast(j);
-                const offset_pos = Point.init(i_ - half_kernel + frontier.row, j_ - half_kernel + frontier.col);
-                if (!inBounds(offset_pos, dim)) continue;
-                // if (frontier.eq(offset_pos)) continue;
-                const dist = myf.manhattan(frontier.toArr(), offset_pos.toArr());
-                if (dist > 20) continue;
-                const next_row, const next_col = offset_pos.cast();
-                const this_count = count_matrix[row][col] + dist;
-                const next_count = count_matrix[next_row][next_col];
-                if (next_count > this_count) {
-                    const diff = next_count - this_count;
-                    if (diff >= 100) cheats_100 += 1;
-                    if (diff >= 50) cheats += 1;
-                    // std.debug.print("diff: {d}, man: {d}\n", .{ diff, dist });
-                }
+        var next_iter = validNeighborsIter(frontier, 41, dim, dim);
+        while (next_iter.next()) |next_pos| {
+            const next_row, const next_col, const dist = next_pos;
+            const this_count = count_matrix[row][col] + dist;
+            const next_count = count_matrix[next_row][next_col];
+            if (next_count > this_count) {
+                const diff = next_count - this_count;
+                if (diff >= 100) cheats_100 += 1;
+                if (diff >= 50) cheats += 1;
+                // std.debug.print("diff: {d}, man: {d}\n", .{ diff, dist });
             }
         }
         // myf.waitForInput();
@@ -238,4 +228,54 @@ test "example" {
     }
     printa(cheats);
     printa(cheats_100);
+}
+
+pub fn ValidNeighborsIterator() type {
+    return struct {
+        point: Point,
+        max_row: usize,
+        max_col: usize,
+        kernel: usize,
+        half_kernel: isize,
+        product: usize,
+        index: usize,
+
+        const Self = @This();
+
+        pub fn next(self: *Self) ?[3]u16 {
+            while (self.index < self.product) {
+                defer self.index += 1;
+                const row: @TypeOf(self.point.row) = @intCast(self.index / self.kernel);
+                const col: @TypeOf(self.point.col) = @intCast(@mod(self.index, self.kernel));
+                const dist = @abs(row - self.half_kernel) + @abs(col - self.half_kernel);
+                if (dist <= self.half_kernel) {
+                    const next_row = row - self.half_kernel + self.point.row;
+                    const next_col = col - self.half_kernel + self.point.col;
+                    if (0 <= next_row and next_row < self.max_row and
+                        0 <= next_col and next_col < self.max_col)
+                        return .{ @intCast(next_row), @intCast(next_col), @intCast(dist) };
+                }
+            }
+            return null;
+        }
+    };
+}
+pub fn validNeighborsIter(
+    point: Point,
+    comptime kernel: usize, // 41,3. Has to b
+    max_row: usize,
+    max_col: usize,
+) ValidNeighborsIterator() {
+    comptime if (kernel % 2 == 0)
+        @compileError("The number is even, which is not allowed.");
+
+    return .{
+        .point = point,
+        .max_row = max_row,
+        .max_col = max_col,
+        .kernel = kernel,
+        .half_kernel = @intCast(kernel / 2),
+        .product = kernel * kernel,
+        .index = 0,
+    };
 }
