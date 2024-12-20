@@ -217,11 +217,11 @@ pub fn ValidNeighborsIterator() type {
                 defer self.index += 1;
                 const i = self.index / kernel;
                 const j = @mod(self.index, kernel);
-                const row: @TypeOf(self.point.row) = @intCast(i);
-                const col: @TypeOf(self.point.col) = @intCast(j);
 
                 const dist = manhattan_circle[i][j];
                 if (2 <= dist) {
+                    const row: @TypeOf(self.point.row) = @intCast(i);
+                    const col: @TypeOf(self.point.col) = @intCast(j);
                     const next_row = row - center + self.point.row;
                     const next_col = col - center + self.point.col;
                     if (0 <= next_row and next_row < self.max_row and
