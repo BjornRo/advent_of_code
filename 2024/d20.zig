@@ -36,23 +36,11 @@ fn inBounds(p: Point, dim: anytype) bool {
     return 0 <= r and 0 <= c and r < tdim and c < tdim;
 }
 
-fn getOffset2Pos(point: Point) [4]Point {
+fn getNextPositions(point: Point, comptime factor: i8) [4]Point {
     const T = @TypeOf(point.row);
     const row, const col = point.toArr();
     const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
-    const b = @Vector(8, T){ 2, 0, 0, 2, -2, 0, 0, -2 };
-    const res: [8]T = a + b;
-    const resT: [4][2]T = @bitCast(res);
-    var result: [4]Point = undefined;
-    for (resT, 0..) |coords, i| result[i] = Point{ .row = coords[0], .col = coords[1] };
-    return result;
-}
-
-fn getNextPositions(point: Point) [4]Point {
-    const T = @TypeOf(point.row);
-    const row, const col = point.toArr();
-    const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
-    const b = @Vector(8, T){ 1, 0, 0, 1, -1, 0, 0, -1 };
+    const b = @Vector(8, T){ 1 * factor, 0, 0, 1 * factor, -1 * factor, 0, 0, -1 * factor };
     const res: [8]T = a + b;
     const resT: [4][2]T = @bitCast(res);
     var result: [4]Point = undefined;
@@ -89,7 +77,7 @@ fn fast_part1(
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        for (getOffset2Pos(frontier)) |offset_pos| {
+        for (getNextPositions(frontier, 2)) |offset_pos| {
             if (!inBounds(offset_pos, matrix.len)) continue;
             const next_row, const next_col = offset_pos.cast();
             const this_count = count_matrix[row][col] + 2;
@@ -99,7 +87,7 @@ fn fast_part1(
             }
         }
 
-        for (getNextPositions(frontier)) |next_pos| {
+        for (getNextPositions(frontier, 1)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
             if (visited.eq(next_pos)) continue;
@@ -132,7 +120,7 @@ fn solver(
                 if (next_count - this_count >= 100) cheats += 1;
             }
         }
-        for (getNextPositions(frontier)) |next_pos| {
+        for (getNextPositions(frontier, 1)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
             if (visited.eq(next_pos)) continue;
@@ -233,7 +221,7 @@ pub fn main() !void {
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        for (getNextPositions(frontier)) |next_pos| {
+        for (getNextPositions(frontier, 1)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
             if (visited.eq(next_pos)) continue;
