@@ -8,6 +8,7 @@ year = 2024
 print_input = True
 max_rows = 168
 cookie_keyname = "session"
+cookie_file = ".env"
 
 # Pads a '0' if it is only 1 digit.
 input_file = "in/d{:02}.txt"
@@ -28,8 +29,8 @@ example_file = example_file.format(day)
 if isfile(input_file) or isfile(example_file):
     raise Exception(f"File already exists: {input_file} |or| {example_file}")
 
-with open(".env") as f:
-    cookie = {cookie_keyname: f.readline().rstrip()}
+with open(cookie_file) as f:
+    cookie = {cookie_keyname: f.read().strip()}
 
 """Fetch example data"""
 ex_result = requests.get(f"https://adventofcode.com/{year}/day/{day}", cookies=cookie)
