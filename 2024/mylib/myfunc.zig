@@ -241,8 +241,8 @@ pub fn product(slice: anytype) @TypeOf(slice[0]) {
     return total;
 }
 
-pub fn manhattan(a: anytype, b: anytype) @TypeOf(a[0], b[0]) {
-    switch (@typeInfo(@TypeOf(a, b))) {
+pub fn manhattan(a: anytype, b: anytype) u32 {
+    switch (@typeInfo(@TypeOf(a[1], b[1]))) {
         .Int => |int| {
             if (int.signedness == .unsigned) {
                 const x1: i32 = @intCast(a[0]);

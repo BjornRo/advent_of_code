@@ -8,6 +8,58 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
+const CT = i16;
+
+const Point = struct {
+    row: CT,
+    col: CT,
+
+    const Self = @This();
+
+    fn init(row: anytype, col: anytype) Self {
+        return .{ .row = @intCast(row), .col = @intCast(col) };
+    }
+    fn cast(self: Self) [2]u16 {
+        return .{ @intCast(self.row), @intCast(self.col) };
+    }
+    fn eq(self: Self, o: Point) bool {
+        return self.row == o.row and self.col == o.col;
+    }
+    fn toArr(self: Self) [2]CT {
+        return .{ self.row, self.col };
+    }
+};
+
+fn inBounds(p: Point, dim: anytype) bool {
+    const r, const c = p.toArr();
+    const tdim: @TypeOf(r) = @intCast(dim);
+    return 0 < r and 0 < c and r < tdim and c < tdim;
+}
+
+fn getOffset2Pos(point: Point) [4]Point {
+    const T = @TypeOf(point.row);
+    const row, const col = point.toArr();
+    const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
+    const b = @Vector(8, T){ 2, 0, 0, 2, -2, 0, 0, -2 };
+    const res: [8]T = a + b;
+    const resT: [4][2]T = @bitCast(res);
+    var result: [4]Point = undefined;
+    for (resT, 0..) |coords, i| result[i] = Point{ .row = coords[0], .col = coords[1] };
+    return result;
+}
+
+fn getNextPositions(point: Point) [4]Point {
+    const T = @TypeOf(point.row);
+    const row, const col = point.toArr();
+    const a = @Vector(8, T){ row, col, row, col, row, col, row, col };
+    const b = @Vector(8, T){ 1, 0, 0, 1, -1, 0, 0, -1 };
+    const res: [8]T = a + b;
+    const resT: [4][2]T = @bitCast(res);
+    var result: [4]Point = undefined;
+    for (resT, 0..) |coords, i| result[i] = Point{ .row = coords[0], .col = coords[1] };
+    return result;
+}
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -16,9 +68,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
     // var buffer: [70_000]u8 = undefined;
     // var fba = std.heap.FixedBufferAllocator.init(&buffer);
     // const allocator = fba.allocator();
@@ -31,7 +83,74 @@ pub fn main() !void {
     // const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
-    // std.debug.print("{s}\n", .{input});
+    const input = @embedFile("in/d20.txt");
+    const input_attributes = try myf.getInputAttributes(input);
+
+    const dim: u8 = @intCast(input_attributes.row_len);
+
+    const matrix = try allocator.alloc([]u8, dim);
+    defer allocator.free(matrix);
+
+    var start_point: Point = undefined;
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    for (matrix, 0..) |*row, i| {
+        row.* = @constCast(in_iter.next().?);
+        if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
+    }
+
+    // Count ALL steps in the new matrix
+    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
+    defer myf.freeMatrix(allocator, count_matrix);
+    var frontier = start_point;
+    var steps: u16 = 0;
+    var visited = frontier;
+    while (true) {
+        const row, const col = frontier.cast();
+        if (matrix[row][col] == 'E') break;
+
+        for (getNextPositions(frontier)) |next_pos| {
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+            if (visited.eq(next_pos)) continue;
+            steps += 1;
+            visited = frontier;
+            frontier = next_pos;
+            count_matrix[next_row][next_col] = steps;
+            break;
+        }
+    }
+    var cheats: u16 = 0;
+    var cheats_100: u16 = 0;
+    frontier = start_point;
+    visited = frontier;
+    while (true) {
+        const row, const col = frontier.cast();
+        if (matrix[row][col] == 'E') break;
+
+        // count cheats
+        for (getOffset2Pos(frontier)) |offset_pos| {
+            if (!inBounds(offset_pos, dim)) continue;
+            const next_row, const next_col = offset_pos.cast();
+            const this_count = count_matrix[row][col] + 2;
+            const next_count = count_matrix[next_row][next_col];
+            if (next_count > this_count) {
+                const diff = next_count - this_count;
+                if (diff >= 100) cheats_100 += 1;
+                if (diff < 100) cheats += 1;
+            }
+        }
+
+        for (getNextPositions(frontier)) |next_pos| {
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+            if (visited.eq(next_pos)) continue;
+            visited = frontier;
+            frontier = next_pos;
+            break;
+        }
+    }
+    printa(cheats);
+    printa(cheats_100);
 }
 
 test "example" {
@@ -39,14 +158,84 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d18t.txt");
+    const input = @embedFile("in/d20.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
-    // const double_delim = try std.mem.concat(allocator, u8, &.{ input_attributes.delim, input_attributes.delim });
-    // defer allocator.free(double_delim);
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    const dim: u8 = @intCast(input_attributes.row_len);
 
-    const res = try myf.collect([]const u8, allocator, &in_iter);
-    defer res.deinit();
-    printa(res);
+    const matrix = try allocator.alloc([]u8, dim);
+    defer allocator.free(matrix);
+
+    var start_point: Point = undefined;
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    for (matrix, 0..) |*row, i| {
+        row.* = @constCast(in_iter.next().?);
+        if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
+    }
+
+    // Count ALL steps in the new matrix
+    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
+    defer myf.freeMatrix(allocator, count_matrix);
+    var frontier = start_point;
+    var steps: u16 = 0;
+    var visited = frontier;
+    while (true) {
+        const row, const col = frontier.cast();
+        if (matrix[row][col] == 'E') break;
+
+        for (getNextPositions(frontier)) |next_pos| {
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+            if (visited.eq(next_pos)) continue;
+            steps += 1;
+            visited = frontier;
+            frontier = next_pos;
+            count_matrix[next_row][next_col] = steps;
+            break;
+        }
+    }
+    var cheats: u32 = 0;
+    var cheats_100: u32 = 0;
+    frontier = start_point;
+    visited = frontier;
+    while (true) {
+        const row, const col = frontier.cast();
+        if (matrix[row][col] == 'E') break;
+
+        // count cheats
+        const kernel = 40;
+        const half_kernel = kernel / 2; // Calculate half the kernel size
+        for (0..kernel + 1) |i| {
+            for (0..kernel + 1) |j| {
+                const i_: CT = @intCast(i);
+                const j_: CT = @intCast(j);
+                const offset_pos = Point.init(i_ - half_kernel + frontier.row, j_ - half_kernel + frontier.col);
+                if (!inBounds(offset_pos, dim)) continue;
+                // if (frontier.eq(offset_pos)) continue;
+                const dist = myf.manhattan(frontier.toArr(), offset_pos.toArr());
+                if (dist > 20) continue;
+                const next_row, const next_col = offset_pos.cast();
+                const this_count = count_matrix[row][col] + dist;
+                const next_count = count_matrix[next_row][next_col];
+                if (next_count > this_count) {
+                    const diff = next_count - this_count;
+                    if (diff >= 100) cheats_100 += 1;
+                    if (diff >= 50) cheats += 1;
+                    // std.debug.print("diff: {d}, man: {d}\n", .{ diff, dist });
+                }
+            }
+        }
+        // myf.waitForInput();
+
+        for (getNextPositions(frontier)) |next_pos| {
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+            if (visited.eq(next_pos)) continue;
+            visited = frontier;
+            frontier = next_pos;
+            break;
+        }
+    }
+    printa(cheats);
+    printa(cheats_100);
 }

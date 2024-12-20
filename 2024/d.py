@@ -1,3 +1,4 @@
+import re
 import sys
 from datetime import UTC, datetime
 from os.path import isfile
@@ -59,9 +60,12 @@ text = ex_result.text
 start_pre = text.find("<pre>") + 5
 end_pre = text.find("</pre>")
 
-example_block = text[start_pre:end_pre].replace("<code>", "", 1).replace("</code>", "", 1)
+example_block = re.sub(r"<.*?>", "", text[start_pre:end_pre])
 
-with open(example_file, "wt") as f:
+example_cols = example_block.index("\n")
+example_rows = example_block.count("\n")
+
+with open(example_file, "wt", newline="\n") as f:
     f.write(example_block)
 
 """Fetch input"""
@@ -69,9 +73,15 @@ in_result = requests.get(f"https://adventofcode.com/{year}/day/{day}/input", coo
 if not in_result.ok:
     raise Exception(f"Request failed: {in_result.status_code}, {in_result.reason}, {in_result.text}")
 
-with open(input_file, "wt") as f:
+with open(input_file, "wt", newline="\n") as f:
     f.write(in_result.text)
 
 if print_input:
     for row in in_result.text.split("\n")[: max_rows + 1]:
         print(row)
+
+in_cols = in_result.text.index("\n")
+in_rows = in_result.text.count("\n")
+
+print(f"Example shape: Rows: {example_rows}, Cols: {example_cols}")
+print(f"Input shape: Rows: {in_rows}, Cols: {in_cols}")
