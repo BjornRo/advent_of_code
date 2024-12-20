@@ -68,23 +68,16 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var buffer: [70_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // std.debug.print("Input size: {d}\n\n", .{input.len});
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
-    // End setup
-
-    const input = @embedFile("in/d20.txt");
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     const input_attributes = try myf.getInputAttributes(input);
+    // End setup
 
     const dim: u8 = @intCast(input_attributes.row_len);
 
@@ -98,7 +91,6 @@ pub fn main() !void {
         if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
     }
 
-    // Count ALL steps in the new matrix
     var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
     defer myf.freeMatrix(allocator, count_matrix);
     var frontier = start_point;
@@ -119,24 +111,32 @@ pub fn main() !void {
             break;
         }
     }
+
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+        fast_part1(matrix, count_matrix, start_point),
+        solver(matrix, count_matrix, 41, start_point),
+    });
+}
+
+fn fast_part1(
+    matrix: []const []const u8,
+    count_matrix: []const []const u16,
+    start_point: Point,
+) u16 {
     var cheats: u16 = 0;
-    var cheats_100: u16 = 0;
-    frontier = start_point;
-    visited = frontier;
+    var frontier = start_point;
+    var visited = frontier;
     while (true) {
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        // count cheats
         for (getOffset2Pos(frontier)) |offset_pos| {
-            if (!inBounds(offset_pos, dim)) continue;
+            if (!inBounds(offset_pos, matrix.len)) continue;
             const next_row, const next_col = offset_pos.cast();
             const this_count = count_matrix[row][col] + 2;
             const next_count = count_matrix[next_row][next_col];
             if (next_count > this_count) {
-                const diff = next_count - this_count;
-                if (diff >= 100) cheats_100 += 1;
-                if (diff < 100) cheats += 1;
+                if (next_count - this_count >= 100) cheats += 1;
             }
         }
 
@@ -149,74 +149,31 @@ pub fn main() !void {
             break;
         }
     }
-    printa(cheats);
-    printa(cheats_100);
+    return cheats;
 }
 
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d20.txt");
-    const input_attributes = try myf.getInputAttributes(input);
-
-    const dim: u8 = @intCast(input_attributes.row_len);
-
-    const matrix = try allocator.alloc([]u8, dim);
-    defer allocator.free(matrix);
-
-    var start_point: Point = undefined;
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    for (matrix, 0..) |*row, i| {
-        row.* = @constCast(in_iter.next().?);
-        if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
-    }
-
-    // Count ALL steps in the new matrix
-    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
-    defer myf.freeMatrix(allocator, count_matrix);
+fn solver(
+    matrix: []const []const u8,
+    count_matrix: []const []const u16,
+    comptime kernel: usize,
+    start_point: Point,
+) u32 {
+    var cheats: u32 = 0;
     var frontier = start_point;
-    var steps: u16 = 0;
     var visited = frontier;
     while (true) {
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        for (getNextPositions(frontier)) |next_pos| {
-            const next_row, const next_col = next_pos.cast();
-            if (matrix[next_row][next_col] == '#') continue;
-            if (visited.eq(next_pos)) continue;
-            steps += 1;
-            visited = frontier;
-            frontier = next_pos;
-            count_matrix[next_row][next_col] = steps;
-            break;
-        }
-    }
-    var cheats: u32 = 0;
-    var cheats_100: u32 = 0;
-    frontier = start_point;
-    visited = frontier;
-    while (true) {
-        const row, const col = frontier.cast();
-        if (matrix[row][col] == 'E') break;
-
-        // count cheats
-        var next_iter = validNeighborsIter(frontier, 41, dim, dim);
+        var next_iter = validNeighborsIter(frontier, kernel, matrix.len, matrix.len);
         while (next_iter.next()) |next_pos| {
             const next_row, const next_col, const dist = next_pos;
             const this_count = count_matrix[row][col] + dist;
             const next_count = count_matrix[next_row][next_col];
             if (next_count > this_count) {
-                const diff = next_count - this_count;
-                if (diff >= 100) cheats_100 += 1;
-                if (diff >= 50) cheats += 1;
-                // std.debug.print("diff: {d}, man: {d}\n", .{ diff, dist });
+                if (next_count - this_count >= 100) cheats += 1;
             }
         }
-        // myf.waitForInput();
-
         for (getNextPositions(frontier)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
@@ -226,8 +183,7 @@ test "example" {
             break;
         }
     }
-    printa(cheats);
-    printa(cheats_100);
+    return cheats;
 }
 
 pub fn ValidNeighborsIterator() type {
@@ -262,7 +218,7 @@ pub fn ValidNeighborsIterator() type {
 }
 pub fn validNeighborsIter(
     point: Point,
-    comptime kernel: usize, // 41,3. Has to b
+    comptime kernel: usize,
     max_row: usize,
     max_col: usize,
 ) ValidNeighborsIterator() {
