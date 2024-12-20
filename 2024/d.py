@@ -4,24 +4,42 @@ from os.path import isfile
 
 import requests
 
+"""
+File args: Empty or day [1-25] -> thisfile.py 24
+
+If no file args given: Automatically fetches year and day IF december.
+If day is given, the year specified below will be used!
+
+Cookie is simply taken using your browser. Take the value of the cookie and store it
+in a secret 'cookie_file'.
+"""
+
 year = 2024
 print_input = True
 max_rows = 168
 cookie_keyname = "session"
 cookie_file = ".env"
 
-# Pads a '0' if it is only 1 digit.
+# Pads a '0' if it is only 1 digit. Replace for your desired output path+filenames.
 input_file = "in/d{:02}.txt"
 example_file = "in/d{:02}t.txt"
 
-if len(sys.argv) == 1:
-    raise Exception("No day given")
 
-day = int(sys.argv[1])
-if not (1 <= day <= 25):
-    raise Exception("Invalid date")
+"""Do not touch"""
+date = datetime.now(UTC)
+if len(sys.argv) >= 2:
+    day = int(sys.argv[1])
+    if not (1 <= day <= 25):
+        raise Exception(f"Invalid date, [1,25], given: {day}")
+else:
+    day = date.day
+    year = date.year
+    if date.month != 12:
+        raise Exception("Cannot use this script other than december without any file arguments.")
+    if not (1 <= day <= 25):
+        raise Exception("Invalid day, use first argument for day")
 
-if datetime.now(UTC) < datetime(year=year, month=12, day=day, hour=5, tzinfo=UTC):
+if date < datetime(year=year, month=12, day=day, hour=5, tzinfo=UTC):
     raise Exception("Current day is not open yet!")
 
 input_file = input_file.format(day)
