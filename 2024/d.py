@@ -1,4 +1,5 @@
 import sys
+from datetime import UTC, datetime
 from os.path import isfile
 
 import requests
@@ -18,6 +19,9 @@ if len(sys.argv) == 1:
 day = int(sys.argv[1])
 if not (1 <= day <= 25):
     raise Exception("Invalid date")
+
+if datetime.now(UTC) < datetime(year=year, month=12, day=day, hour=5, tzinfo=UTC):
+    raise Exception("Current day is not open yet!")
 
 input_file = input_file.format(day)
 example_file = example_file.format(day)
