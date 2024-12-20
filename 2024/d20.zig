@@ -60,6 +60,23 @@ fn getNextPositions(point: Point) [4]Point {
     return result;
 }
 
+const kernel = 41;
+const center: i8 = @intCast(kernel / 2);
+const manhattan_circle = blk: {
+    @setEvalBranchQuota(2000);
+    var flat_circle = [_]u8{0} ** (kernel * kernel);
+    const circle = @as(*[kernel][kernel]u8, @ptrCast(&flat_circle));
+    for (0..kernel) |i| {
+        for (0..kernel) |j| {
+            const i_: i8 = @intCast(i);
+            const j_: i8 = @intCast(j);
+            const dst: u8 = @intCast(@abs(center - i_) + @abs(center - j_));
+            if (2 <= dst and dst <= center) circle[i][j] = dst;
+        }
+    }
+    break :blk circle.*;
+};
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -114,7 +131,7 @@ pub fn main() !void {
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
         fast_part1(matrix, count_matrix, start_point),
-        solver(matrix, count_matrix, 41, start_point),
+        solver(matrix, count_matrix, start_point),
     });
 }
 
@@ -155,7 +172,6 @@ fn fast_part1(
 fn solver(
     matrix: []const []const u8,
     count_matrix: []const []const u16,
-    comptime kernel: usize,
     start_point: Point,
 ) u32 {
     var cheats: u32 = 0;
@@ -165,10 +181,10 @@ fn solver(
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        var next_iter = validNeighborsIter(frontier, kernel, matrix.len, matrix.len);
+        var next_iter = validNeighborsIter(frontier, matrix.len, matrix.len);
         while (next_iter.next()) |next_pos| {
-            const next_row, const next_col, const dist = next_pos;
-            const this_count = count_matrix[row][col] + dist;
+            const next_row, const next_col, const dst = next_pos;
+            const this_count = count_matrix[row][col] + dst;
             const next_count = count_matrix[next_row][next_col];
             if (next_count > this_count) {
                 if (next_count - this_count >= 100) cheats += 1;
@@ -191,8 +207,6 @@ pub fn ValidNeighborsIterator() type {
         point: Point,
         max_row: usize,
         max_col: usize,
-        kernel: usize,
-        half_kernel: isize,
         product: usize,
         index: usize,
 
@@ -201,24 +215,27 @@ pub fn ValidNeighborsIterator() type {
         pub fn next(self: *Self) ?[3]u16 {
             while (self.index < self.product) {
                 defer self.index += 1;
-                const row: @TypeOf(self.point.row) = @intCast(self.index / self.kernel);
-                const col: @TypeOf(self.point.col) = @intCast(@mod(self.index, self.kernel));
-                const dist = @abs(row - self.half_kernel) + @abs(col - self.half_kernel);
-                if (dist <= self.half_kernel) {
-                    const next_row = row - self.half_kernel + self.point.row;
-                    const next_col = col - self.half_kernel + self.point.col;
+                const i = self.index / kernel;
+                const j = @mod(self.index, kernel);
+                const row: @TypeOf(self.point.row) = @intCast(i);
+                const col: @TypeOf(self.point.col) = @intCast(j);
+
+                const dist = manhattan_circle[i][j];
+                if (2 <= dist) {
+                    const next_row = row - center + self.point.row;
+                    const next_col = col - center + self.point.col;
                     if (0 <= next_row and next_row < self.max_row and
                         0 <= next_col and next_col < self.max_col)
-                        return .{ @intCast(next_row), @intCast(next_col), @intCast(dist) };
+                        return .{ @intCast(next_row), @intCast(next_col), dist };
                 }
             }
+
             return null;
         }
     };
 }
 pub fn validNeighborsIter(
     point: Point,
-    comptime kernel: usize,
     max_row: usize,
     max_col: usize,
 ) ValidNeighborsIterator() {
@@ -229,8 +246,6 @@ pub fn validNeighborsIter(
         .point = point,
         .max_row = max_row,
         .max_col = max_col,
-        .kernel = kernel,
-        .half_kernel = @intCast(kernel / 2),
         .product = kernel * kernel,
         .index = 0,
     };
