@@ -215,8 +215,8 @@ pub fn main() !void {
     var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
     defer myf.freeMatrix(allocator, count_matrix);
     var frontier = start_point;
-    var steps: u16 = 0;
     var visited = frontier;
+    var steps: u16 = 0;
     while (true) {
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
@@ -225,9 +225,9 @@ pub fn main() !void {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
             if (visited.eq(next_pos)) continue;
-            steps += 1;
             visited = frontier;
             frontier = next_pos;
+            steps += 1;
             count_matrix[next_row][next_col] = steps;
             break;
         }
