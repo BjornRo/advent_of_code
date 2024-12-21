@@ -42,6 +42,12 @@ const Point = struct {
         const res = myf.manhattan(self.toArr(), p.toArr());
         return @intCast(res);
     }
+    fn deltaP(self: Self, p: Self) Point {
+        return .{
+            .row = self.row - p.row,
+            .col = self.col - p.col,
+        };
+    }
     fn delta(self: Self, p: Self) [2]CT {
         return .{
             self.row - p.row,
@@ -86,6 +92,13 @@ pub fn main() !void {
     // std.debug.print("{s}\n", .{input});
 }
 
+const N = Point.init(-1, -1);
+const Ad = Point.init(0, 0);
+const U = Point.init(-1, 0);
+const D = Point.init(1, 0);
+const L = Point.init(0, -1);
+const R = Point.init(0, 1);
+
 const X = 16;
 const A = 10;
 
@@ -119,9 +132,10 @@ const map = blk: {
     break :blk btn_coord;
 };
 
+const DirPad = enum { LEFT, RIGHT, UP, DOWN, A };
+
 const start_row = 3;
 const start_col = 2;
-const start_A = Point.init(start_row, start_col);
 
 test "example" {
     const allocator = std.testing.allocator;
@@ -129,30 +143,167 @@ test "example" {
     const input = @embedFile("in/d21t.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
-    var list = std.ArrayList(u8).init(allocator);
-    defer list.deinit();
+    // const keypad = [_][3]u8{
+    //     .{ 7, 8, 9 },
+    //     .{ 4, 5, 6 },
+    //     .{ 1, 2, 3 },
+    //     .{ X, 0, A },
+    // };
+    // const dirpad = [_][3]u8{
+    //     .{ N, U, Ad },
+    //     .{ L, D, R },
+    // };
+    var robot_cost_map = std.AutoArrayHashMap([2]DirPad, u8).init(allocator);
+    defer robot_cost_map.deinit();
+
+    var robot_cost_map_raw = std.AutoArrayHashMap([2]DirPad, u8).init(allocator);
+    defer robot_cost_map_raw.deinit();
+    try robot_cost_map_raw.put(.{ .LEFT, .RIGHT }, 2);
+    try robot_cost_map_raw.put(.{ .LEFT, .DOWN }, 1);
+    try robot_cost_map_raw.put(.{ .LEFT, .UP }, 2);
+    try robot_cost_map_raw.put(.{ .LEFT, .A }, 3);
+    try robot_cost_map_raw.put(.{ .RIGHT, .DOWN }, 1);
+    try robot_cost_map_raw.put(.{ .RIGHT, .UP }, 2);
+    try robot_cost_map_raw.put(.{ .RIGHT, .LEFT }, 2);
+    try robot_cost_map_raw.put(.{ .RIGHT, .A }, 1);
+    try robot_cost_map_raw.put(.{ .UP, .A }, 1);
+    try robot_cost_map_raw.put(.{ .UP, .DOWN }, 1);
+    try robot_cost_map_raw.put(.{ .DOWN, .A }, 2);
+    try robot_cost_map_raw.put(.{ .LEFT, .LEFT }, 0);
+    try robot_cost_map_raw.put(.{ .RIGHT, .RIGHT }, 0);
+    try robot_cost_map_raw.put(.{ .UP, .UP }, 0);
+    try robot_cost_map_raw.put(.{ .A, .A }, 0);
+    try robot_cost_map_raw.put(.{ .DOWN, .DOWN }, 0);
+    for (robot_cost_map_raw.keys(), robot_cost_map_raw.values()) |key, value| {
+        const left, const right = key;
+        try robot_cost_map.put(key, value);
+        try robot_cost_map.put(.{ right, left }, value);
+    }
+
+    var robot_kp_map = std.AutoArrayHashMap([2]DirPad, []const DirPad).init(allocator);
+    defer robot_kp_map.deinit();
+
+    try robot_kp_map.put(.{ .A, .LEFT }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT, DirPad.LEFT });
+    try robot_kp_map.put(.{ .A, .UP }, &[_]DirPad{DirPad.LEFT});
+    try robot_kp_map.put(.{ .A, .DOWN }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT });
+    try robot_kp_map.put(.{ .A, .RIGHT }, &[_]DirPad{DirPad.DOWN});
+    try robot_kp_map.put(.{ .A, .A }, &[_]DirPad{});
+    try robot_kp_map.put(.{ .LEFT, .A }, &[_]DirPad{ DirPad.RIGHT, DirPad.RIGHT, DirPad.UP });
+    try robot_kp_map.put(.{ .LEFT, .UP }, &[_]DirPad{ DirPad.RIGHT, DirPad.UP });
+    try robot_kp_map.put(.{ .LEFT, .DOWN }, &[_]DirPad{DirPad.RIGHT});
+    try robot_kp_map.put(.{ .LEFT, .RIGHT }, &[_]DirPad{ DirPad.RIGHT, DirPad.RIGHT });
+    try robot_kp_map.put(.{ .LEFT, .LEFT }, &[_]DirPad{});
+    try robot_kp_map.put(.{ .UP, .LEFT }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT });
+    try robot_kp_map.put(.{ .UP, .A }, &[_]DirPad{DirPad.RIGHT});
+    try robot_kp_map.put(.{ .UP, .RIGHT }, &[_]DirPad{ DirPad.DOWN, DirPad.RIGHT });
+    try robot_kp_map.put(.{ .UP, .DOWN }, &[_]DirPad{DirPad.DOWN});
+    try robot_kp_map.put(.{ .UP, .UP }, &[_]DirPad{});
+    try robot_kp_map.put(.{ .RIGHT, .A }, &[_]DirPad{DirPad.UP});
+    try robot_kp_map.put(.{ .RIGHT, .DOWN }, &[_]DirPad{DirPad.LEFT});
+    try robot_kp_map.put(.{ .RIGHT, .UP }, &[_]DirPad{ DirPad.LEFT, DirPad.UP });
+    try robot_kp_map.put(.{ .RIGHT, .LEFT }, &[_]DirPad{ DirPad.LEFT, DirPad.LEFT });
+    try robot_kp_map.put(.{ .RIGHT, .RIGHT }, &[_]DirPad{});
+    try robot_kp_map.put(.{ .DOWN, .A }, &[_]DirPad{ DirPad.RIGHT, DirPad.UP });
+    try robot_kp_map.put(.{ .DOWN, .RIGHT }, &[_]DirPad{DirPad.RIGHT});
+    try robot_kp_map.put(.{ .DOWN, .UP }, &[_]DirPad{DirPad.UP});
+    try robot_kp_map.put(.{ .DOWN, .LEFT }, &[_]DirPad{DirPad.LEFT});
+    try robot_kp_map.put(.{ .DOWN, .DOWN }, &[_]DirPad{});
+
+    var robot_kp_pos = std.ArrayHashMap(Point, DirPad, HashCtx, true).init(allocator);
+    defer robot_kp_pos.deinit();
+    try robot_kp_pos.put(Point.init(0, -1), .LEFT);
+    try robot_kp_pos.put(Point.init(0, 1), .RIGHT);
+    try robot_kp_pos.put(Point.init(-1, 0), .UP);
+    try robot_kp_pos.put(Point.init(1, 0), .DOWN);
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
-        list.clearRetainingCapacity();
         var numeric: u16 = 0;
+
+        var robot_kp = DirPad.A;
+        var robot_mid = DirPad.A;
         for (row) |c| {
             const value = try std.fmt.charToDigit(c, 16);
-            try list.append(value);
+            var path = try aStar(allocator, map[A], map[value]);
+            defer path.deinit();
+
+            var cost: u32 = 0;
+            for (0..path.items.len - 1) |i| {
+                const dir = path.items[i + 1].deltaP(path.items[i]);
+                // Move robot 1 to satisfy dir, Get movements robot 1 needs to move to kp dir
+                var move_mid = robot_kp_map.get(.{ robot_kp, robot_kp_pos.get(dir).? }).?;
+                robot_kp = robot_kp_pos.get(dir).?; // Move kp robot, order does not matter
+                for (move_mid) |dp| {
+                    cost += robot_cost_map.get(.{ robot_mid, dp }).? + 1; // Pressing A costs 1
+                    robot_mid = dp;
+                }
+
+                // Move mid back to A to press left.
+                cost += robot_cost_map.get(.{ robot_mid, .A }).? + 1;
+                robot_mid = .A;
+                cost += 1; // Press A to move robot_kp
+                // KP is now on 0, move robot_kp back
+                move_mid = robot_kp_map.get(.{ robot_kp, .A }).?;
+                robot_kp = .A;
+                for (move_mid) |dp| {
+                    cost += robot_cost_map.get(.{ robot_mid, dp }).? + 1; // Pressing A costs 1
+                    robot_mid = dp;
+                }
+                cost += 1; // Press A to put the value in
+                printa(cost);
+                break;
+            }
+
+            _ = map[value];
+            break;
         }
         numeric = try std.fmt.parseInt(u16, row[0 .. row.len - 1], 10);
-        printa(list.items);
-        printa(numeric);
         break;
     }
-    var path = try aStar(allocator, map[6], map[4]);
-    defer path.deinit();
-    printa(path.items);
-    for (0..path.items.len - 1) |i| {
-        const dir = path.items[i + 1].delta(path.items[i]);
-        printa(dir);
-    }
 }
+
+fn dirBounds(p: Point) bool {
+    return 0 <= p.row and p.row < 2 and 0 <= p.col and p.col < 3 and
+        !p.eq(Point.init(0, 0));
+}
+
+// const keypad = [_][3]u8{
+//     .{ 7, 8, 9 },
+//     .{ 4, 5, 6 },
+//     .{ 1, 2, 3 },
+//     .{ X, 0, A },
+// };
+// const dirpad = [_][3]u8{
+//     .{ N, U, Ad },
+//     .{ L, D, R },
+// };
+
+// Find sequence from A to 0
+// {0,-1}. -> r1 to R (LDALAA), D (RR)
+// Robot 1 need to move keypad D L L (keypad at 0) A -> R R U (keypad at A) A for 0
+// Robot 1 is now at A, keypad 0 // Robot 1 always resets to A to press keypad
+
+// Robot 2 needs to move L D A -> robot 1 moves to R.
+// then             move L A -> robot 1 moves to U
+// then             move A -> robot 1 moves to L
+
+// Robot 1 have Dirpad+A
+// Robot 2 have only dir pad
+// LDA LA A RRUA DA A LUA RA | LDLA RRUA DA UA LDA RUA LDLA RUA RA A | DA UA LDLA RA RUA A A DA LUA RA
+//
+// LDA   move robot 2 to U D, move robot 1 to R
+// LA    move robot 2 to L, move robot 1 to D
+// A     move robot 2 move robot 1 to L
+// RRUA  move robot 2 to D R A, robot 1 moves keypad to 0
+// DA    move robot 2 to R, move robot 1 to D
+// A     robot 2, move robot 1 to R
+// LUA   move robot 2 to D U, move robot 1 to A
+// RA    move robot 2 to A, robot 1 presses A -> keypad 0  -> 18 steps for 0
+
+const dirpad = [_][3]u8{
+    .{ N, U, Ad },
+    .{ L, D, R },
+};
 
 const State = struct {
     count: CT,
@@ -197,7 +348,6 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
         if (goal.eq(state.pos)) {
             var curr = state.pos;
             while (!edges[curr.r()][curr.c()].eq(NULL)) {
-                printa(curr);
                 if (curr.eq(start)) {
                     break;
                 }
