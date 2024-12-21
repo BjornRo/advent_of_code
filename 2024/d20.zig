@@ -49,25 +49,30 @@ fn getNextPositions(point: Point, comptime factor: i8) [4]Point {
 }
 
 const kernel = 41;
-const center: i8 = @intCast(kernel / 2);
+const center: i16 = @intCast(kernel / 2);
 const manhattan_circle = blk: {
     @setEvalBranchQuota(2000);
-    var flat_circle = [_]u8{0} ** (kernel * kernel);
-    const circle = @as(*[kernel][kernel]u8, @ptrCast(&flat_circle));
+    var buf: [(kernel * (kernel + 1)) / 2 - 5][3]i8 = undefined;
+    var idx = 0;
+
     for (0..kernel) |i| {
         for (0..kernel) |j| {
             const i_: i8 = @intCast(i);
             const j_: i8 = @intCast(j);
-            const dst: u8 = @intCast(@abs(center - i_) + @abs(center - j_));
-            if (2 <= dst and dst <= center) circle[i][j] = dst;
+            const dst = @abs(center - i_) + @abs(center - j_);
+            if (2 <= dst and dst <= center) {
+                buf[idx] = .{ center - i_, center - j_, dst };
+                idx += 1;
+            }
         }
     }
-    break :blk circle.*;
+
+    break :blk buf;
 };
 
 fn fast_part1(
     matrix: []const []const u8,
-    count_matrix: []const []const u16,
+    count_matrix: []const []const i16,
     start_point: Point,
 ) u16 {
     var cheats: u16 = 0;
@@ -101,7 +106,7 @@ fn fast_part1(
 
 fn solver(
     matrix: []const []const u8,
-    count_matrix: []const []const u16,
+    count_matrix: []const []const i16,
     start_point: Point,
 ) u32 {
     var cheats: u32 = 0;
@@ -114,11 +119,9 @@ fn solver(
         var next_iter = validNeighborsIter(frontier, matrix.len, matrix.len);
         while (next_iter.next()) |next_pos| {
             const next_row, const next_col, const dst = next_pos;
-            const this_count = count_matrix[row][col] + dst;
+            const this_count = count_matrix[row][col] + @as(i16, @intCast(dst));
             const next_count = count_matrix[next_row][next_col];
-            if (next_count > this_count) {
-                if (next_count - this_count >= 100) cheats += 1;
-            }
+            if (next_count - this_count >= 100) cheats += 1;
         }
         for (getNextPositions(frontier, 1)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
@@ -137,29 +140,21 @@ pub fn ValidNeighborsIterator() type {
         point: Point,
         max_row: usize,
         max_col: usize,
-        product: usize,
         index: usize,
 
         const Self = @This();
 
         pub fn next(self: *Self) ?[3]u16 {
-            while (self.index < self.product) {
+            while (self.index < manhattan_circle.len) {
                 defer self.index += 1;
-                const i = self.index / kernel;
-                const j = @mod(self.index, kernel);
 
-                const dist = manhattan_circle[i][j];
-                if (2 <= dist) {
-                    const row: @TypeOf(self.point.row) = @intCast(i);
-                    const col: @TypeOf(self.point.col) = @intCast(j);
-                    const next_row = row - center + self.point.row;
-                    const next_col = col - center + self.point.col;
-                    if (0 <= next_row and next_row < self.max_row and
-                        0 <= next_col and next_col < self.max_col)
-                        return .{ @intCast(next_row), @intCast(next_col), dist };
-                }
+                const i, const j, const dst = manhattan_circle[self.index];
+                const next_row = i + self.point.row;
+                const next_col = j + self.point.col;
+                if (0 <= next_row and next_row < self.max_row and
+                    0 <= next_col and next_col < self.max_col)
+                    return .{ @intCast(next_row), @intCast(next_col), @intCast(dst) };
             }
-
             return null;
         }
     };
@@ -169,14 +164,11 @@ pub fn validNeighborsIter(
     max_row: usize,
     max_col: usize,
 ) ValidNeighborsIterator() {
-    comptime if (kernel % 2 == 0)
-        @compileError("The number is even, which is not allowed.");
-
+    comptime if (kernel % 2 == 0) @compileError("Even numbers not allowed.");
     return .{
         .point = point,
         .max_row = max_row,
         .max_col = max_col,
-        .product = kernel * kernel,
         .index = 0,
     };
 }
@@ -212,11 +204,11 @@ pub fn main() !void {
         if (std.mem.indexOfScalar(u8, row.*, 'S')) |j| start_point = Point.init(i, j);
     }
 
-    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(u16, 0));
+    var count_matrix = try myf.initValueMatrix(allocator, dim, dim, @as(i16, 0));
     defer myf.freeMatrix(allocator, count_matrix);
     var frontier = start_point;
     var visited = frontier;
-    var steps: u16 = 0;
+    var steps: i16 = 0;
     while (true) {
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
