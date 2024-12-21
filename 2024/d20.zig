@@ -87,9 +87,7 @@ fn fast_part1(
             const next_row, const next_col = offset_pos.cast();
             const this_count = count_matrix[row][col] + 2;
             const next_count = count_matrix[next_row][next_col];
-            if (next_count > this_count) {
-                if (next_count - this_count >= 100) cheats += 1;
-            }
+            if (next_count - this_count >= 100) cheats += 1;
         }
 
         for (getNextPositions(frontier, 1)) |next_pos| {
