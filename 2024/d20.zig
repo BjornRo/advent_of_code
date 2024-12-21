@@ -30,12 +30,6 @@ const Point = struct {
     }
 };
 
-fn inBounds(p: Point, dim: anytype) bool {
-    const r, const c = p.toArr();
-    const tdim: @TypeOf(r) = @intCast(dim);
-    return 0 <= r and 0 <= c and r < tdim and c < tdim;
-}
-
 fn getNextPositions(point: Point, comptime factor: i8) [4]Point {
     const T = @TypeOf(point.row);
     const row, const col = point.toArr();
@@ -83,11 +77,14 @@ fn fast_part1(
         if (matrix[row][col] == 'E') break;
 
         for (getNextPositions(frontier, 2)) |offset_pos| {
-            if (!inBounds(offset_pos, matrix.len)) continue;
-            const next_row, const next_col = offset_pos.cast();
-            const this_count = count_matrix[row][col] + 2;
-            const next_count = count_matrix[next_row][next_col];
-            if (next_count - this_count >= 100) cheats += 1;
+            const r, const c = offset_pos.toArr();
+            const maxdim: @TypeOf(r) = @intCast(matrix.len);
+            if (0 <= r and 0 <= c and r < maxdim and c < maxdim) {
+                const next_row, const next_col = offset_pos.cast();
+                const this_count = count_matrix[row][col] + 2;
+                const next_count = count_matrix[next_row][next_col];
+                if (next_count - this_count >= 100) cheats += 1;
+            }
         }
 
         for (getNextPositions(frontier, 1)) |next_pos| {
@@ -114,13 +111,19 @@ fn solver(
         const row, const col = frontier.cast();
         if (matrix[row][col] == 'E') break;
 
-        var next_iter = validNeighborsIter(frontier, matrix.len, matrix.len);
-        while (next_iter.next()) |next_pos| {
-            const next_row, const next_col, const dst = next_pos;
-            const this_count = count_matrix[row][col] + @as(i16, @intCast(dst));
-            const next_count = count_matrix[next_row][next_col];
-            if (next_count - this_count >= 100) cheats += 1;
+        for (manhattan_circle) |next_pos| {
+            const i, const j, const dst = next_pos;
+            const next_row = i + frontier.row;
+            const next_col = j + frontier.col;
+            if (0 <= next_row and next_row < matrix.len and
+                0 <= next_col and next_col < matrix.len)
+            {
+                const this_count = count_matrix[row][col] + @as(i16, @intCast(dst));
+                const next_count = count_matrix[@intCast(next_row)][@intCast(next_col)];
+                if (next_count - this_count >= 100) cheats += 1;
+            }
         }
+
         for (getNextPositions(frontier, 1)) |next_pos| {
             const next_row, const next_col = next_pos.cast();
             if (matrix[next_row][next_col] == '#') continue;
@@ -131,44 +134,6 @@ fn solver(
         }
     }
     return cheats;
-}
-
-pub fn ValidNeighborsIterator() type {
-    return struct {
-        point: Point,
-        max_row: usize,
-        max_col: usize,
-        index: usize,
-
-        const Self = @This();
-
-        pub fn next(self: *Self) ?[3]u16 {
-            while (self.index < manhattan_circle.len) {
-                defer self.index += 1;
-
-                const i, const j, const dst = manhattan_circle[self.index];
-                const next_row = i + self.point.row;
-                const next_col = j + self.point.col;
-                if (0 <= next_row and next_row < self.max_row and
-                    0 <= next_col and next_col < self.max_col)
-                    return .{ @intCast(next_row), @intCast(next_col), @intCast(dst) };
-            }
-            return null;
-        }
-    };
-}
-pub fn validNeighborsIter(
-    point: Point,
-    max_row: usize,
-    max_col: usize,
-) ValidNeighborsIterator() {
-    comptime if (kernel % 2 == 0) @compileError("Even numbers not allowed.");
-    return .{
-        .point = point,
-        .max_row = max_row,
-        .max_col = max_col,
-        .index = 0,
-    };
 }
 
 pub fn main() !void {
