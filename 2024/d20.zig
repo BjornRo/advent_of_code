@@ -46,7 +46,8 @@ const kernel = 41;
 const center: i16 = @intCast(kernel / 2);
 const manhattan_circle = blk: {
     @setEvalBranchQuota(2000);
-    var buf: [(kernel * (kernel + 1)) / 2 - 5][3]i8 = undefined;
+    const remove_additional = 4; // Remove neighbors around the center
+    var buf: [(kernel * (kernel + 1)) / 2 - 1 - remove_additional][3]i8 = undefined;
     var idx = 0;
 
     for (0..kernel) |i| {
