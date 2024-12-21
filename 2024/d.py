@@ -57,6 +57,13 @@ if not ex_result.ok:
     raise Exception(f"Request failed: {ex_result.status_code}, {ex_result.reason}, {ex_result.text}")
 
 text = ex_result.text
+
+if text.count("<pre>") > 1:
+    res = text.lower().find("example:")
+    if res == -1:
+        raise Exception("Could not find example")
+    text = text[res:]
+
 start_pre = text.find("<pre>") + 5
 end_pre = text.find("</pre>")
 

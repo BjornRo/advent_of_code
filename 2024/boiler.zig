@@ -1,6 +1,7 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
 const Deque = @import("mylib/deque.zig").Deque;
+const PriorityQueue = std.PriorityQueue;
 const print = std.debug.print;
 const printa = myf.printAny;
 const prints = myf.printStr;

@@ -1,6 +1,6 @@
 import os
 
-ignore = {"in", "mylib", "_zig_ver0_13_0"}
+ignore = {"in", "mylib", "_zig_ver0_13_0", ".env"}
 
 for item in os.listdir():
     if os.path.isfile(item) and item not in ignore:
