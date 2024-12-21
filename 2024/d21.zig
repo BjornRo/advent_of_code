@@ -42,7 +42,23 @@ const Point = struct {
         const res = myf.manhattan(self.toArr(), p.toArr());
         return @intCast(res);
     }
+    fn delta(self: Self, p: Self) [2]CT {
+        return .{
+            self.row - p.row,
+            self.col - p.col,
+        };
+    }
 };
+
+const HashCtx = struct {
+    pub fn hash(_: @This(), key: Point) u32 {
+        return @bitCast([2]CT{ key.row, key.col });
+    }
+    pub fn eql(_: @This(), a: Point, b: Point, _: usize) bool {
+        return a.eq(b);
+    }
+};
+const Edges = std.ArrayHashMap(Point, Point, HashCtx, true);
 
 pub fn main() !void {
     const start = time.nanoTimestamp();
@@ -129,9 +145,13 @@ test "example" {
         printa(numeric);
         break;
     }
-    var path = try aStar(allocator, start_A, map[2]);
+    var path = try aStar(allocator, map[6], map[4]);
     defer path.deinit();
     printa(path.items);
+    for (0..path.items.len - 1) |i| {
+        const dir = path.items[i + 1].delta(path.items[i]);
+        printa(dir);
+    }
 }
 
 const State = struct {
@@ -177,9 +197,14 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
         if (goal.eq(state.pos)) {
             var curr = state.pos;
             while (!edges[curr.r()][curr.c()].eq(NULL)) {
+                printa(curr);
+                if (curr.eq(start)) {
+                    break;
+                }
                 try path.append(curr);
                 curr = edges[curr.r()][curr.c()];
             }
+            try path.append(start);
             std.mem.reverse(Point, path.items);
             break;
         }
@@ -194,8 +219,9 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
             if (g_score[next_row][next_col] != MAX and tmp_g_score >= f_score[next_row][next_col]) {
                 continue;
             }
-            edges[next_row][next_col] = state.pos;
-
+            if (g_score[next_row][next_col] > tmp_g_score) {
+                edges[next_row][next_col] = state.pos;
+            }
             g_score[next_row][next_col] = tmp_g_score;
             const new_f_score = tmp_g_score + next_pos.manhattan(goal);
             f_score[next_row][next_col] = new_f_score;
