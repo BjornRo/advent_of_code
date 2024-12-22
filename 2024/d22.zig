@@ -17,11 +17,10 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
     defer visited.deinit();
     try visited.ensureTotalCapacity(2000);
 
-    var first_index = myf.FixedBuffer([4]i8, 2000).init();
     var list = myf.FixedBuffer(i8, 2000).init();
 
     var p1_sum: u64 = 0;
-    for (seeds, 0..) |seed, i| {
+    for (seeds) |seed| {
         list.len = 0;
         visited.clearRetainingCapacity();
 
@@ -45,7 +44,6 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
                     const res = try map.getOrPut(arr);
                     if (!res.found_existing) res.value_ptr.* = 0;
                     res.value_ptr.* += curr;
-                    if (i == 0) try first_index.append(arr);
                 }
             }
             prev = curr;
@@ -53,8 +51,7 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
     }
 
     var p2_val: u64 = 0;
-    for (first_index.getSlice()) |k| {
-        const value = map.get(k).?;
+    for (map.values()) |value| {
         if (value > p2_val) p2_val = @intCast(value);
     }
     return .{ p1_sum, p2_val };
