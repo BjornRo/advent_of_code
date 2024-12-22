@@ -10,18 +10,17 @@ const time = std.time;
 const Allocator = std.mem.Allocator;
 
 fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
-    var map = std.AutoArrayHashMap([4]i8, i16).init(allocator);
+    var map = std.AutoArrayHashMap(u32, i16).init(allocator);
     defer map.deinit();
 
-    var visited = std.AutoArrayHashMap([4]i8, void).init(allocator);
+    var visited = std.AutoArrayHashMap(u32, void).init(allocator);
     defer visited.deinit();
     try visited.ensureTotalCapacity(2000);
 
-    var list = myf.FixedBuffer(i8, 2000).init();
+    var queue: u32 = 0;
 
     var p1_sum: u64 = 0;
     for (seeds) |seed| {
-        list.len = 0;
         visited.clearRetainingCapacity();
 
         var secret = seed;
@@ -31,17 +30,16 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
         for (0..2000) |j| {
             secret = prng(secret);
             const curr: i8 = @intCast(@mod(secret, 10));
-            const delta = curr - prev;
+            const delta: u8 = @bitCast(curr - prev);
 
-            try list.append(delta);
+            queue <<= 8;
+            queue |= delta;
 
-            const slice = list.getSlice();
-            if (slice.len >= 4) {
-                const arr: [4]i8 = .{ slice[j - 3], slice[j - 2], slice[j - 1], slice[j] };
-                if (!visited.contains(arr)) {
-                    visited.putAssumeCapacity(arr, {});
+            if (j >= 4) {
+                if (!visited.contains(queue)) {
+                    visited.putAssumeCapacity(queue, {});
 
-                    const res = try map.getOrPut(arr);
+                    const res = try map.getOrPut(queue);
                     if (!res.found_existing) res.value_ptr.* = 0;
                     res.value_ptr.* += curr;
                 }
