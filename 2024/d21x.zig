@@ -192,8 +192,10 @@ test "example" {
                 robot_mid = move_mid.end_dir;
                 cost += move_mid.cost;
                 cost += getOnlyMoveCost(robot_mid, .A);
+                robot_mid = .A;
                 cost += 1; // Press A
             }
+
             // robot_kp != .A here , move robot is on A, we need to press keypad!
             // Move robot_kp to A
             move_mid = getCostMove(robot_kp, .A);
@@ -201,11 +203,15 @@ test "example" {
             robot_mid = move_mid.end_dir;
             cost += move_mid.cost;
             cost += getOnlyMoveCost(robot_mid, .A);
+            robot_mid = .A;
             cost += 1; // Press A
 
         }
+        // [72, 70, 70, 68, 74]
+        std.debug.print("{d}, {d}\n", .{ cost, numeric });
         sum += cost * numeric;
     }
+    prints("");
     printa(sum);
 }
 
@@ -237,12 +243,12 @@ fn getCostMove(from: DirPad, to: DirPad) CostMove {
         .RIGHT => return switch (to) {
             .A => .{ .cost = 2, .end_dir = .UP },
             .DOWN => .{ .cost = 4, .end_dir = .LEFT },
-            .UP => .{ .cost = 4, .end_dir = .LEFT },
+            .UP => .{ .cost = 5, .end_dir = .LEFT },
             .LEFT => .{ .cost = 5, .end_dir = .LEFT },
             else => unreachable,
         },
         .DOWN => return switch (to) {
-            .A => .{ .cost = 5, .end_dir = .UP }, // Can also be .RIGHT
+            .A => .{ .cost = 5, .end_dir = .UP }, // .UP .RIGHT
             .RIGHT => .{ .cost = 2, .end_dir = .RIGHT },
             .UP => .{ .cost = 2, .end_dir = .UP },
             .LEFT => .{ .cost = 4, .end_dir = .LEFT },
@@ -294,9 +300,12 @@ fn getOnlyMoveCost(from: DirPad, to: DirPad) u8 {
 // fn codeMover(allocator: Allocator, code: []const u8) !void {}
 
 fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) {
+    const Path = myf.FixedBuffer(Point, rows * cols);
     const State = struct {
         count: CT,
         pos: Point,
+        prev_dir: Point,
+        path: Path,
 
         const Self = @This();
 
@@ -311,18 +320,11 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
 
     var g_score: [rows][cols]CT = undefined;
     var f_score: [rows][cols]CT = undefined;
-    var edges: [rows][cols]Point = undefined;
+    var prev_dir: [rows][cols]Point = undefined; // Punish zig zags
     for (0..rows) |i| {
         for (0..cols) |j| {
             g_score[i][j] = MAX;
             f_score[i][j] = MAX;
-            edges[i][j] = NULL_POINT;
-        }
-    }
-    // Punish zig zags
-    var prev_dir: [rows][cols]Point = undefined;
-    for (0..rows) |i| {
-        for (0..cols) |j| {
             prev_dir[i][j] = NULL_POINT;
         }
     }
@@ -334,22 +336,24 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
 
     var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
     defer pqueue.deinit();
-    try pqueue.add(.{ .count = 0, .pos = start });
+    try pqueue.add(.{ .count = 0, .pos = start, .path = Path.init(), .prev_dir = NULL_POINT });
 
     while (pqueue.count() != 0) {
         const state = pqueue.remove();
 
         if (goal.eq(state.pos)) {
-            var curr = state.pos;
-            while (!edges[curr.r()][curr.c()].eq(NULL_POINT)) {
-                if (curr.eq(start)) {
-                    break;
-                }
-                try path.append(curr);
-                curr = edges[curr.r()][curr.c()];
-            }
+            var stpath = state.path;
             try path.append(start);
-            std.mem.reverse(Point, path.items);
+            for (stpath.getSlice()) |p| {
+                try path.append(p);
+            }
+            // for (g_score) |row| {
+            //     printa(row);
+            // }
+            // printa(path.items);
+            // printa(state.count);
+            // printa(pqueue.items);
+            // myf.waitForInput();
             break;
         }
 
@@ -360,21 +364,20 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
 
             const row, const col = state.pos.cast();
             const tmp_g_score = g_score[row][col] + 1 +
-                calcPenalty(prev_dir[row][col], next_dir, NULL_POINT, 10);
+                calcPenalty(state.prev_dir, next_dir, NULL_POINT, 1000);
 
             const next_row, const next_col = next_pos.cast();
             if (g_score[next_row][next_col] != MAX and tmp_g_score >= f_score[next_row][next_col]) {
                 continue;
-            }
-            if (g_score[next_row][next_col] > tmp_g_score) {
-                edges[next_row][next_col] = state.pos;
             }
             g_score[next_row][next_col] = tmp_g_score;
             prev_dir[next_row][next_col] = next_dir;
 
             const new_f_score = tmp_g_score + next_pos.manhattan(goal);
             f_score[next_row][next_col] = new_f_score;
-            try pqueue.add(.{ .count = new_f_score, .pos = next_pos });
+            var new_state: State = .{ .count = new_f_score, .pos = next_pos, .path = state.path.copy(), .prev_dir = next_dir };
+            try new_state.path.append(next_pos);
+            try pqueue.add(new_state);
         }
     }
 
@@ -382,7 +385,9 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
 }
 
 inline fn calcPenalty(prev_dir: Point, next_dir: Point, comptime NULL_POINT: Point, comptime penalty: CT) CT {
-    return if (prev_dir.eq(NULL_POINT) or prev_dir.eq(next_dir)) 0 else penalty;
+    var pen = if (prev_dir.eq(NULL_POINT) or prev_dir.eq(next_dir)) 0 else penalty;
+    pen += if (prev_dir.eq(Point.init(0, 1)) or prev_dir.eq(Point.init(0, -1))) 0 else 1;
+    return pen;
 }
 
 //     var robot_kp_map = std.AutoArrayHashMap([2]DirPad, []const DirPad).init(allocator);

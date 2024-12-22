@@ -40,8 +40,14 @@ pub fn FixedBuffer(comptime T: type, size: u8) type {
             if (index >= size) return error.OutOfBounds;
             self.buf[index] = value;
         }
+        pub fn copy(self: Self) Self {
+            var new_buf = Self{ .len = self.len, .buf = undefined };
+            for (0..self.len) |i| new_buf.buf[i] = self.buf[i];
+            return new_buf;
+        }
     };
 }
+
 pub fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
