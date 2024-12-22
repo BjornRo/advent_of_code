@@ -9,6 +9,68 @@ const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
 
+fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
+    var map = std.AutoArrayHashMap([4]i8, i16).init(allocator);
+    defer map.deinit();
+
+    var visited = std.AutoArrayHashMap([4]i8, void).init(allocator);
+    defer visited.deinit();
+    try visited.ensureTotalCapacity(2000);
+
+    var first_index = myf.FixedBuffer([4]i8, 2000).init();
+    var list = myf.FixedBuffer(i8, 2000).init();
+
+    var p1_sum: u64 = 0;
+    for (seeds, 0..) |seed, i| {
+        list.len = 0;
+        visited.clearRetainingCapacity();
+
+        var secret = seed;
+        defer p1_sum += secret;
+
+        var prev: i8 = @intCast(@mod(secret, 10));
+        for (0..2000) |j| {
+            secret = prng(secret);
+            const curr: i8 = @intCast(@mod(secret, 10));
+            const delta = curr - prev;
+
+            try list.append(delta);
+
+            const slice = list.getSlice();
+            if (slice.len >= 4) {
+                const arr: [4]i8 = .{ slice[j - 3], slice[j - 2], slice[j - 1], slice[j] };
+                if (!visited.contains(arr)) {
+                    visited.putAssumeCapacity(arr, {});
+
+                    const res = try map.getOrPut(arr);
+                    if (!res.found_existing) res.value_ptr.* = 0;
+                    res.value_ptr.* += curr;
+                    if (i == 0) try first_index.append(arr);
+                }
+            }
+            prev = curr;
+        }
+    }
+
+    var p2_val: u64 = 0;
+    for (first_index.getSlice()) |k| {
+        const value = map.get(k).?;
+        if (value > p2_val) p2_val = @intCast(value);
+    }
+    return .{ p1_sum, p2_val };
+}
+
+fn prng(seed: u64) u64 {
+    var secret = seed;
+    secret ^= secret * 64;
+    secret = @mod(secret, 16777216);
+    secret ^= secret / 32;
+    secret = @mod(secret, 16777216);
+    secret ^= secret * 2048;
+    secret = @mod(secret, 16777216);
+    return secret;
+}
+
 pub fn main() !void {
     const start = time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -28,85 +90,12 @@ pub fn main() !void {
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
-    var p1_sum: u64 = 0;
-
     var list = std.ArrayList(u64).init(allocator);
     defer list.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| {
-        const seed = try std.fmt.parseInt(u64, row, 10);
-        p1_sum += part1(seed);
-        try list.append(seed);
-    }
+    while (in_iter.next()) |row| try list.append(try std.fmt.parseInt(u64, row, 10));
+    const p1, const p2 = try solver(allocator, list.items);
 
-    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, try part2(allocator, list.items) });
-}
-
-fn part2(allocator: Allocator, seeds: []u64) !i64 {
-    var map = std.AutoArrayHashMap([4]i8, i16).init(allocator);
-    defer map.deinit();
-
-    var visited = std.AutoArrayHashMap([4]i8, void).init(allocator);
-    defer visited.deinit();
-    try visited.ensureTotalCapacity(2000);
-
-    var first_index = myf.FixedBuffer([4]i8, 2000).init();
-    var list = myf.FixedBuffer(i8, 2000).init();
-
-    for (seeds, 0..) |seed, i| {
-        list.len = 0;
-        visited.clearRetainingCapacity();
-
-        var secret = seed;
-
-        var prev: i8 = @intCast(@mod(secret, 10));
-        for (0..2000) |j| {
-            secret = prng(secret);
-            const curr: i8 = @intCast(@mod(secret, 10));
-            const delta = curr - prev;
-
-            try list.append(delta);
-
-            const slice = list.getSlice();
-            if (slice.len >= 4) {
-                const arr: [4]i8 = .{ slice[j - 3], slice[j - 2], slice[j - 1], slice[j] };
-                if (!visited.contains(arr)) {
-                    visited.putAssumeCapacity(arr, {});
-
-                    const res = try map.getOrPut(arr);
-                    if (!res.found_existing) {
-                        res.value_ptr.* = 0;
-                    }
-                    res.value_ptr.* += curr;
-                    if (i == 0) try first_index.append(arr);
-                }
-            }
-            prev = curr;
-        }
-    }
-
-    var max: i16 = 0;
-    for (first_index.getSlice()) |k| {
-        const value = map.get(k).?;
-        if (value > max) max = value;
-    }
-    return max;
-}
-
-fn part1(seed: u64) u64 {
-    var secret = seed;
-    for (0..2000) |_| secret = prng(secret);
-    return secret;
-}
-
-fn prng(seed: u64) u64 {
-    var secret = seed;
-    secret ^= secret * 64;
-    secret = @mod(secret, 16777216);
-    secret ^= secret / 32;
-    secret = @mod(secret, 16777216);
-    secret ^= secret * 2048;
-    secret = @mod(secret, 16777216);
-    return secret;
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
 }
