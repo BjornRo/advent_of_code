@@ -10,10 +10,10 @@ const time = std.time;
 const Allocator = std.mem.Allocator;
 
 fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
-    var map = std.AutoArrayHashMap(u32, i16).init(allocator);
+    var map = std.AutoHashMap(u32, i16).init(allocator);
     defer map.deinit();
 
-    var visited = std.AutoArrayHashMap(u32, void).init(allocator);
+    var visited = std.AutoHashMap(u32, void).init(allocator);
     defer visited.deinit();
     try visited.ensureTotalCapacity(2000);
 
@@ -47,8 +47,9 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
     }
 
     var p2_val: u64 = 0;
-    for (map.values()) |value| {
-        if (value > p2_val) p2_val = @intCast(value);
+    var iter = map.valueIterator();
+    while (iter.next()) |value| {
+        if (value.* > p2_val) p2_val = @intCast(value.*);
     }
     return .{ p1_sum, p2_val };
 }

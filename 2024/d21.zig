@@ -187,13 +187,7 @@ fn getOnlyMoveCost(from: DirPad, to: DirPad) u8 {
             .LEFT => 4,
             .DOWN => 0,
         },
-        .A => return switch (to) {
-            .LEFT => 6,
-            .UP => 4,
-            .DOWN => 5,
-            .RIGHT => 3,
-            .A => 0,
-        },
+        else => unreachable,
     };
 }
 
