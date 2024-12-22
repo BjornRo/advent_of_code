@@ -36,9 +36,7 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
             queue |= delta;
 
             if (j >= 4) {
-                if (!visited.contains(queue)) {
-                    visited.putAssumeCapacity(queue, {});
-
+                if (!visited.getOrPutAssumeCapacity(queue).found_existing) {
                     const res = try map.getOrPut(queue);
                     if (!res.found_existing) res.value_ptr.* = 0;
                     res.value_ptr.* += curr;
