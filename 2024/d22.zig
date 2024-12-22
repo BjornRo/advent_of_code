@@ -87,11 +87,11 @@ pub fn main() !void {
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
-    var list = std.ArrayList(u64).init(allocator);
+    var list = try std.ArrayList(u64).initCapacity(allocator, 2600);
     defer list.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| try list.append(try std.fmt.parseInt(u64, row, 10));
+    while (in_iter.next()) |row| list.appendAssumeCapacity(try std.fmt.parseInt(u64, row, 10));
     const p1, const p2 = try solver(allocator, list.items);
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
