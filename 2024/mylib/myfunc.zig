@@ -4,10 +4,10 @@ const Type = std.builtin.Type;
 
 const DelimType = enum { CRLF, LF };
 
-pub fn FixedBuffer(comptime T: type, size: u8) type {
+pub fn FixedBuffer(comptime T: type, size: u16) type {
     return struct {
         buf: [size]T,
-        len: u8,
+        len: @TypeOf(size),
 
         const Self = @This();
 
