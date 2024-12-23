@@ -94,82 +94,6 @@ pub fn getNeighborOffset(comptime T: type) [4][2]T {
     return .{ .{ 1, 0 }, .{ 0, 1 }, .{ -1, 0 }, .{ 0, -1 } };
 }
 
-// pub fn ValidNeighborsIterator(comptime T: type) type {
-//     return struct {
-//         positions: []const [2]T,
-//         min_pos: T,
-//         max_row: T,
-//         max_col: T,
-//         index: usize,
-
-//         const Self = @This();
-
-//         pub fn next(self: *Self) ?[2]T {
-//             while (self.index < self.positions.len) {
-//                 const nrow, const ncol = self.positions[self.index];
-//                 if (self.min_pos <= nrow and nrow < self.max_row and
-//                     self.min_pos <= ncol and ncol < self.max_col)
-//                 {
-//                     defer self.index += 1;
-//                     return self.positions[self.index];
-//                 }
-//                 self.index += 1;
-//             }
-//             return null;
-//         }
-//     };
-// }
-// pub fn validNeighborsIter(
-//     comptime slice: anytype,
-//     min_pos: @TypeOf(slice[0][0]),
-//     max_row: @TypeOf(slice[0][0]),
-//     max_col: @TypeOf(slice[0][0]),
-// ) ValidNeighborsIterator(@TypeOf(slice[0][0])) {
-//     return .{
-//         .positions = &slice,
-//         .min_pos = min_pos,
-//         .max_row = max_row,
-//         .max_col = max_col,
-//         .index = 0,
-//     };
-// }
-
-// pub fn ValidScalarNeighborsIterator(comptime T: type, comptime S: type) type {
-//     return struct {
-//         invalid_scalar: S,
-//         matrix: []const []const S,
-//         index: usize,
-//         positions: []const [2]T,
-
-//         const Self = @This();
-
-//         pub fn next(self: *Self) ?struct { pos: [2]T, elem: S } {
-//             while (self.index < self.positions.len) {
-//                 const nrow, const ncol = self.positions[self.index];
-//                 const elem = self.matrix[@intCast(nrow)][@intCast(ncol)];
-//                 if (elem != self.invalid_scalar) {
-//                     defer self.index += 1;
-//                     return .{ .pos = self.positions[self.index], .elem = elem };
-//                 }
-//                 self.index += 1;
-//             }
-//             return null;
-//         }
-//     };
-// }
-// pub fn validScalarNeighborsIterator(
-//     comptime slice: anytype,
-//     invalid_scalar: anytype,
-//     matrix: anytype,
-// ) ValidNeighborsIterator(@TypeOf(slice[0][0]), @TypeOf(invalid_scalar)) {
-//     return .{
-//         .invalid_scalar = invalid_scalar,
-//         .matrix = matrix,
-//         .index = 0,
-//         .positions = &slice,
-//     };
-// }
-
 pub fn collect(comptime T: type, allocator: Allocator, iter_ptr: anytype) !std.ArrayList(T) {
     var list = std.ArrayList(T).init(allocator);
     while (iter_ptr.*.next()) |val| try list.append(val);
@@ -602,3 +526,90 @@ pub fn waitForInput() void {
         if (res == '\n') return;
     }
 }
+
+pub fn joinStrings(allocator: Allocator, strings: []const []const u8, separator: []const u8) ![]const u8 {
+    var list = std.ArrayList(u8).init(allocator);
+
+    for (strings) |str| {
+        for (str) |c| try list.append(c);
+        for (separator) |c| try list.append(c);
+    }
+    for (separator.len) |_| _ = list.pop();
+    return list.toOwnedSlice();
+}
+
+// pub fn ValidNeighborsIterator(comptime T: type) type {
+//     return struct {
+//         positions: []const [2]T,
+//         min_pos: T,
+//         max_row: T,
+//         max_col: T,
+//         index: usize,
+
+//         const Self = @This();
+
+//         pub fn next(self: *Self) ?[2]T {
+//             while (self.index < self.positions.len) {
+//                 const nrow, const ncol = self.positions[self.index];
+//                 if (self.min_pos <= nrow and nrow < self.max_row and
+//                     self.min_pos <= ncol and ncol < self.max_col)
+//                 {
+//                     defer self.index += 1;
+//                     return self.positions[self.index];
+//                 }
+//                 self.index += 1;
+//             }
+//             return null;
+//         }
+//     };
+// }
+// pub fn validNeighborsIter(
+//     comptime slice: anytype,
+//     min_pos: @TypeOf(slice[0][0]),
+//     max_row: @TypeOf(slice[0][0]),
+//     max_col: @TypeOf(slice[0][0]),
+// ) ValidNeighborsIterator(@TypeOf(slice[0][0])) {
+//     return .{
+//         .positions = &slice,
+//         .min_pos = min_pos,
+//         .max_row = max_row,
+//         .max_col = max_col,
+//         .index = 0,
+//     };
+// }
+
+// pub fn ValidScalarNeighborsIterator(comptime T: type, comptime S: type) type {
+//     return struct {
+//         invalid_scalar: S,
+//         matrix: []const []const S,
+//         index: usize,
+//         positions: []const [2]T,
+
+//         const Self = @This();
+
+//         pub fn next(self: *Self) ?struct { pos: [2]T, elem: S } {
+//             while (self.index < self.positions.len) {
+//                 const nrow, const ncol = self.positions[self.index];
+//                 const elem = self.matrix[@intCast(nrow)][@intCast(ncol)];
+//                 if (elem != self.invalid_scalar) {
+//                     defer self.index += 1;
+//                     return .{ .pos = self.positions[self.index], .elem = elem };
+//                 }
+//                 self.index += 1;
+//             }
+//             return null;
+//         }
+//     };
+// }
+// pub fn validScalarNeighborsIterator(
+//     comptime slice: anytype,
+//     invalid_scalar: anytype,
+//     matrix: anytype,
+// ) ValidNeighborsIterator(@TypeOf(slice[0][0]), @TypeOf(invalid_scalar)) {
+//     return .{
+//         .invalid_scalar = invalid_scalar,
+//         .matrix = matrix,
+//         .index = 0,
+//         .positions = &slice,
+//     };
+// }

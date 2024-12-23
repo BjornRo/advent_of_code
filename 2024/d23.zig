@@ -48,7 +48,7 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
             for (neighbors[1..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue;
                 var group = nodesToArr3(item.key_ptr.*, n0, n1);
-                std.mem.sort(String, &group, {}, sortArr3LessThan);
+                std.mem.sort(String, &group, {}, sortArrLessThan);
                 if (set.getOrPutAssumeCapacity(group).found_existing) continue;
                 for (group) |slice| {
                     if (slice[0] == 't') {
@@ -62,7 +62,7 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
     return sum;
 }
 
-fn sortArr3LessThan(_: void, a: String, b: String) bool {
+fn sortArrLessThan(_: void, a: String, b: String) bool {
     for (a, b) |ca, ba| {
         if (ca < ba) return true;
         if (ca > ba) return false;
@@ -94,9 +94,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
     const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -126,40 +123,44 @@ pub fn main() !void {
         try res.value_ptr.*.append(node0);
     }
 
-    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try part1(allocator, graph),
-        0,
-    });
+    const p2 = try part2(allocator, graph);
+    defer allocator.free(p2);
+
+    try writer.print("Part 1: {d}\nPart 2: {s}\n", .{ try part1(allocator, graph), p2 });
 }
 
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
+fn part2(allocator: Allocator, graph: Graph) !String {
+    var map = std.StringHashMap(void).init(allocator);
+    try map.ensureTotalCapacity(15); // tested max len: 13
+    defer map.deinit();
 
-    const input = @embedFile("in/d23.txt");
-    const input_attributes = try myf.getInputAttributes(input);
+    var conn_list = std.ArrayList(String).init(allocator);
+    defer conn_list.deinit();
 
-    var graph = Graph.init(allocator);
-    defer {
-        var git = graph.valueIterator();
-        while (git.next()) |v| v.deinit();
-        graph.deinit();
+    var max_conn: u8 = 0;
+
+    var git = graph.iterator();
+    while (git.next()) |item| {
+        map.clearRetainingCapacity();
+        map.putAssumeCapacity(item.key_ptr.*, {});
+
+        var conn: u8 = 0;
+        const neighbors = item.value_ptr.*.items;
+        outer: for (neighbors) |n0| {
+            for (neighbors[1..]) |n1| {
+                if (!isConnected(graph, n0, n1)) continue :outer;
+                map.putAssumeCapacity(n0, {});
+                map.putAssumeCapacity(n1, {});
+                conn += 1;
+            }
+        }
+        if (conn <= max_conn) continue;
+        conn_list.clearRetainingCapacity();
+        max_conn = conn;
+        var m_it = map.keyIterator();
+        while (m_it.next()) |node| try conn_list.append(node.*);
     }
 
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| {
-        const split = std.mem.indexOfScalar(u8, row, '-').?;
-        const node0 = row[0..split];
-        const node1 = row[split + 1 ..];
-        var res = try graph.getOrPut(node0);
-        if (!res.found_existing) res.value_ptr.* = GraphValue.init(allocator);
-        try res.value_ptr.*.append(node1);
-        // Undirected
-        res = try graph.getOrPut(node1);
-        if (!res.found_existing) res.value_ptr.* = GraphValue.init(allocator);
-        try res.value_ptr.*.append(node0);
-    }
-
-    // printa(part1(allocator, graph));
+    std.mem.sort(String, conn_list.items, {}, sortArrLessThan);
+    return try myf.joinStrings(allocator, conn_list.items, ",");
 }
