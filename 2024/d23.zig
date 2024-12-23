@@ -47,7 +47,7 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
         for (neighbors) |n0| {
             for (neighbors[1..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue;
-                var group = nodesToArr3(item.key_ptr.*, n0, n1);
+                var group: [3]String = .{ item.key_ptr.*, n0, n1 };
                 std.mem.sort(String, &group, {}, sortArrLessThan);
                 if (set.getOrPutAssumeCapacity(group).found_existing) continue;
                 for (group) |slice| {
@@ -77,10 +77,6 @@ fn isConnected(graph: Graph, node0: String, node1: String) bool {
         }
     }
     return false;
-}
-
-fn nodesToArr3(a: String, b: String, c: String) [3]String {
-    return .{ a, b, c };
 }
 
 pub fn main() !void {
