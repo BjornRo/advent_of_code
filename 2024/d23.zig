@@ -32,34 +32,10 @@ const HashCtx = struct {
 const String = []const u8;
 const GraphValue = std.ArrayList(String);
 const Graph = std.StringHashMap(GraphValue);
-const String3Set = std.HashMap([3]String, void, HashCtx, 80);
+const String3Set = std.AutoHashMap(u64, void);
 
-fn part1(allocator: Allocator, graph: Graph) !u16 {
-    var set = String3Set.init(allocator);
-    try set.ensureTotalCapacity(graph.count() * graph.count());
-    defer set.deinit();
-
-    var sum: u16 = 0;
-
-    var git = graph.iterator();
-    while (git.next()) |item| {
-        const neighbors = item.value_ptr.*.items;
-        for (neighbors) |n0| {
-            for (neighbors[1..]) |n1| {
-                if (!isConnected(graph, n0, n1)) continue;
-                var group: [3]String = .{ item.key_ptr.*, n0, n1 };
-                std.mem.sort(String, &group, {}, sortArrLessThan);
-                if (set.getOrPutAssumeCapacity(group).found_existing) continue;
-                for (group) |slice| {
-                    if (slice[0] == 't') {
-                        sum += 1;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    return sum;
+fn stringsToInt(key: [3]String) u64 {
+    return @bitCast([_]u8{ 0, 0, key[0][0], key[0][1], key[1][0], key[1][1], key[2][0], key[2][1] });
 }
 
 fn sortArrLessThan(_: void, a: String, b: String) bool {
@@ -77,6 +53,70 @@ fn isConnected(graph: Graph, node0: String, node1: String) bool {
         }
     }
     return false;
+}
+
+fn part1(allocator: Allocator, graph: Graph) !u16 {
+    var set = String3Set.init(allocator);
+    try set.ensureTotalCapacity(graph.count() * graph.count());
+    defer set.deinit();
+
+    var sum: u16 = 0;
+
+    var git = graph.iterator();
+    while (git.next()) |item| {
+        const neighbors = item.value_ptr.*.items;
+        for (neighbors) |n0| {
+            for (neighbors[1..]) |n1| {
+                if (!isConnected(graph, n0, n1)) continue;
+                var group: [3]String = .{ item.key_ptr.*, n0, n1 };
+                std.mem.sort(String, &group, {}, sortArrLessThan);
+                if (set.getOrPutAssumeCapacity(stringsToInt(group)).found_existing) continue;
+                for (group) |slice| {
+                    if (slice[0] == 't') {
+                        sum += 1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return sum;
+}
+
+fn part2(allocator: Allocator, graph: Graph) !String {
+    var map = std.StringHashMap(void).init(allocator);
+    try map.ensureTotalCapacity(15); // tested max len: 13
+    defer map.deinit();
+
+    var conn_list = std.ArrayList(String).init(allocator);
+    defer conn_list.deinit();
+
+    var max_conn: u8 = 0;
+
+    var git = graph.iterator();
+    while (git.next()) |item| {
+        map.clearRetainingCapacity();
+        map.putAssumeCapacity(item.key_ptr.*, {});
+
+        var conn: u8 = 0;
+        const neighbors = item.value_ptr.*.items;
+        outer: for (neighbors) |n0| {
+            for (neighbors[1..]) |n1| {
+                if (!isConnected(graph, n0, n1)) continue :outer;
+                map.putAssumeCapacity(n0, {});
+                map.putAssumeCapacity(n1, {});
+                conn += 1;
+            }
+        }
+        if (conn <= max_conn) continue;
+        conn_list.clearRetainingCapacity();
+        max_conn = conn;
+        var m_it = map.keyIterator();
+        while (m_it.next()) |node| try conn_list.append(node.*);
+    }
+
+    std.mem.sort(String, conn_list.items, {}, sortArrLessThan);
+    return try myf.joinStrings(allocator, conn_list.items, ",");
 }
 
 pub fn main() !void {
@@ -123,40 +163,4 @@ pub fn main() !void {
     defer allocator.free(p2);
 
     try writer.print("Part 1: {d}\nPart 2: {s}\n", .{ try part1(allocator, graph), p2 });
-}
-
-fn part2(allocator: Allocator, graph: Graph) !String {
-    var map = std.StringHashMap(void).init(allocator);
-    try map.ensureTotalCapacity(15); // tested max len: 13
-    defer map.deinit();
-
-    var conn_list = std.ArrayList(String).init(allocator);
-    defer conn_list.deinit();
-
-    var max_conn: u8 = 0;
-
-    var git = graph.iterator();
-    while (git.next()) |item| {
-        map.clearRetainingCapacity();
-        map.putAssumeCapacity(item.key_ptr.*, {});
-
-        var conn: u8 = 0;
-        const neighbors = item.value_ptr.*.items;
-        outer: for (neighbors) |n0| {
-            for (neighbors[1..]) |n1| {
-                if (!isConnected(graph, n0, n1)) continue :outer;
-                map.putAssumeCapacity(n0, {});
-                map.putAssumeCapacity(n1, {});
-                conn += 1;
-            }
-        }
-        if (conn <= max_conn) continue;
-        conn_list.clearRetainingCapacity();
-        max_conn = conn;
-        var m_it = map.keyIterator();
-        while (m_it.next()) |node| try conn_list.append(node.*);
-    }
-
-    std.mem.sort(String, conn_list.items, {}, sortArrLessThan);
-    return try myf.joinStrings(allocator, conn_list.items, ",");
 }
