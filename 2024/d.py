@@ -75,6 +75,8 @@ for i in range(1, 11):
     example_cols = example_block.index("\n")
     example_rows = example_block.count("\n")
 
+    example_block = example_block.replace("&gt;", ">").replace("&lt;", "<").replace("&amp;", "&").replace("&quot;", '"')
+
     with open(example_file.replace("<#>", example_suffix * i), "wt", newline="\n") as f:
         f.write(example_block)
 

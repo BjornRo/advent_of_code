@@ -36,19 +36,12 @@ test "casting" {
     try expect(int0 != int1 and int0 != int2 and int0 != int3 and int1 != int2 and int1 != int3);
 }
 
-const InSignal = packed struct {
-    id: u24,
-    value: bool,
-};
-
 const Op = enum {
     XOR,
     AND,
     OR,
 
-    const Self = @This();
-
-    fn fromChar(char: u8) Self {
+    fn fromChar(char: u8) @This() {
         return switch (char) {
             'X' => .XOR,
             'O' => .OR,
@@ -80,83 +73,6 @@ const Gate = struct {
 const Grid = std.AutoHashMap(u24, Gate);
 const InSignals = std.AutoHashMap(u24, bool);
 
-pub fn main() !void {
-    const start = time.nanoTimestamp();
-    const writer = std.io.getStdOut().writer();
-    defer {
-        const end = time.nanoTimestamp();
-        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
-        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
-    }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
-
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // std.debug.print("Input size: {d}\n\n", .{input.len});
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
-    // End setup
-
-    // std.debug.print("{s}\n", .{input});
-}
-
-// 43109482179994 too low
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d24.txt");
-    const input_attributes = try myf.getInputAttributes(input);
-
-    const double_delim = try std.mem.concat(allocator, u8, &.{ input_attributes.delim, input_attributes.delim });
-    defer allocator.free(double_delim);
-
-    var in_iter = std.mem.tokenizeSequence(u8, input, double_delim);
-    const raw_signals = in_iter.next().?;
-    const raw_grid = in_iter.next().?;
-
-    var signals = InSignals.init(allocator);
-    defer signals.deinit();
-    var grid = Grid.init(allocator);
-    defer grid.deinit();
-
-    var zee = std.ArrayList(u24).init(allocator);
-    defer zee.deinit();
-
-    var signal_it = std.mem.tokenizeSequence(u8, raw_signals, input_attributes.delim);
-    while (signal_it.next()) |row| try signals.put(arrToInt(row[0..3]), row[row.len - 1] == '1');
-    std.mem.sort(u24, zee.items, {}, std.sort.desc(u24));
-
-    var grid_it = std.mem.tokenizeSequence(u8, raw_grid, input_attributes.delim);
-    while (grid_it.next()) |row| {
-        var row_iter = std.mem.tokenizeScalar(u8, row, ' ');
-        const left = arrToInt(row_iter.next().?);
-        const op = Op.fromChar(row_iter.next().?[0]);
-        const right = arrToInt(row_iter.next().?);
-        _ = row_iter.next().?; // Arrow
-        const out_str = row_iter.next().?;
-        const out = arrToInt(out_str);
-        try grid.put(out, .{
-            .left = left,
-            .left_in = signals.get(left),
-            .right = right,
-            .right_in = signals.get(right),
-            .op = op,
-        });
-        if (out_str[0] == 'z') try zee.append(out);
-    }
-
-    const p1_number = try part1(allocator, grid, zee.items);
-    printa(p1_number);
-}
-
 fn part1(allocator: Allocator, grid_: Grid, zee: []const u24) !u64 {
     var grid = try grid_.clone();
     defer grid.deinit();
@@ -186,9 +102,126 @@ fn part1(allocator: Allocator, grid_: Grid, zee: []const u24) !u64 {
     }
 
     var number: u64 = 0;
-    for (zee.items) |z| {
+    for (zee) |z| {
         const val: u64 = if (grid.get(z).?.out().?) 1 else 0;
         number = number * 2 + val;
     }
     return number;
+}
+
+pub fn main() !void {
+    const start = time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
+    defer {
+        const end = time.nanoTimestamp();
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
+        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
+    }
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+    // var buffer: [70_000]u8 = undefined;
+    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    // const allocator = fba.allocator();
+
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input_attributes = try myf.getInputAttributes(input);
+    // End setup
+
+    const double_delim = try std.mem.concat(allocator, u8, &.{ input_attributes.delim, input_attributes.delim });
+    defer allocator.free(double_delim);
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, double_delim);
+    const raw_signals = in_iter.next().?;
+    const raw_grid = in_iter.next().?;
+
+    var signals = InSignals.init(allocator);
+    defer signals.deinit();
+    var grid = Grid.init(allocator);
+    defer grid.deinit();
+
+    var zee = std.ArrayList(u24).init(allocator);
+    defer zee.deinit();
+
+    var signal_it = std.mem.tokenizeSequence(u8, raw_signals, input_attributes.delim);
+    while (signal_it.next()) |row| try signals.put(arrToInt(row[0..3]), row[row.len - 1] == '1');
+
+    var grid_it = std.mem.tokenizeSequence(u8, raw_grid, input_attributes.delim);
+    while (grid_it.next()) |row| {
+        var row_iter = std.mem.tokenizeScalar(u8, row, ' ');
+        const left = arrToInt(row_iter.next().?);
+        const op = Op.fromChar(row_iter.next().?[0]);
+        const right = arrToInt(row_iter.next().?);
+        _ = row_iter.next().?; // Arrow
+        const out_str = row_iter.next().?;
+        const out = arrToInt(out_str);
+        try grid.put(out, .{
+            .left = left,
+            .left_in = signals.get(left),
+            .right = right,
+            .right_in = signals.get(right),
+            .op = op,
+        });
+        if (out_str[0] == 'z') try zee.append(out);
+    }
+    std.mem.sort(u24, zee.items, {}, std.sort.desc(u24));
+
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+        try part1(allocator, grid, zee.items),
+        0,
+    });
+}
+
+test "example" {
+    const allocator = std.testing.allocator;
+    var list = std.ArrayList(i8).init(allocator);
+    defer list.deinit();
+
+    const input = @embedFile("in/d24tt.txt");
+    const input_attributes = try myf.getInputAttributes(input);
+
+    const double_delim = try std.mem.concat(allocator, u8, &.{ input_attributes.delim, input_attributes.delim });
+    defer allocator.free(double_delim);
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, double_delim);
+    const raw_signals = in_iter.next().?;
+    const raw_grid = in_iter.next().?;
+
+    var signals = InSignals.init(allocator);
+    defer signals.deinit();
+    var grid = Grid.init(allocator);
+    defer grid.deinit();
+
+    var zee = std.ArrayList(u24).init(allocator);
+    defer zee.deinit();
+
+    var signal_it = std.mem.tokenizeSequence(u8, raw_signals, input_attributes.delim);
+    while (signal_it.next()) |row| try signals.put(arrToInt(row[0..3]), row[row.len - 1] == '1');
+
+    var grid_it = std.mem.tokenizeSequence(u8, raw_grid, input_attributes.delim);
+    while (grid_it.next()) |row| {
+        var row_iter = std.mem.tokenizeScalar(u8, row, ' ');
+        const left = arrToInt(row_iter.next().?);
+        const op = Op.fromChar(row_iter.next().?[0]);
+        const right = arrToInt(row_iter.next().?);
+        _ = row_iter.next().?; // Arrow
+        const out_str = row_iter.next().?;
+        const out = arrToInt(out_str);
+        try grid.put(out, .{
+            .left = left,
+            .left_in = signals.get(left),
+            .right = right,
+            .right_in = signals.get(right),
+            .op = op,
+        });
+        if (out_str[0] == 'z') try zee.append(out);
+    }
+    std.mem.sort(u24, zee.items, {}, std.sort.desc(u24));
+
+    const p1_number = try part1(allocator, grid, zee.items);
+    printa(p1_number);
 }
