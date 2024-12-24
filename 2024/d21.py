@@ -4,8 +4,10 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Literal
 
-with open("in/d23t.txt") as f:
-    data = f.read().strip().splitlines()
+with open("in/d21t.txt") as f:
+    raw_data = f.read().strip().splitlines()
+
+data = [(tuple(map(lambda x: int(x, 16), s)), int(s[:-1])) for s in raw_data]
 
 type Directions = Literal["^", "A", "<", "v", ">"]
 A = 10
@@ -68,7 +70,7 @@ dp_col = 2
 
 memo = {}
 
-# robots(1, "<A")
+# for data(keypad starts at A):  robots(1, "<A")
 
 
 def robots(level: int, string: str) -> tuple[str, int]:

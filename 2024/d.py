@@ -22,8 +22,9 @@ cookie_keyname = "session"
 cookie_file = ".env"
 
 # Pads a '0' if it is only 1 digit. Replace for your desired output path+filenames.
+example_suffix = "t"  # for example d21t.txt
 input_file = "in/d{:02}.txt"
-example_file = "in/d{:02}t.txt"
+example_file = "in/d{:02}<#>.txt"
 
 
 """Do not touch"""
@@ -45,8 +46,8 @@ if date < datetime(year=year, month=12, day=day, hour=5, tzinfo=UTC):
 
 input_file = input_file.format(day)
 example_file = example_file.format(day)
-if isfile(input_file) or isfile(example_file):
-    raise Exception(f"File already exists: {input_file} |or| {example_file}")
+if isfile(input_file):
+    raise Exception(f"File already exists: {input_file}")
 
 with open(cookie_file) as f:
     cookie = {cookie_keyname: f.read().strip()}
@@ -59,21 +60,30 @@ if not ex_result.ok:
 text = ex_result.text
 
 if text.count("<pre>") > 1:
-    res = text.lower().find("example:")
-    if res == -1:
+    try:
+        res = text.lower().index("example:")
+    except:
         raise Exception("Could not find example")
-    text = text[res:]
+    text = text[res + 8 :]
 
-start_pre = text.find("<pre>") + 5
-end_pre = text.find("</pre>")
+for i in range(1, 11):
+    start_pre = text.find("<pre>") + 5
+    end_pre = text.find("</pre>")
 
-example_block = re.sub(r"<.*?>", "", text[start_pre:end_pre])
+    example_block = re.sub(r"<.*?>", "", text[start_pre:end_pre])
 
-example_cols = example_block.index("\n")
-example_rows = example_block.count("\n")
+    example_cols = example_block.index("\n")
+    example_rows = example_block.count("\n")
 
-with open(example_file, "wt", newline="\n") as f:
-    f.write(example_block)
+    with open(example_file.replace("<#>", example_suffix * i), "wt", newline="\n") as f:
+        f.write(example_block)
+
+    try:
+        more_ex = text.lower().index("example:")
+        text = text[more_ex + 8 :]
+    except:
+        break
+
 
 """Fetch input"""
 in_result = requests.get(f"https://adventofcode.com/{year}/day/{day}/input", cookies=cookie)
