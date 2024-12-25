@@ -8,42 +8,26 @@ const prints = myf.printStr;
 const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
+const endian = @import("builtin").cpu.arch.endian();
 
 const String = []const u8;
 const GraphValue = std.ArrayList(u16);
 const Graph = std.AutoHashMap(u16, GraphValue);
 
 fn stringToInt(str: String) u16 {
-    var result: u16 = 0;
-    inline for (0..2) |i| {
-        result <<= i * 8;
-        result |= str[i];
-    }
-    return result;
-}
-fn intToString(value: u16) [2]u8 {
-    return .{ @truncate(value >> 8), @truncate(value) };
+    const value: u16 = @bitCast([2]u8{ str[0], str[1] });
+    return if (.big == endian) value else @byteSwap(value);
 }
 
-// fn stringToInt(str: String) u16 {
-//     return @bitCast([2]u8{ str[0], str[1] });
-// }
+fn intToString(int: u16) [2]u8 {
+    const value = if (.big == endian) int else @byteSwap(int);
+    return @bitCast(value);
+}
 
-// fn stringsToInt(key: [3]String) u64 {
-//     var result: u64 = 0;
-//     inline for (0..6) |i| {
-//         const row = i / 2;
-//         const col = i % 2;
-//         result <<= i * 8;
-//         result |= key[row][col];
-//     }
-//     return result;
-// }
-
-fn matchChar(value: u64) bool {
+fn matchChar(value: u48) bool {
     var res = value;
     for (0..4) |_| {
-        if ((res & 0xFF00) == 0x7400) {
+        if ((res & 0xFF) == 't') {
             return true;
         }
         res >>= 16;
@@ -51,17 +35,13 @@ fn matchChar(value: u64) bool {
     return false;
 }
 
-fn intToInt(key: [3]u16) u64 {
-    var result: u64 = 0;
-    inline for (0..3) |i| {
-        result <<= i * 16;
-        result |= key[i];
-    }
-    return result;
+fn intToInt(key: [3]u16) u48 {
+    const value: u48 = @bitCast(key);
+    return if (.big == endian) value else @byteSwap(value);
 }
 
 fn part1(allocator: Allocator, graph: Graph) !u16 {
-    var set = std.AutoHashMap(u64, void).init(allocator);
+    var set = std.AutoHashMap(u48, void).init(allocator);
     try set.ensureTotalCapacity(graph.count() * graph.count());
     defer set.deinit();
 
@@ -74,9 +54,11 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
             for (neighbors[1..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue;
                 var group: [3]u16 = .{ item.key_ptr.*, n0, n1 };
+                // printa(group);
 
                 std.mem.sort(u16, &group, {}, std.sort.asc(u16));
                 const x = intToInt(group);
+                // printa(x);
 
                 if (set.getOrPutAssumeCapacity(x).found_existing) continue;
                 if (matchChar(x)) {

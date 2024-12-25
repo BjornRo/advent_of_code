@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 with open("in/d21t.txt") as f:
     raw_data = f.read().strip().splitlines()
 
 data = [(tuple(map(lambda x: int(x, 16), s)), int(s[:-1])) for s in raw_data]
 
-type Directions = Literal["^", "A", "<", "v", ">"]
+type Directions = Literal["^", "A", "<", "v", ">", ""]
 A = 10
 
 
@@ -18,11 +18,23 @@ class Point:
     row: int
     col: int
 
-    def add(self, other: Point) -> Point:
+    def __add__(self, other: Point) -> Point:
         return Point(self.row + other.row, self.col + other.col)
 
-    def sub(self, other: Point) -> Point:
+    def __sub__(self, other: Point) -> Point:
         return Point(self.row - other.row, self.col - other.col)
+
+    def horizontal(self) -> Directions:
+        return cast(Directions, ("<" if self.col < 0 else "" if self.col == 0 else ">") * abs(self.col))
+
+    def vertical(self) -> Directions:
+        return cast(Directions, ("^" if self.row < 0 else "" if self.row == 0 else "v") * abs(self.row))
+
+    def steps(self) -> Directions:
+        if self.row > 0:
+            return cast(Directions, self.vertical() + self.horizontal())
+        else:
+            return cast(Directions, self.horizontal() + self.vertical())
 
     def as_tuple(self) -> tuple[int, int]:
         return self.row, self.col
@@ -72,16 +84,49 @@ memo = {}
 
 # for data(keypad starts at A):  robots(1, "<A")
 
+pos = "A"
+next_pos = pos
+next_pos = "^"
+next_pos = "v"
+next_pos = "<"
+next_pos = ">"
 
+
+# too low 133093870844
 def robots(level: int, string: str) -> tuple[str, int]:
+    if (key := (level, string)) in memo:
+        return "", memo[key]
+
     if level == 0:
         return string, len(string)
 
-    pos = "A"
+    pos: Directions = "A"
     strlen = 0
     final_str = ""
 
-    for next_pos in string:
-        pass
-        # res = robots(level, target_index, target, keypad_pos, dir, steps + 1)
+    for next_pos in cast(list[Directions], string):
+        point = dirpad(next_pos) - dirpad(pos)
+        if point.row > 0:
+            next_steps = point.vertical() + point.horizontal()
+        else:
+            next_steps = point.horizontal() + point.vertical()
+        new_str, steps = robots(level - 1, next_steps + "A")
+        final_str += new_str
+        strlen += steps
+        pos = next_pos
+    memo[(level, string)] = strlen
+
     return final_str, strlen
+
+
+# <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
+# v<<A>>^A<A>AvA<^AA>A<vAAA>^A
+
+p = [
+    ("".join([(keypad[b] - keypad[a]).steps() + "A" for a, b in zip(x[:-1], x[1:])]))
+    for x in [[A] + [x for x in kp] for kp, num in data]
+]
+
+for x in p:
+    memo.clear()
+    print(robots(2, x))
