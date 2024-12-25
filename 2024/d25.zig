@@ -43,7 +43,7 @@ pub fn main() !void {
         try list.*.append(result.vector);
     }
 
-    try writer.print("Part 1: {d}", .{combinations(locks.items, keys.items)});
+    try writer.print("Part 1: {d}\n", .{combinations(locks.items, keys.items)});
 }
 
 fn combinations(locks: []Vec5, keys: []Vec5) u16 {
