@@ -122,12 +122,14 @@ def robots(level: int, string: str) -> tuple[str, int]:
 # <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
 # v<<A>>^A<A>AvA<^AA>A<vAAA>^A
 
+# <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A
+# v<A<AA>>^AAvA<^A>AAvA^Av<A>^A<A>Av<A>^A<A>Av<A<A>>^AAvA<^A>A
+
 for kp, num in data:
     new_kp = [A] + [x for x in kp]
     steps = ["".join([(keypad[b] - keypad[a]).steps() + "A" for a, b in zip(new_kp[:-1], new_kp[1:])])][0]
 
     memo.clear()
-    s, val = robots(1, steps)
+    s, val = robots(2, steps)
     print(s)
     print(val)
-    break

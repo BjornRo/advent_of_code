@@ -52,6 +52,25 @@ if isfile(input_file):
 with open(cookie_file) as f:
     cookie = {cookie_keyname: f.read().strip()}
 
+
+"""Fetch input"""
+in_result = requests.get(f"https://adventofcode.com/{year}/day/{day}/input", cookies=cookie)
+if not in_result.ok:
+    raise Exception(f"Request failed: {in_result.status_code}, {in_result.reason}, {in_result.text}")
+
+with open(input_file, "wt", newline="\n") as f:
+    f.write(in_result.text)
+
+if print_input:
+    for row in in_result.text.split("\n")[: max_rows + 1]:
+        print(row)
+
+in_cols = in_result.text.index("\n")
+in_rows = in_result.text.count("\n")
+
+print(f"Input shape: Rows: {in_rows}, Cols: {in_cols}")
+
+
 """Fetch example data"""
 ex_result = requests.get(f"https://adventofcode.com/{year}/day/{day}", cookies=cookie)
 if not ex_result.ok:
@@ -87,20 +106,4 @@ for i in range(1, 11):
         break
 
 
-"""Fetch input"""
-in_result = requests.get(f"https://adventofcode.com/{year}/day/{day}/input", cookies=cookie)
-if not in_result.ok:
-    raise Exception(f"Request failed: {in_result.status_code}, {in_result.reason}, {in_result.text}")
-
-with open(input_file, "wt", newline="\n") as f:
-    f.write(in_result.text)
-
-if print_input:
-    for row in in_result.text.split("\n")[: max_rows + 1]:
-        print(row)
-
-in_cols = in_result.text.index("\n")
-in_rows = in_result.text.count("\n")
-
 print(f"Example shape: Rows: {example_rows}, Cols: {example_cols}")
-print(f"Input shape: Rows: {in_rows}, Cols: {in_cols}")
