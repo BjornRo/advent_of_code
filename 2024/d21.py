@@ -114,7 +114,7 @@ def robots(level: int, string: str) -> tuple[str, int]:
         final_str += new_str
         strlen += steps
         pos = next_pos
-    memo[(level, string)] = strlen
+    # memo[(level, string)] = strlen
 
     return final_str, strlen
 
@@ -122,11 +122,12 @@ def robots(level: int, string: str) -> tuple[str, int]:
 # <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
 # v<<A>>^A<A>AvA<^AA>A<vAAA>^A
 
-p = [
-    ("".join([(keypad[b] - keypad[a]).steps() + "A" for a, b in zip(x[:-1], x[1:])]))
-    for x in [[A] + [x for x in kp] for kp, num in data]
-]
+for kp, num in data:
+    new_kp = [A] + [x for x in kp]
+    steps = ["".join([(keypad[b] - keypad[a]).steps() + "A" for a, b in zip(new_kp[:-1], new_kp[1:])])][0]
 
-for x in p:
     memo.clear()
-    print(robots(2, x))
+    s, val = robots(1, steps)
+    print(s)
+    print(val)
+    break
