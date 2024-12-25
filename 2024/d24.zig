@@ -15,7 +15,7 @@ const Grid = std.AutoArrayHashMap(u24, Gate);
 const InSignals = std.AutoArrayHashMap(u24, bool);
 const ChildToParent = std.AutoArrayHashMap(u24, myf.FixedBuffer(u24, 2));
 
-const Op = enum {
+const Op = enum(u2) {
     XOR,
     AND,
     OR,
@@ -30,25 +30,21 @@ const Op = enum {
     }
 };
 
-const Gate = struct {
+const Gate = packed struct {
     left: u24,
     right: u24,
     out: u24,
     op: Op,
 
     const Self = @This();
-    fn outValue(self: Self, signals: InSignals, grid: Grid, depth: u8) ?bool {
-        if (depth == 255) return null;
-        const left_val: ?bool =
-            if (signals.get(self.left)) |val| val else grid.get(self.left).?.outValue(signals, grid, depth + 1);
-        const right_val: ?bool =
-            if (signals.get(self.right)) |val| val else grid.get(self.right).?.outValue(signals, grid, depth + 1);
-        if (left_val == null or right_val == null) return null;
+    fn outValue(self: Self, signals: InSignals, grid: Grid) bool {
+        const left_val: bool = signals.get(self.left) orelse grid.get(self.left).?.outValue(signals, grid);
+        const right_val: bool = signals.get(self.right) orelse grid.get(self.right).?.outValue(signals, grid);
 
         return switch (self.op) {
-            .XOR => left_val.? != right_val.?,
-            .AND => left_val.? and right_val.?,
-            .OR => left_val.? or right_val.?,
+            .XOR => left_val != right_val,
+            .AND => left_val and right_val,
+            .OR => left_val or right_val,
         };
     }
 };
@@ -135,10 +131,10 @@ fn visitOrCluster(allocator: Allocator, grid: Grid, reverseGrid: ChildToParent, 
     }
 }
 
-fn part1(grid: Grid, signals: InSignals, zee: []const u24) !u64 {
+fn part1(grid: Grid, signals: InSignals, zee: []const u24) u64 {
     var number: u64 = 0;
     for (zee) |z| {
-        const val: u64 = if (grid.get(z).?.outValue(signals, grid, 0).?) 1 else 0;
+        const val: u64 = if (grid.get(z).?.outValue(signals, grid)) 1 else 0;
         number = number * 2 + val;
     }
     return number;
@@ -189,12 +185,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var buffer: [52_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -249,7 +242,7 @@ pub fn main() !void {
     const result = try part2(allocator, &grid, reverseGrid, zee.items[0]);
     defer allocator.free(result);
 
-    try writer.print("Part 1: {d}\nPart 2: {s}\n", .{ try part1(grid, signals, zee.items), result });
+    try writer.print("Part 1: {d}\nPart 2: {s}\n", .{ part1(grid, signals, zee.items), result });
 }
 
 test "casting" {
