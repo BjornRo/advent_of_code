@@ -16,9 +16,7 @@ const Key = struct { level: u8, path: []const u8 };
 
 const HashCtx = struct {
     pub fn hash(_: @This(), key: Key) u64 {
-        const level: u64 = @intCast(key.level);
-        const khash = std.hash.Murmur2_64.hash(key.path) + level;
-        return khash;
+        return std.hash.CityHash64.hash(key.path) + key.level;
     }
     pub fn eql(_: @This(), a: Key, b: Key) bool {
         return a.level == b.level and std.mem.eql(u8, a.path, b.path);
@@ -55,30 +53,23 @@ const Point = struct {
 };
 
 const A = 10;
-const keypad_str = [4]*const [3:0]u8{
+const keypad_matrix = [4]*const [3:0]u8{
     "789",
     "456",
     "123",
-    " 0A",
+    "B0A",
 };
 
-const rows: i8 = keypad_str.len;
-const cols: i8 = keypad_str[0].len;
+const rows: i8 = keypad_matrix.len;
+const cols: i8 = keypad_matrix[0].len;
 
 const keypad_map = blk: {
-    const X = 16; // just placeholder. Invalid case
-    const keypad_matrix = [_][3]i8{
-        .{ 7, 8, 9 },
-        .{ 4, 5, 6 },
-        .{ 1, 2, 3 },
-        .{ X, 0, A },
-    };
     const buttons = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A };
     var btn_coord: [buttons.len]Point = undefined;
     outer: for (buttons) |val| {
         for (0..rows) |i| {
             for (0..cols) |j| {
-                if (val == keypad_matrix[i][j]) {
+                if (val == std.fmt.charToDigit(keypad_matrix[i][j], 16) catch unreachable) {
                     btn_coord[val] = Point.init(i, j);
                     continue :outer;
                 }
@@ -138,7 +129,7 @@ fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set)
     while (stack.items.len != 0) {
         var state = stack.pop();
         const row, const col = state.position.cast();
-        var elem = keypad_str[row][col];
+        var elem = keypad_matrix[row][col];
         if (elem == state.to_visit[0]) {
             var new_path = state.path;
             try new_path.append('A');
@@ -167,8 +158,8 @@ fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set)
             const new_pos = state.position.addA(next_pos);
             if (0 <= new_pos.row and new_pos.row < rows and 0 <= new_pos.col and new_pos.col < cols) {
                 const next_row, const next_col = new_pos.cast();
-                elem = keypad_str[next_row][next_col];
-                if (elem == ' ') continue;
+                elem = keypad_matrix[next_row][next_col];
+                if (elem == 'B') continue;
                 var new_path = state.path;
                 try new_path.append(dir);
 
