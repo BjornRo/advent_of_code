@@ -7,12 +7,12 @@ from typing import Literal, cast
 with open("in/d21.txt") as f:
     raw_data = f.read().strip().splitlines()
 
-data = [(s, int(s[:-1])) for s in raw_data]
+data = [(tuple(map(lambda x: int(x, 16), s)), int(s[:-1])) for s in raw_data]
 
 type Directions = Literal["^", "A", "<", "v", ">", ""]
 A = 10
 
-n_robots = 25
+n_robots = 2
 
 
 @dataclass
@@ -29,21 +29,29 @@ class Point:
     def __eq__(self, other: Point) -> bool:
         return self.row == other.row and self.col == other.col
 
+    def horizontal(self) -> Directions:
+        return cast(Directions, ("<" if self.col < 0 else "" if self.col == 0 else ">") * abs(self.col))
+
+    def vertical(self) -> Directions:
+        return cast(Directions, ("^" if self.row < 0 else "" if self.row == 0 else "v") * abs(self.row))
+
+    def keypad(self, to: Point):
+        direction = to - self
+        if self.row == 3 and direction.col < 0:
+            return cast(Directions, direction.vertical() + direction.horizontal())
+        if self.col == 0 and direction.row > 0:
+            return cast(Directions, direction.horizontal() + direction.vertical())
+        if direction.col < 0:
+            return cast(Directions, direction.horizontal() + direction.vertical())
+        if direction.col > 0:
+            return cast(Directions, direction.vertical() + direction.horizontal())
+        return cast(Directions, direction.horizontal() + direction.vertical())
+
     def as_tuple(self) -> tuple[int, int]:
         return self.row, self.col
 
     def manhattan(self, other: Point) -> int:
         return abs(self.row - other.row) + abs(self.col - other.col)
-
-    def direction(self) -> str:
-        if self.col < 0:
-            return "<"
-        if self.col > 0:
-            return ">"
-        if self.row < 0:
-            return "^"
-        # if self.row > 0:
-        return "v"
 
 
 """
@@ -62,19 +70,20 @@ d21.DirPad.DOWN
 
 # v<A>^Av<<A>^A>AvA^Av<A<A>>^AAvA<^A>Av<A<A>>^AvA<^A>A
 
-keypadp = {
-    "7": Point(0, 0),
-    "8": Point(0, 1),
-    "9": Point(0, 2),
-    "4": Point(1, 0),
-    "5": Point(1, 1),
-    "6": Point(1, 2),
-    "1": Point(2, 0),
-    "2": Point(2, 1),
-    "3": Point(2, 2),
-    "0": Point(3, 1),
-    "A": Point(3, 2),
+keypad = {
+    7: Point(0, 0),
+    8: Point(0, 1),
+    9: Point(0, 2),
+    4: Point(1, 0),
+    5: Point(1, 1),
+    6: Point(1, 2),
+    1: Point(2, 0),
+    2: Point(2, 1),
+    3: Point(2, 2),
+    0: Point(3, 1),
+    A: Point(3, 2),
 }
+k = lambda a, b: keypad[b] - keypad[a]
 
 # .{ 7, 8, 9 },
 # .{ 4, 5, 6 },
@@ -142,8 +151,8 @@ def directions(start: str, to: str) -> str:
 
 
 def robots(level: int, string: str) -> tuple[str, int]:
-    if (key := (level, string)) in memo:
-        return "", memo[key]
+    # if (key := (level, string)) in memo:
+    #     return "", memo[key]
 
     if level == 0:
         return string, len(string)
@@ -179,8 +188,8 @@ def robots(level: int, string: str) -> tuple[str, int]:
         strlen += min_len
         pos = next_pos
 
-    if memo.get((level, string), 1 << 64) > strlen:
-        memo[(level, string)] = strlen
+    # if memo.get((level, string), 1 << 64) > strlen:
+    #     memo[(level, string)] = strlen
 
     return final_str, strlen
 
@@ -216,54 +225,17 @@ def robots(level: int, string: str) -> tuple[str, int]:
 # 66, 789
 # Part 1: 207806
 
-
-keypad = [
-    "789",
-    "456",
-    "123",
-    " 0A",
-]
-
-
 value = 0
 for kp, num in data:
+    new_kp = [A] + [x for x in kp]
+    steps = ["".join([(keypad[a]).keypad(keypad[b]) + "A" for a, b in zip(new_kp[:-1], new_kp[1:])])][0]
+
     memo.clear()
-    new_kp = [x for x in kp]
-
-    best_string = ""
-    min_len = 1 << 64
-
-    # start, vis, dirs, current_max_steps, to_visit
-    stack = [(Point(3, 2), "", "", keypadp["A"].manhattan(keypadp[new_kp[0]]), new_kp)]
-    while stack:
-        pos, vis, dirs, max_steps, to_visit = stack.pop()
-
-        row, col = pos.as_tuple()
-        elem = keypad[row][col]
-        if elem == to_visit[0]:
-            if len(to_visit) == 1:
-                s, val = robots(n_robots, dirs + "A")
-                if val < min_len:
-                    best_string = s
-                    min_len = val
-                continue
-            stack.append((pos, "", dirs + "A", keypadp[to_visit[0]].manhattan(keypadp[to_visit[1]]), to_visit[1:]))
-            continue
-        if elem in vis or len(vis) >= max_steps:
-            continue
-        new_vis = vis + elem
-
-
-        for p in Point(1, 0), Point(-1, 0), Point(0, 1), Point(0, -1):
-            new_pos = pos + p
-            crow, ccol = new_pos.as_tuple()
-            if 0 <= crow < len(keypad) and 0 <= ccol < len(keypad[0]):
-                elem = keypad[crow][ccol]
-                if elem != " ":
-                    stack.append((new_pos, new_vis, dirs + p.direction(), max_steps, to_visit))
-
-    print(best_string)
-    value += min_len * num
-    print(min_len)
+    s, val = robots(n_robots, steps)
+    print(steps)
+    print("".join(map(str, kp[:-1])))
+    print(s)
+    value += val * num
+    print(val)
     print()
 print(value)

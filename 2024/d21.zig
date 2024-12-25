@@ -296,7 +296,7 @@ pub fn main() !void {
     // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
     // const input = try myf.readFile(allocator, target_file);
     // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    const input = @embedFile("in/d21.txt");
+    const input = @embedFile("in/d21tt.txt");
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
@@ -328,7 +328,9 @@ fn robots(allocator: Allocator, code: []const u8, _: u8) !u64 {
         for (0..path.items.len - 1) |i| {
             // Move robot 1 to satisfy dir, Get movements robot 1 needs to move to kp dir
             const move_dir = DirPad.fromPos(path.items[i + 1].sub(path.items[i]));
+            // printa(move_dir);
             if (move_dir == robot_kp) { // If we are on the correct position, no need to move.
+                // prints("A");
                 cost += 1; // We do not need to move mover, just press A
                 continue;
             }
