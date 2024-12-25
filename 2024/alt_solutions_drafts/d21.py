@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Literal, cast
 
-with open("in/d21.txt") as f:
+with open("in/d21t.txt") as f:
     raw_data = f.read().strip().splitlines()
 
 data = [(s, int(s[:-1])) for s in raw_data]
@@ -45,23 +45,6 @@ class Point:
         # if self.row > 0:
         return "v"
 
-
-"""
-d21.DirPad.LEFT
-d21.DirPad.UP
-d21.DirPad.UP
-A
-d21.DirPad.RIGHT
-d21.DirPad.UP
-d21.DirPad.DOWN
-d21.DirPad.DOWN
-A
-d21.DirPad.DOWN
-"""
-
-
-# v<A>^Av<<A>^A>AvA^Av<A<A>>^AAvA<^A>Av<A<A>>^AvA<^A>A
-
 keypadp = {
     "7": Point(0, 0),
     "8": Point(0, 1),
@@ -76,16 +59,6 @@ keypadp = {
     "A": Point(3, 2),
 }
 
-# .{ 7, 8, 9 },
-# .{ 4, 5, 6 },
-# .{ 1, 2, 3 },
-# .{ X, 0, A },
-
-
-# print(k(A, 4))
-# print(k(A, 1).steps())
-# print(k(3, 7).steps())
-
 
 kp_row = 3
 kp_col = 2
@@ -95,7 +68,6 @@ dp_col = 2
 
 memo = {}
 
-# for data(keypad starts at A):  robots(1, "<A")
 
 pos = "A"
 next_pos = pos
@@ -104,11 +76,6 @@ next_pos = "v"
 next_pos = "<"
 next_pos = ">"
 
-
-# too low 133093870844, 153656148712678
-# too high 390073922586586
-#          512223765078440
-# 242337182910752
 
 
 def dirpad(key: str) -> str:
@@ -142,6 +109,8 @@ def directions(start: str, to: str) -> str:
 
 
 def robots(level: int, string: str) -> tuple[str, int]:
+    print(string);
+    breakpoint()
     if (key := (level, string)) in memo:
         return "", memo[key]
 
@@ -183,38 +152,6 @@ def robots(level: int, string: str) -> tuple[str, int]:
         memo[(level, string)] = strlen
 
     return final_str, strlen
-
-
-# <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
-# v<<A>>^A<A>AvA<^AA>A<vAAA>^A
-
-# <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A
-# v<A<AA>>^AAvA<^A>AAvA^Av<A>^A<A>Av<A>^A<A>Av<A<A>>^AAvA<^A>A
-
-# v<<A>>^AvA^Av<<A>>^AAv<A<A>>^AAvAA<^A>Av<A>^AA<A>Av<A<A>>^AAAvA<^A>A
-#
-# v<<A >>^A vA ^A v<<A>>^AA v<A <A>>^AA vAA <^A >A v<A >^AA <A >A v<A <A >>^AAAvA<^A>A
-
-# <v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A
-# .{ 7, 8, 9 },
-# .{ 4, 5, 6 },
-# .{ 1, 2, 3 },
-# .{ X, 0, A },
-
-
-# 72, 964
-# 70, 140
-# 70, 413
-# 68, 670
-# 74, 593
-
-
-# 70, 83
-# 74, 935
-# 72, 964
-# 76, 149
-# 66, 789
-# Part 1: 207806
 
 
 keypad = [
@@ -262,8 +199,8 @@ for kp, num in data:
                 if elem != " ":
                     stack.append((new_pos, new_vis, dirs + p.direction(), max_steps, to_visit))
 
-    print(best_string)
-    value += min_len * num
-    print(min_len)
-    print()
-print(value)
+#     print(best_string)
+#     value += min_len * num
+#     print(min_len)
+#     print()
+# print(value)

@@ -29,6 +29,9 @@ const Point = struct {
     fn eq(self: Self, o: Point) bool {
         return self.row == o.row and self.col == o.col;
     }
+    fn eqA(self: Self, o: [2]CT) bool {
+        return self.row == o[0] and self.col == o[1];
+    }
     fn toArr(self: Self) [2]CT {
         return .{ self.row, self.col };
     }
@@ -42,62 +45,25 @@ const Point = struct {
         const res = myf.manhattan(self.toArr(), p.toArr());
         return @intCast(res);
     }
-    fn deltaP(self: Self, p: Self) Point {
+    fn addA(self: Self, arr: [2]CT) Point {
+        return .{
+            .row = self.row + arr[0],
+            .col = self.col + arr[1],
+        };
+    }
+    fn add(self: Self, p: Self) Point {
+        return .{
+            .row = self.row + p.row,
+            .col = self.col + p.col,
+        };
+    }
+    fn sub(self: Self, p: Self) Point {
         return .{
             .row = self.row - p.row,
             .col = self.col - p.col,
         };
     }
-    fn delta(self: Self, p: Self) [2]CT {
-        return .{
-            self.row - p.row,
-            self.col - p.col,
-        };
-    }
 };
-
-const HashCtx = struct {
-    pub fn hash(_: @This(), key: Point) u32 {
-        return @bitCast([2]CT{ key.row, key.col });
-    }
-    pub fn eql(_: @This(), a: Point, b: Point, _: usize) bool {
-        return a.eq(b);
-    }
-};
-const Edges = std.ArrayHashMap(Point, Point, HashCtx, true);
-
-pub fn main() !void {
-    const start = time.nanoTimestamp();
-    const writer = std.io.getStdOut().writer();
-    defer {
-        const end = time.nanoTimestamp();
-        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
-        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
-    }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
-
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // std.debug.print("Input size: {d}\n\n", .{input.len});
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
-    // End setup
-
-    // std.debug.print("{s}\n", .{input});
-}
-
-const N = Point.init(-1, -1);
-const Ad = Point.init(0, 0);
-const U = Point.init(-1, 0);
-const D = Point.init(1, 0);
-const L = Point.init(0, -1);
-const R = Point.init(0, 1);
 
 const X = 16;
 const A = 10;
@@ -111,11 +77,6 @@ const keypad = [_][3]u8{
 
 const rows: i8 = keypad.len;
 const cols: i8 = keypad[0].len;
-
-fn inBounds(p: Point) bool {
-    return 0 <= p.row and p.row < rows and 0 <= p.col and p.col < cols and
-        !p.eq(Point.init(3, 0));
-}
 
 const map = blk: {
     const buttons = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A };
@@ -132,207 +93,129 @@ const map = blk: {
     break :blk btn_coord;
 };
 
-const DirPad = enum { LEFT, RIGHT, UP, DOWN, A };
+const CostMove = struct {
+    cost: u8, // including A's
+    end_dir: DirPad, // The movers ending pos
+};
+const DirPad = enum {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN,
+    A,
+    const Self = @This();
+    fn fromPos(p: Point) Self {
+        if (p.row == -1) return .UP;
+        if (p.row == 1) return .DOWN;
+        if (p.col == -1) return .LEFT;
+        if (p.col == 1) return .RIGHT;
+        unreachable;
+    }
+};
 const start_row = 3;
 const start_col = 2;
 
-test "example" {
-    const allocator = std.testing.allocator;
-
-    const input = @embedFile("in/d21t.txt");
-    const input_attributes = try myf.getInputAttributes(input);
-
-    var robot_cost_map = std.AutoArrayHashMap([2]DirPad, u8).init(allocator);
-    defer robot_cost_map.deinit();
-
-    var robot_cost_map_raw = std.AutoArrayHashMap([2]DirPad, u8).init(allocator);
-    defer robot_cost_map_raw.deinit();
-    try robot_cost_map_raw.put(.{ .LEFT, .RIGHT }, 2);
-    try robot_cost_map_raw.put(.{ .LEFT, .DOWN }, 1);
-    try robot_cost_map_raw.put(.{ .LEFT, .UP }, 2);
-    try robot_cost_map_raw.put(.{ .LEFT, .A }, 3);
-    try robot_cost_map_raw.put(.{ .RIGHT, .DOWN }, 1);
-    try robot_cost_map_raw.put(.{ .RIGHT, .UP }, 2);
-    try robot_cost_map_raw.put(.{ .RIGHT, .LEFT }, 2);
-    try robot_cost_map_raw.put(.{ .RIGHT, .A }, 1);
-    try robot_cost_map_raw.put(.{ .UP, .A }, 1);
-    try robot_cost_map_raw.put(.{ .UP, .DOWN }, 1);
-    try robot_cost_map_raw.put(.{ .DOWN, .A }, 2);
-    try robot_cost_map_raw.put(.{ .LEFT, .LEFT }, 0);
-    try robot_cost_map_raw.put(.{ .RIGHT, .RIGHT }, 0);
-    try robot_cost_map_raw.put(.{ .UP, .UP }, 0);
-    try robot_cost_map_raw.put(.{ .A, .A }, 0);
-    try robot_cost_map_raw.put(.{ .DOWN, .DOWN }, 0);
-    for (robot_cost_map_raw.keys(), robot_cost_map_raw.values()) |key, value| {
-        const left, const right = key;
-        try robot_cost_map.put(key, value);
-        try robot_cost_map.put(.{ right, left }, value);
-    }
-
-    var robot_kp_map = std.AutoArrayHashMap([2]DirPad, []const DirPad).init(allocator);
-    defer robot_kp_map.deinit();
-
-    try robot_kp_map.put(.{ .A, .LEFT }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT, DirPad.LEFT });
-    try robot_kp_map.put(.{ .A, .UP }, &[_]DirPad{DirPad.LEFT});
-    try robot_kp_map.put(.{ .A, .DOWN }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT });
-    try robot_kp_map.put(.{ .A, .RIGHT }, &[_]DirPad{DirPad.DOWN});
-    try robot_kp_map.put(.{ .A, .A }, &[_]DirPad{});
-    try robot_kp_map.put(.{ .LEFT, .A }, &[_]DirPad{ DirPad.RIGHT, DirPad.RIGHT, DirPad.UP });
-    try robot_kp_map.put(.{ .LEFT, .UP }, &[_]DirPad{ DirPad.RIGHT, DirPad.UP });
-    try robot_kp_map.put(.{ .LEFT, .DOWN }, &[_]DirPad{DirPad.RIGHT});
-    try robot_kp_map.put(.{ .LEFT, .RIGHT }, &[_]DirPad{ DirPad.RIGHT, DirPad.RIGHT });
-    try robot_kp_map.put(.{ .LEFT, .LEFT }, &[_]DirPad{});
-    try robot_kp_map.put(.{ .UP, .LEFT }, &[_]DirPad{ DirPad.DOWN, DirPad.LEFT });
-    try robot_kp_map.put(.{ .UP, .A }, &[_]DirPad{DirPad.RIGHT});
-    try robot_kp_map.put(.{ .UP, .RIGHT }, &[_]DirPad{ DirPad.DOWN, DirPad.RIGHT });
-    try robot_kp_map.put(.{ .UP, .DOWN }, &[_]DirPad{DirPad.DOWN});
-    try robot_kp_map.put(.{ .UP, .UP }, &[_]DirPad{});
-    try robot_kp_map.put(.{ .RIGHT, .A }, &[_]DirPad{DirPad.UP});
-    try robot_kp_map.put(.{ .RIGHT, .DOWN }, &[_]DirPad{DirPad.LEFT});
-    try robot_kp_map.put(.{ .RIGHT, .UP }, &[_]DirPad{ DirPad.LEFT, DirPad.UP });
-    try robot_kp_map.put(.{ .RIGHT, .LEFT }, &[_]DirPad{ DirPad.LEFT, DirPad.LEFT });
-    try robot_kp_map.put(.{ .RIGHT, .RIGHT }, &[_]DirPad{});
-    try robot_kp_map.put(.{ .DOWN, .A }, &[_]DirPad{ DirPad.RIGHT, DirPad.UP });
-    try robot_kp_map.put(.{ .DOWN, .RIGHT }, &[_]DirPad{DirPad.RIGHT});
-    try robot_kp_map.put(.{ .DOWN, .UP }, &[_]DirPad{DirPad.UP});
-    try robot_kp_map.put(.{ .DOWN, .LEFT }, &[_]DirPad{DirPad.LEFT});
-    try robot_kp_map.put(.{ .DOWN, .DOWN }, &[_]DirPad{});
-
-    var robot_kp_pos = std.ArrayHashMap(Point, DirPad, HashCtx, true).init(allocator);
-    defer robot_kp_pos.deinit();
-    try robot_kp_pos.put(Point.init(0, -1), .LEFT);
-    try robot_kp_pos.put(Point.init(0, 1), .RIGHT);
-    try robot_kp_pos.put(Point.init(-1, 0), .UP);
-    try robot_kp_pos.put(Point.init(1, 0), .DOWN);
-
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| {
-        var numeric: u16 = 0;
-
-        var move_mid: []const DirPad = undefined;
-
-        var robot_kp = DirPad.A;
-        var robot_mid = DirPad.A;
-        var cost: u32 = 0;
-        var curr_kp: u8 = A;
-        for (row, 0..) |c, k| {
-            const next_kp = try std.fmt.charToDigit(c, 16);
-            var path = try aStar(allocator, map[curr_kp], map[next_kp]);
-            defer path.deinit();
-            curr_kp = next_kp;
-
-            // First move keypad robot to the desired keypad location
-            for (0..path.items.len - 1) |i| {
-                const dir = path.items[i + 1].deltaP(path.items[i]);
-                // Move robot 1 to satisfy dir, Get movements robot 1 needs to move to kp dir
-                move_mid = robot_kp_map.get(.{ robot_kp, robot_kp_pos.get(dir).? }).?;
-                robot_kp = robot_kp_pos.get(dir).?; // Move kp robot, order does not matter
-                for (move_mid) |dp| {
-                    cost += robot_cost_map.get(.{ robot_mid, dp }).?;
-                    cost += 1; // Press A to move robot-kp
-                    robot_mid = dp;
-                }
-            }
-
-            // Robot_kp points on 'next_kp', move robot mid back to A to press keypad
-            cost += robot_cost_map.get(.{ robot_mid, .A }).?;
-            cost += 1; // Press A to press keypad
-            robot_mid = .A;
-            // Move robot_kp to A
-            move_mid = robot_kp_map.get(.{ robot_kp, .A }).?;
-            robot_kp = .A;
-            for (move_mid) |dp| {
-                cost += robot_cost_map.get(.{ robot_mid, dp }).?;
-                cost += 1; // Press A to move robot-kp
-                robot_mid = dp;
-            }
-            // Move robot_mid to A
-            cost += robot_cost_map.get(.{ robot_mid, .A }).?;
-            robot_mid = .A;
-            // Then press A
-            cost += 1; // Press A to move robot-kp
-            if (k == 1) {
-                // LDLA RRUA DA UA, LDA RUA LDLA RUA RA A
-                // printa(move_mid);
-                printa(robot_kp);
-                printa(cost);
-                myf.waitForInput();
-            }
-        }
-        printa(cost);
-        numeric = try std.fmt.parseInt(u16, row[0 .. row.len - 1], 10);
-        break;
-    }
+/// Move keypad robot from X -> Y, assuming mover is at A
+/// The mover should always reset to A to be able to move next robot
+fn getCostMove(from: DirPad, to: DirPad) CostMove {
+    return switch (from) {
+        .A => return switch (to) {
+            .LEFT => .{ .cost = 6, .end_dir = .LEFT },
+            .UP => .{ .cost = 4, .end_dir = .LEFT },
+            .DOWN => .{ .cost = 5, .end_dir = .LEFT },
+            .RIGHT => .{ .cost = 3, .end_dir = .DOWN },
+            else => unreachable,
+        },
+        .LEFT => return switch (to) {
+            .A => .{ .cost = 6, .end_dir = .UP },
+            .UP => .{ .cost = 5, .end_dir = .UP },
+            .DOWN => .{ .cost = 2, .end_dir = .RIGHT },
+            .RIGHT => .{ .cost = 3, .end_dir = .RIGHT },
+            else => unreachable,
+        },
+        .UP => return switch (to) {
+            .LEFT => .{ .cost = 5, .end_dir = .LEFT },
+            .A => .{ .cost = 2, .end_dir = .RIGHT },
+            .RIGHT => .{ .cost = 4, .end_dir = .DOWN },
+            .DOWN => .{ .cost = 3, .end_dir = .DOWN },
+            else => unreachable,
+        },
+        .RIGHT => return switch (to) {
+            .A => .{ .cost = 2, .end_dir = .UP },
+            .DOWN => .{ .cost = 4, .end_dir = .LEFT },
+            .UP => .{ .cost = 5, .end_dir = .LEFT },
+            .LEFT => .{ .cost = 5, .end_dir = .LEFT },
+            else => unreachable,
+        },
+        .DOWN => return switch (to) {
+            .A => .{ .cost = 5, .end_dir = .UP }, // .UP .RIGHT
+            .RIGHT => .{ .cost = 2, .end_dir = .RIGHT },
+            .UP => .{ .cost = 2, .end_dir = .UP },
+            .LEFT => .{ .cost = 4, .end_dir = .LEFT },
+            else => unreachable,
+        },
+    };
 }
 
-fn dirBounds(p: Point) bool {
-    return 0 <= p.row and p.row < 2 and 0 <= p.col and p.col < 3 and
-        !p.eq(Point.init(0, 0));
+fn getOnlyMoveCost(from: DirPad, to: DirPad) u8 {
+    return switch (from) {
+        .LEFT => return switch (to) {
+            .RIGHT => 2,
+            .DOWN => 1,
+            .UP => 2,
+            .A => 3,
+            .LEFT => 0,
+        },
+        .RIGHT => return switch (to) {
+            .LEFT => 2,
+            .DOWN => 1,
+            .UP => 2,
+            .A => 1,
+            .RIGHT => 0,
+        },
+        .UP => return switch (to) {
+            .A => 1,
+            .DOWN => 1,
+            .LEFT => 5,
+            .RIGHT => 4,
+            .UP => 0,
+        },
+        .DOWN => return switch (to) {
+            .A => 2,
+            .RIGHT => 2,
+            .UP => 2,
+            .LEFT => 4,
+            .DOWN => 0,
+        },
+        else => unreachable,
+    };
 }
-
-// const keypad = [_][3]u8{
-//     .{ 7, 8, 9 },
-//     .{ 4, 5, 6 },
-//     .{ 1, 2, 3 },
-//     .{ X, 0, A },
-// };
-// const dirpad = [_][3]u8{
-//     .{ N, U, Ad },
-//     .{ L, D, R },
-// };
-
-// Find sequence from A to 0
-// {0,-1}. -> r1 to R (LDALAA), D (RR)
-// Robot 1 need to move keypad D L L (keypad at 0) A -> R R U (keypad at A) A for 0
-// Robot 1 is now at A, keypad 0 // Robot 1 always resets to A to press keypad
-
-// Robot 2 needs to move L D A -> robot 1 moves to R.
-// then             move L A -> robot 1 moves to U
-// then             move A -> robot 1 moves to L
-
-// Robot 1 have Dirpad+A
-// Robot 2 have only dir pad
-// LDA LA A RRUA DA A LUA RA | LDLA RRUA DA UA | LDA RUA LDLA RUA RA A  DA UA LDLA RA RUA A A DA LUA RA
-//
-// LDA   move robot 2 to U D, move robot 1 to R
-// LA    move robot 2 to L, move robot 1 to D
-// A     move robot 2 move robot 1 to L
-// RRUA  move robot 2 to D R A, robot 1 moves keypad to 0
-// DA    move robot 2 to R, move robot 1 to D
-// A     robot 2, move robot 1 to R
-// LUA   move robot 2 to D U, move robot 1 to A
-// RA    move robot 2 to A, robot 1 presses A -> keypad 0  -> 18 steps for 0
-
-const dirpad = [_][3]u8{
-    .{ N, U, Ad },
-    .{ L, D, R },
-};
-
-const State = struct {
-    count: CT,
-    pos: Point,
-
-    const Self = @This();
-
-    fn cmp(_: void, a: Self, b: Self) std.math.Order {
-        if (a.count < b.count) return .lt;
-        if (a.count > b.count) return .gt;
-        return .eq;
-    }
-};
 
 fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) {
-    const MAX: CT = std.math.maxInt(CT);
-    const NULL = Point.init(-1, -1);
+    const Path = myf.FixedBuffer(Point, rows * cols);
+    const State = struct {
+        count: CT,
+        pos: Point,
+        prev_dir: Point,
+        path: Path,
+
+        const Self = @This();
+
+        fn cmp(_: void, a: Self, b: Self) std.math.Order {
+            if (a.count < b.count) return .lt;
+            if (a.count > b.count) return .gt;
+            return .eq;
+        }
+    };
+    const MAX: CT = comptime std.math.maxInt(CT);
+    const NULL_POINT = comptime Point.init(-1, -1);
 
     var g_score: [rows][cols]CT = undefined;
     var f_score: [rows][cols]CT = undefined;
-    var edges: [rows][cols]Point = undefined;
     for (0..rows) |i| {
         for (0..cols) |j| {
             g_score[i][j] = MAX;
             f_score[i][j] = MAX;
-            edges[i][j] = NULL;
         }
     }
 
@@ -343,44 +226,195 @@ fn aStar(allocator: Allocator, start: Point, goal: Point) !std.ArrayList(Point) 
 
     var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
     defer pqueue.deinit();
-    try pqueue.add(.{ .count = 0, .pos = start });
+    try pqueue.add(.{ .count = 0, .pos = start, .path = Path.init(), .prev_dir = NULL_POINT });
 
     while (pqueue.count() != 0) {
         const state = pqueue.remove();
 
         if (goal.eq(state.pos)) {
-            var curr = state.pos;
-            while (!edges[curr.r()][curr.c()].eq(NULL)) {
-                if (curr.eq(start)) {
-                    break;
-                }
-                try path.append(curr);
-                curr = edges[curr.r()][curr.c()];
-            }
+            var stpath = state.path;
             try path.append(start);
-            std.mem.reverse(Point, path.items);
+            for (stpath.getSlice()) |p| {
+                try path.append(p);
+            }
             break;
         }
 
-        for (myf.getNextPositions(state.pos.row, state.pos.col)) |next_coord| {
-            const next_pos = Point.initA(next_coord);
+        for (myf.getNeighborOffset(CT)) |next_dir_| {
+            const next_dir = Point.initA(next_dir_);
+            const next_pos = state.pos.add(next_dir);
             if (!inBounds(next_pos)) continue;
 
-            const tmp_g_score = g_score[state.pos.r()][state.pos.c()] + 1;
+            const row, const col = state.pos.cast();
+            const tmp_g_score = g_score[row][col] + 1 +
+                calcPenalty(state.prev_dir, next_dir, NULL_POINT, 100);
 
             const next_row, const next_col = next_pos.cast();
             if (g_score[next_row][next_col] != MAX and tmp_g_score >= f_score[next_row][next_col]) {
                 continue;
             }
-            if (g_score[next_row][next_col] > tmp_g_score) {
-                edges[next_row][next_col] = state.pos;
-            }
             g_score[next_row][next_col] = tmp_g_score;
+
             const new_f_score = tmp_g_score + next_pos.manhattan(goal);
             f_score[next_row][next_col] = new_f_score;
-            try pqueue.add(.{ .count = new_f_score, .pos = next_pos });
+            var new_state: State = .{ .count = new_f_score, .pos = next_pos, .path = state.path.copy(), .prev_dir = next_dir };
+            try new_state.path.append(next_pos);
+            try pqueue.add(new_state);
         }
     }
 
     return path;
+}
+
+fn inBounds(p: Point) bool {
+    return 0 <= p.row and p.row < rows and 0 <= p.col and p.col < cols and
+        !p.eq(Point.init(3, 0));
+}
+
+fn calcPenalty(prev_dir: Point, next_dir: Point, comptime NULL_POINT: Point, comptime penalty: CT) CT {
+    var pen = if (prev_dir.eq(NULL_POINT) or prev_dir.eq(next_dir)) 0 else penalty;
+    pen += if (prev_dir.eq(Point.init(0, 1)) or prev_dir.eq(Point.init(0, -1))) 0 else 1;
+    return pen;
+}
+
+pub fn main() !void {
+    const start = time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
+    defer {
+        const end = time.nanoTimestamp();
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
+        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
+    }
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+    // var buffer: [70_000]u8 = undefined;
+    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    // const allocator = fba.allocator();
+
+    // const filename = try myf.getAppArg(allocator, 1);
+    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    // const input = try myf.readFile(allocator, target_file);
+    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input = @embedFile("in/d21tt.txt");
+    const input_attributes = try myf.getInputAttributes(input);
+    // End setup
+
+    var sum: u64 = 0;
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    while (in_iter.next()) |row| {
+        sum += try robots(allocator, row, 2);
+    }
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ sum, 0 });
+}
+
+fn robots(allocator: Allocator, code: []const u8, _: u8) !u64 {
+    const numeric: u16 = try std.fmt.parseInt(u16, code[0 .. code.len - 1], 10);
+    var cost: u64 = 0;
+
+    var move_mid: CostMove = undefined;
+
+    var robot_kp = DirPad.A;
+    var robot_mid = DirPad.A;
+    var curr_kp: u8 = A;
+    for (code) |c| {
+        const next_kp = try std.fmt.charToDigit(c, 16);
+        var path = try aStar(allocator, map[curr_kp], map[next_kp]);
+        defer path.deinit();
+        curr_kp = next_kp;
+
+        // First move keypad robot to the desired keypad location
+        for (0..path.items.len - 1) |i| {
+            // Move robot 1 to satisfy dir, Get movements robot 1 needs to move to kp dir
+            const move_dir = DirPad.fromPos(path.items[i + 1].sub(path.items[i]));
+            // printa(move_dir);
+            if (move_dir == robot_kp) { // If we are on the correct position, no need to move.
+                // prints("A");
+                cost += 1; // We do not need to move mover, just press A
+                continue;
+            }
+            // If needs to move, then move back mover to A to move
+            move_mid = getCostMove(robot_kp, move_dir);
+            robot_kp = move_dir;
+            robot_mid = move_mid.end_dir;
+            cost += move_mid.cost;
+            cost += getOnlyMoveCost(robot_mid, .A);
+            robot_mid = .A;
+            cost += 1; // Press A
+        }
+
+        // robot_kp != .A here , move robot is on A, we need to press keypad!
+        // Move robot_kp to A
+        move_mid = getCostMove(robot_kp, .A);
+        robot_kp = .A;
+        robot_mid = move_mid.end_dir;
+        cost += move_mid.cost;
+        cost += getOnlyMoveCost(robot_mid, .A);
+        robot_mid = .A;
+        cost += 1; // Press A
+
+    }
+    std.debug.print("{d}, {d}\n", .{ cost, numeric });
+    return cost * numeric;
+}
+
+test "example" {
+    const allocator = std.testing.allocator;
+
+    const input = @embedFile("in/d21.txt");
+    const input_attributes = try myf.getInputAttributes(input);
+
+    var sum: u64 = 0;
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    while (in_iter.next()) |row| {
+        const numeric: u16 = try std.fmt.parseInt(u16, row[0 .. row.len - 1], 10);
+
+        var move_mid: CostMove = undefined;
+
+        var robot_kp = DirPad.A;
+        var robot_mid = DirPad.A;
+        var cost: u32 = 0;
+        var curr_kp: u8 = A;
+        for (row) |c| {
+            const next_kp = try std.fmt.charToDigit(c, 16);
+            var path = try aStar(allocator, map[curr_kp], map[next_kp]);
+            defer path.deinit();
+            curr_kp = next_kp;
+
+            // First move keypad robot to the desired keypad location
+            for (0..path.items.len - 1) |i| {
+                // Move robot 1 to satisfy dir, Get movements robot 1 needs to move to kp dir
+                const move_dir = DirPad.fromPos(path.items[i + 1].sub(path.items[i]));
+                if (move_dir == robot_kp) { // If we are on the correct position, no need to move.
+                    cost += 1; // We do not need to move mover, just press A
+                    continue;
+                }
+                // If needs to move, then move back mover to A to move
+                move_mid = getCostMove(robot_kp, move_dir);
+                robot_kp = move_dir;
+                robot_mid = move_mid.end_dir;
+                cost += move_mid.cost;
+                cost += getOnlyMoveCost(robot_mid, .A);
+                robot_mid = .A;
+                cost += 1; // Press A
+            }
+
+            // robot_kp != .A here , move robot is on A, we need to press keypad!
+            // Move robot_kp to A
+            move_mid = getCostMove(robot_kp, .A);
+            robot_kp = .A;
+            robot_mid = move_mid.end_dir;
+            cost += move_mid.cost;
+            cost += getOnlyMoveCost(robot_mid, .A);
+            robot_mid = .A;
+            cost += 1; // Press A
+
+        }
+        std.debug.print("{d}, {d}\n", .{ cost, numeric });
+        sum += cost * numeric;
+    }
+    prints("");
+    printa(sum);
 }

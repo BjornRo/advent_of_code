@@ -40,10 +40,9 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
             if (index >= size) return error.OutOfBounds;
             self.buf[index] = value;
         }
-        pub fn copy(self: Self) Self {
-            var new_buf = Self{ .len = self.len, .buf = undefined };
-            for (0..self.len) |i| new_buf.buf[i] = self.buf[i];
-            return new_buf;
+        pub fn contains(self: *Self, value: T) bool {
+            for (0..self.len) |i| if (self.buf[i] == value) return true;
+            return false;
         }
     };
 }

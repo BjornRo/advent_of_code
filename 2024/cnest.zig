@@ -4,6 +4,13 @@ const StringHashMap = std.StringHashMap;
 const str = []const u8;
 const print = myf.printAny;
 
+fn f(char: u8) []const u8 {
+    if (char == '0') {
+        return "abba";
+    }
+    return "bbabdd";
+}
+
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
@@ -29,6 +36,9 @@ pub fn main() !void {
     allocator.free(b);
     std.debug.print("{*}\n", .{&data});
     std.debug.print("{*}\n", .{&b});
+
+    print(f('0'));
+    print(f('1'));
 
     // print(@typeInfo(@TypeOf(myf.getNextPositions)).Fn.return_type.?);
     // print(myf.getNextPositions(i8, 3, 3));
