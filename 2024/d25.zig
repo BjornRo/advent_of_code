@@ -51,9 +51,7 @@ fn combinations(locks: []Vec5, keys: []Vec5) u16 {
     for (locks) |lock| {
         for (keys) |key| {
             const res: [5]bool = (lock + key) > Vec5{ 5, 5, 5, 5, 5 };
-            if (!myf.any(&res)) {
-                pairs += 1;
-            }
+            if (!myf.any(&res)) pairs += 1;
         }
     }
     return pairs;
@@ -62,22 +60,15 @@ fn combinations(locks: []Vec5, keys: []Vec5) u16 {
 fn parseSubMat(sub_mat: []const u8, delim: []const u8) struct { is_lock: bool, vector: Vec5 } {
     var vector: Vec5 = @splat(0);
 
-    var is_lock = false;
     var sub_mat_it = std.mem.tokenizeSequence(u8, sub_mat, delim);
+    const is_lock = sub_mat_it.next().?[0] == '#';
 
-    var first_row = false;
     var rows: u8 = 0;
     while (sub_mat_it.next()) |row| {
-        defer rows += 1;
-        if (!first_row) {
-            first_row = true;
-            is_lock = row[0] == '#';
-            continue;
-        }
-        var row_vec: Vec5 = undefined;
-        for (row, 0..) |c, i| row_vec[i] = c;
-
+        const row_vec = Vec5{ row[0], row[1], row[2], row[3], row[4] };
         vector += row_vec & Vec5{ 1, 1, 1, 1, 1 }; // "." ends with 0, "#" with 1 :)
+
+        rows += 1;
         if (rows == 5) break;
     }
     return .{ .is_lock = is_lock, .vector = vector };

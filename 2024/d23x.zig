@@ -15,33 +15,51 @@ const GraphValue = std.ArrayList(u16);
 const Graph = std.AutoHashMap(u16, GraphValue);
 
 fn stringToInt(str: String) u16 {
-    const value: u16 = @bitCast([2]u8{ str[0], str[1] });
-    return if (.big == endian) value else @byteSwap(value);
+    const b0: u16 = @intCast(str[0]);
+    const b1: u16 = @intCast(str[1]);
+    return (b0 << 8) | b1;
 }
 
 fn intToString(int: u16) [2]u8 {
-    const value = if (.big == endian) int else @byteSwap(int);
-    return @bitCast(value);
+    return .{ @truncate(int >> 8), @truncate(int) };
 }
 
 fn matchChar(value: u48) bool {
     var res = value;
-    for (0..4) |_| {
-        if ((res & 0xFF) == 't') {
-            return true;
-        }
+    for (0..3) |_| {
+        if ((res & 0xFF00) == 0x7400) return true;
         res >>= 16;
     }
     return false;
 }
 
-fn intToInt(key: [3]u16) u48 {
-    const value: u48 = @bitCast(key);
-    return if (.big == endian) value else @byteSwap(value);
+fn intArrToInt(key: [3]u16) u48 {
+    const b0: u48 = @intCast(key[0]);
+    const b1: u48 = @intCast(key[1]);
+    const b2: u48 = @intCast(key[2]);
+    return (b0 << 32) | (b1 << 16) | b2;
+}
+
+fn intToIntArr(key: u48) [3]u16 {
+    return .{ @truncate(key >> 32), @truncate(key >> 16), @truncate(key) };
+}
+
+test "conversions" {
+    const s0: []const u8 = "tc";
+    const s1: []const u8 = "kh";
+    const s2: []const u8 = "de";
+    const s3: []const u8 = "tt";
+    // const arr = .{ s0, s1, s2, s3 };
+    try expect(std.mem.eql(u8, s0, &intToString(stringToInt(s0))));
+    try expect(stringToInt(s0) < stringToInt("td"));
+
+    var iarr: [4]u16 = .{ stringToInt(s0), stringToInt(s1), stringToInt(s2), stringToInt(s3) };
+    printa(matchChar(intArrToInt(iarr[1..4].*)));
+    // printa(arr);
 }
 
 fn part1(allocator: Allocator, graph: Graph) !u16 {
-    var set = std.AutoHashMap(u48, void).init(allocator);
+    var set = std.AutoArrayHashMap(u48, void).init(allocator);
     try set.ensureTotalCapacity(graph.count() * graph.count());
     defer set.deinit();
 
@@ -54,14 +72,11 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
             for (neighbors[1..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue;
                 var group: [3]u16 = .{ item.key_ptr.*, n0, n1 };
-                // printa(group);
+                std.mem.sort(u16, &group, {}, std.sort.desc(u16));
+                const key = intArrToInt(group);
 
-                std.mem.sort(u16, &group, {}, std.sort.asc(u16));
-                const x = intToInt(group);
-                // printa(x);
-
-                if (set.getOrPutAssumeCapacity(x).found_existing) continue;
-                if (matchChar(x)) {
+                if (set.getOrPutAssumeCapacity(key).found_existing) continue;
+                if (matchChar(key)) {
                     sum += 1;
                     break;
                 }
@@ -108,9 +123,8 @@ pub fn main() !void {
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
-        const split = std.mem.indexOfScalar(u8, row, '-').?;
-        const node0 = stringToInt(row[0..split]);
-        const node1 = stringToInt(row[split + 1 ..]);
+        const node0 = stringToInt(row[0..2]);
+        const node1 = stringToInt(row[3..5]);
         var res = try graph.getOrPut(node0);
         if (!res.found_existing) res.value_ptr.* = try GraphValue.initCapacity(allocator, 15);
         res.value_ptr.*.appendAssumeCapacity(node1);

@@ -7,7 +7,7 @@ const DelimType = enum { CRLF, LF };
 pub fn FixedBuffer(comptime T: type, size: u16) type {
     return struct {
         buf: [size]T,
-        len: @TypeOf(size),
+        len: @TypeOf(size) = 0,
 
         const Self = @This();
 
@@ -526,7 +526,7 @@ pub fn waitForInput() void {
     }
 }
 
-pub fn joinStrings(allocator: Allocator, strings: []const []const u8, separator: []const u8) ![]const u8 {
+pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8) ![]const u8 {
     var list = std.ArrayList(u8).init(allocator);
 
     for (strings) |str| {
