@@ -52,7 +52,6 @@ const Point = struct {
     }
 };
 
-const A = 10;
 const keypad_matrix = [4]*const [3:0]u8{
     "789",
     "456",
@@ -62,23 +61,6 @@ const keypad_matrix = [4]*const [3:0]u8{
 
 const rows: i8 = keypad_matrix.len;
 const cols: i8 = keypad_matrix[0].len;
-
-const keypad_map = blk: {
-    const buttons = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A };
-    var btn_coord: [buttons.len]Point = undefined;
-    outer: for (buttons) |val| {
-        for (0..rows) |i| {
-            for (0..cols) |j| {
-                if (val == std.fmt.charToDigit(keypad_matrix[i][j], 16) catch unreachable) {
-                    btn_coord[val] = Point.init(i, j);
-                    continue :outer;
-                }
-            }
-        }
-    }
-
-    break :blk btn_coord;
-};
 
 fn dirpad(key: u8) []const u8 {
     return switch (key) {
@@ -99,10 +81,21 @@ fn direction(start: u8, to: u8) u8 {
     unreachable;
 }
 
-fn getManhattanDist(from_char: u8, to_char: u8) u8 {
-    const from_point = keypad_map[std.fmt.charToDigit(from_char, 16) catch unreachable];
-    const to_point = keypad_map[std.fmt.charToDigit(to_char, 16) catch unreachable];
-    return @intCast(from_point.manhattan(to_point));
+fn getKeypadPoint(char: u8) Point {
+    return switch (char) {
+        '7' => Point.init(0, 0),
+        '8' => Point.init(0, 1),
+        '9' => Point.init(0, 2),
+        '4' => Point.init(1, 0),
+        '5' => Point.init(1, 1),
+        '6' => Point.init(1, 2),
+        '1' => Point.init(2, 0),
+        '2' => Point.init(2, 1),
+        '3' => Point.init(2, 2),
+        '0' => Point.init(3, 1),
+        'A' => Point.init(3, 2),
+        else => unreachable,
+    };
 }
 
 fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set) !u64 {
@@ -110,7 +103,7 @@ fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set)
         position: Point,
         visited: VisitedBuf,
         path: PathBuf,
-        max_steps: u8,
+        max_steps: i8,
         to_visit: []const u8,
     };
 
@@ -119,10 +112,10 @@ fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set)
     var stack = std.ArrayList(State).init(allocator);
     defer stack.deinit();
     try stack.append(.{
-        .position = keypad_map[A],
+        .position = getKeypadPoint('A'),
         .visited = VisitedBuf.init(),
         .path = PathBuf.init(),
-        .max_steps = getManhattanDist('A', input_row[0]),
+        .max_steps = getKeypadPoint('A').manhattan(getKeypadPoint(input_row[0])),
         .to_visit = input_row,
     });
 
@@ -142,7 +135,7 @@ fn keypad(allocator: Allocator, input_row: []const u8, n_robots: u8, memo: *Set)
                 .position = state.position,
                 .visited = VisitedBuf.init(),
                 .path = new_path,
-                .max_steps = getManhattanDist(state.to_visit[0], state.to_visit[1]),
+                .max_steps = getKeypadPoint(state.to_visit[0]).manhattan(getKeypadPoint(state.to_visit[1])),
                 .to_visit = state.to_visit[1..],
             });
             continue;
@@ -247,9 +240,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
+    var buffer: [200_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
