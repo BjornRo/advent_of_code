@@ -115,9 +115,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
+    var buffer: [5_000_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -133,13 +133,11 @@ pub fn main() !void {
     while (in_iter.next()) |row| {
         const node0 = stringToInt(row[0..2]);
         const node1 = stringToInt(row[3..5]);
-        var res = try graph.getOrPut(node0);
-        if (!res.found_existing) res.value_ptr.*.len = 0;
-        try res.value_ptr.*.append(node1);
-        // Undirected
-        res = try graph.getOrPut(node1);
-        if (!res.found_existing) res.value_ptr.*.len = 0;
-        try res.value_ptr.*.append(node0);
+        inline for (.{ .{ node0, node1 }, .{ node1, node0 } }) |nodes| {
+            const res = try graph.getOrPut(nodes[0]);
+            if (!res.found_existing) res.value_ptr.*.len = 0;
+            try res.value_ptr.*.append(nodes[1]);
+        }
     }
 
     const p2 = try part2(allocator, graph);
