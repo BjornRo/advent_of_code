@@ -24,7 +24,6 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
         visited.clearRetainingCapacity();
 
         var secret = seed;
-        defer p1_sum += secret;
 
         var prev: i8 = @intCast(@mod(secret, 10));
         for (0..2000) |j| {
@@ -44,6 +43,7 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
             }
             prev = curr;
         }
+        p1_sum += secret;
     }
 
     var p2_val: u64 = 0;
@@ -57,11 +57,11 @@ fn solver(allocator: Allocator, seeds: []u64) ![2]u64 {
 fn prng(seed: u64) u64 {
     var secret = seed;
     secret ^= secret * 64;
-    secret = @mod(secret, 16777216);
+    secret = secret & 0xFFFFFF;
     secret ^= secret / 32;
-    secret = @mod(secret, 16777216);
+    secret = secret & 0xFFFFFF;
     secret ^= secret * 2048;
-    secret = @mod(secret, 16777216);
+    secret = secret & 0xFFFFFF;
     return secret;
 }
 
@@ -73,9 +73,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
+    var buffer: [1_000_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
