@@ -172,7 +172,6 @@ pub fn main() !void {
     var mid_point: usize = undefined;
     while (true) {
         mid_point = lower + (size - lower) / 2;
-        // std.debug.print("low: {d}, mid: {d}, hi: {d}\n", .{ lower, mid_point, size });
 
         map = try myf.initValueMatrix(allocator, @intCast(dimension), @intCast(dimension), false);
         defer myf.freeMatrix(allocator, map);
