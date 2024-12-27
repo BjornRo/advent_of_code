@@ -78,12 +78,12 @@ pub fn main() !void {
     });
 
     printa(min_value);
-    const res = try part2(allocator, matrix, .{
-        .count = 0,
-        .pos = ComplexT{ .re = @intCast(matrix.len - 2), .im = 1 },
-        .dir = ComplexT{ .re = 0, .im = 1 }, // Facing east
-    }, min_value);
-    printa(res);
+    // const res = try part2(allocator, matrix, .{
+    //     .count = 0,
+    //     .pos = ComplexT{ .re = @intCast(matrix.len - 2), .im = 1 },
+    //     .dir = ComplexT{ .re = 0, .im = 1 }, // Facing east
+    // }, min_value);
+    // printa(res);
 }
 
 fn part2(allocator: Allocator, matrix: []const []const u8, curr_state: State, min_value: u32) !u32 {
