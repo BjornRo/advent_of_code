@@ -23,7 +23,7 @@ const HashCtx = struct {
     }
 };
 
-const Set = std.HashMap(Key, u64, HashCtx, 95);
+const Set = std.HashMap(Key, u64, HashCtx, 90);
 
 const Point = struct {
     row: CT,
@@ -41,8 +41,7 @@ const Point = struct {
         return .{ self.row, self.col };
     }
     fn manhattan(self: Self, p: Self) CT {
-        const res = myf.manhattan(self.toArr(), p.toArr());
-        return @intCast(res);
+        return @intCast(myf.manhattan(self.toArr(), p.toArr()));
     }
     fn addA(self: Self, arr: [2]CT) Point {
         return .{
@@ -264,8 +263,8 @@ pub fn main() !void {
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
         const numeric: u64 = try std.fmt.parseInt(u64, row[0 .. row.len - 1], 10);
+        p2_sum += numeric * try keypad(allocator, row, 25, &memo); // P1 is essentially a lookup.
         p1_sum += numeric * try keypad(allocator, row, 2, &memo);
-        p2_sum += numeric * try keypad(allocator, row, 25, &memo);
     }
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1_sum, p2_sum });
