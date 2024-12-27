@@ -533,7 +533,7 @@ pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8
         for (str) |c| try list.append(c);
         for (separator) |c| try list.append(c);
     }
-    for (separator.len) |_| _ = list.pop();
+    list.items.len -= separator.len;
     return list.toOwnedSlice();
 }
 

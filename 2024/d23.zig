@@ -8,55 +8,46 @@ const prints = myf.printStr;
 const expect = std.testing.expect;
 const time = std.time;
 const Allocator = std.mem.Allocator;
-
-const HashCtx = struct {
-    pub fn hash(_: @This(), key: [3]String) u64 {
-        var result: u64 = 0;
-        inline for (0..6) |i| {
-            const row = i / 2;
-            const col = i % 2;
-            const char: u64 = @intCast(key[row][col]);
-            result |= char << (i * 8);
-        }
-        return result;
-    }
-
-    pub fn eql(_: @This(), a: [3]String, b: [3]String) bool {
-        for (a, b) |as, bs| {
-            if (!std.mem.eql(u8, as, bs)) return false;
-        }
-        return true;
-    }
-};
+const endian = @import("builtin").cpu.arch.endian();
 
 const String = []const u8;
-const GraphValue = std.ArrayList(String);
-const Graph = std.StringHashMap(GraphValue);
-const String3Set = std.AutoHashMap(u64, void);
+const GraphValue = myf.FixedBuffer(u16, 15);
+const Graph = std.AutoHashMap(u16, GraphValue);
 
-fn stringsToInt(key: [3]String) u64 {
-    return @bitCast([_]u8{ 0, 0, key[0][0], key[0][1], key[1][0], key[1][1], key[2][0], key[2][1] });
+fn stringToInt(str: String) u16 {
+    const b0: u16 = @intCast(str[0]);
+    const b1: u16 = @intCast(str[1]);
+    return (b0 << 8) | b1;
 }
 
-fn sortArrLessThan(_: void, a: String, b: String) bool {
-    for (a, b) |ca, ba| {
-        if (ca < ba) return true;
-        if (ca > ba) return false;
+fn intToString(int: u16) [2]u8 {
+    return .{ @truncate(int >> 8), @truncate(int) };
+}
+
+fn matchChar(value: u48) bool {
+    var res = value;
+    for (0..3) |_| {
+        if ((res & 0xFF00) == 0x7400) return true;
+        res >>= 16;
     }
     return false;
 }
 
-fn isConnected(graph: Graph, node0: String, node1: String) bool {
-    if (graph.get(node0)) |neighbors| {
-        for (neighbors.items) |neighbor| {
-            if (std.mem.eql(u8, neighbor, node1)) return true;
-        }
-    }
+fn intArrToInt(key: [3]u16) u48 {
+    const b0: u48 = @intCast(key[0]);
+    const b1: u48 = @intCast(key[1]);
+    const b2: u48 = @intCast(key[2]);
+    return (b0 << 32) | (b1 << 16) | b2;
+}
+
+fn isConnected(graph: Graph, node0: u16, node1: u16) bool {
+    var buf = graph.get(node0).?;
+    for (buf.getSlice()) |neighbor| if (neighbor == node1) return true;
     return false;
 }
 
 fn part1(allocator: Allocator, graph: Graph) !u16 {
-    var set = String3Set.init(allocator);
+    var set = std.AutoHashMap(u48, void).init(allocator);
     try set.ensureTotalCapacity(graph.count() * graph.count());
     defer set.deinit();
 
@@ -64,19 +55,15 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
 
     var git = graph.iterator();
     while (git.next()) |item| {
-        const neighbors = item.value_ptr.*.items;
-        for (neighbors) |n0| {
-            for (neighbors[1..]) |n1| {
+        const neighbors = item.value_ptr.*.getSlice();
+        for (neighbors, 1..) |n0, i| {
+            for (neighbors[i..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue;
-                var group: [3]String = .{ item.key_ptr.*, n0, n1 };
-                std.mem.sort(String, &group, {}, sortArrLessThan);
-                if (set.getOrPutAssumeCapacity(stringsToInt(group)).found_existing) continue;
-                for (group) |slice| {
-                    if (slice[0] == 't') {
-                        sum += 1;
-                        break;
-                    }
-                }
+                var group: [3]u16 = .{ item.key_ptr.*, n0, n1 };
+                std.mem.sort(u16, &group, {}, std.sort.desc(u16));
+                const key = intArrToInt(group);
+                if (set.getOrPutAssumeCapacity(key).found_existing) continue;
+                if (matchChar(key)) sum += 1;
             }
         }
     }
@@ -84,13 +71,11 @@ fn part1(allocator: Allocator, graph: Graph) !u16 {
 }
 
 fn part2(allocator: Allocator, graph: Graph) !String {
-    var map = std.StringHashMap(void).init(allocator);
+    var map = std.AutoHashMap(u16, void).init(allocator);
     try map.ensureTotalCapacity(15); // tested max len: 13
     defer map.deinit();
 
-    var conn_list = std.ArrayList(String).init(allocator);
-    defer conn_list.deinit();
-
+    var conn_list = myf.FixedBuffer(u16, 15).init();
     var max_conn: u8 = 0;
 
     var git = graph.iterator();
@@ -99,9 +84,9 @@ fn part2(allocator: Allocator, graph: Graph) !String {
         map.putAssumeCapacity(item.key_ptr.*, {});
 
         var conn: u8 = 0;
-        const neighbors = item.value_ptr.*.items;
-        outer: for (neighbors) |n0| {
-            for (neighbors[1..]) |n1| {
+        const neighbors = item.value_ptr.*.getSlice();
+        outer: for (neighbors, 1..) |n0, i| {
+            for (neighbors[i..]) |n1| {
                 if (!isConnected(graph, n0, n1)) continue :outer;
                 map.putAssumeCapacity(n0, {});
                 map.putAssumeCapacity(n1, {});
@@ -109,14 +94,17 @@ fn part2(allocator: Allocator, graph: Graph) !String {
             }
         }
         if (conn <= max_conn) continue;
-        conn_list.clearRetainingCapacity();
+        conn_list.len = 0;
         max_conn = conn;
         var m_it = map.keyIterator();
         while (m_it.next()) |node| try conn_list.append(node.*);
     }
 
-    std.mem.sort(String, conn_list.items, {}, sortArrLessThan);
-    return try myf.joinStrings(allocator, conn_list.items, ",");
+    std.mem.sort(u16, conn_list.getSlice(), {}, std.sort.asc(u16));
+    var list = myf.FixedBuffer([2]u8, 15).init();
+    for (conn_list.getSlice()) |item| try list.append(intToString(item));
+
+    return try myf.joinStrings(allocator, list.getSlice(), ",");
 }
 
 pub fn main() !void {
@@ -139,23 +127,18 @@ pub fn main() !void {
     // End setup
 
     var graph = Graph.init(allocator);
-    defer {
-        var git = graph.valueIterator();
-        while (git.next()) |v| v.deinit();
-        graph.deinit();
-    }
+    defer graph.deinit();
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
-        const split = std.mem.indexOfScalar(u8, row, '-').?;
-        const node0 = row[0..split];
-        const node1 = row[split + 1 ..];
+        const node0 = stringToInt(row[0..2]);
+        const node1 = stringToInt(row[3..5]);
         var res = try graph.getOrPut(node0);
-        if (!res.found_existing) res.value_ptr.* = GraphValue.init(allocator);
+        if (!res.found_existing) res.value_ptr.*.len = 0;
         try res.value_ptr.*.append(node1);
         // Undirected
         res = try graph.getOrPut(node1);
-        if (!res.found_existing) res.value_ptr.* = GraphValue.init(allocator);
+        if (!res.found_existing) res.value_ptr.*.len = 0;
         try res.value_ptr.*.append(node0);
     }
 
