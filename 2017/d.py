@@ -73,38 +73,40 @@ print(f"Input shape: Rows: {in_rows}, Cols: {in_cols}")
 
 
 """Fetch example data"""
-ex_result = requests.get(f"https://adventofcode.com/{year}/day/{day}", cookies=cookie)
-if not ex_result.ok:
-    raise Exception(f"Request failed: {ex_result.status_code}, {ex_result.reason}, {ex_result.text}")
+with open(example_file.replace("<#>", example_suffix), "wt", newline="\n") as f:
+    pass
+# ex_result = requests.get(f"https://adventofcode.com/{year}/day/{day}", cookies=cookie)
+# if not ex_result.ok:
+#     raise Exception(f"Request failed: {ex_result.status_code}, {ex_result.reason}, {ex_result.text}")
 
-text = ex_result.text
+# text = ex_result.text
 
-if text.count("<pre>") > 1:
-    try:
-        res = text.lower().index("example:")
-    except:
-        raise Exception("Could not find example")
-    text = text[res + 8 :]
+# if text.count("<pre>") > 1:
+#     try:
+#         res = text.lower().index("example:")
+#     except:
+#         raise Exception("Could not find example")
+#     text = text[res + 8 :]
 
-for i in range(1, 11):
-    start_pre = text.find("<pre>") + 5
-    end_pre = text.find("</pre>")
+# for i in range(1, 11):
+#     start_pre = text.find("<pre>") + 5
+#     end_pre = text.find("</pre>")
 
-    example_block = re.sub(r"<.*?>", "", text[start_pre:end_pre])
+#     example_block = re.sub(r"<.*?>", "", text[start_pre:end_pre])
 
-    example_cols = example_block.index("\n")
-    example_rows = example_block.count("\n")
+#     example_cols = example_block.index("\n")
+#     example_rows = example_block.count("\n")
 
-    example_block = example_block.replace("&gt;", ">").replace("&lt;", "<").replace("&amp;", "&").replace("&quot;", '"')
+#     example_block = example_block.replace("&gt;", ">").replace("&lt;", "<").replace("&amp;", "&").replace("&quot;", '"')
 
-    with open(example_file.replace("<#>", example_suffix * i), "wt", newline="\n") as f:
-        f.write(example_block)
+#     with open(example_file.replace("<#>", example_suffix * i), "wt", newline="\n") as f:
+#         f.write(example_block)
 
-    try:
-        more_ex = text.lower().index("example:")
-        text = text[more_ex + 8 :]
-    except:
-        break
+#     try:
+#         more_ex = text.lower().index("example:")
+#         text = text[more_ex + 8 :]
+#     except:
+#         break
 
 
-print(f"Example shape: Rows: {example_rows}, Cols: {example_cols}")
+# print(f"Example shape: Rows: {example_rows}, Cols: {example_cols}")
