@@ -2,6 +2,7 @@ import re
 import sys
 from datetime import UTC, datetime
 from os.path import isfile
+from pathlib import Path
 
 import requests
 
@@ -49,7 +50,7 @@ example_file = example_file.format(day)
 if isfile(input_file):
     raise Exception(f"File already exists: {input_file}")
 
-with open(cookie_file) as f:
+with open(Path(__file__).parent.parent / cookie_file) as f:
     cookie = {cookie_keyname: f.read().strip()}
 
 
