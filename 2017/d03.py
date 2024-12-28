@@ -1,7 +1,5 @@
 import math
 
-data = 368078
-
 
 def part1(number: int) -> int:
     width = math.ceil(number**0.5)
@@ -13,14 +11,12 @@ def part1(number: int) -> int:
 
 
 def part2(number: int) -> int:
-    width = math.ceil(number**0.5)
-    width_p2 = width + 2
-
-    matrix = [[0] * width_p2 for _ in range(width_p2)]
+    width = math.ceil(number**0.5) + 2  # +2 to prevent index out of bounds
+    matrix = [[0] * width for _ in range(width)]
 
     turn_left = complex(0, 1)
     dir = complex(0, 1)
-    pos = complex(width_p2 // 2, width_p2 // 2)
+    pos = complex(width // 2, width // 2)
 
     complex_to_int = lambda c: map(int, (c.real, c.imag))
     r, c = complex_to_int(pos)
@@ -45,6 +41,8 @@ def part2(number: int) -> int:
         else:
             pos += dir * complex(0, -1)
 
+
+data = 368078
 
 print(f"Part 1: {part1(data)}")
 print(f"Part 2: {part2(data)}")

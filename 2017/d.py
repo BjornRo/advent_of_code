@@ -74,7 +74,7 @@ print(f"Input shape: Rows: {in_rows}, Cols: {in_cols}")
 
 """Fetch example data"""
 with open(example_file.replace("<#>", example_suffix), "wt", newline="\n") as f:
-    pass
+    f.write("\n")
 # ex_result = requests.get(f"https://adventofcode.com/{year}/day/{day}", cookies=cookie)
 # if not ex_result.ok:
 #     raise Exception(f"Request failed: {ex_result.status_code}, {ex_result.reason}, {ex_result.text}")
