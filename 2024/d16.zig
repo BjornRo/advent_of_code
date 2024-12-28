@@ -10,26 +10,36 @@ const time = std.time;
 const Allocator = std.mem.Allocator;
 
 const CT = i16;
-const ComplexT = std.math.Complex(CT);
-const rot_right = ComplexT.init(0, -1);
-const rot_left = ComplexT.init(0, 1);
+const Point = struct {
+    row: CT,
+    col: CT,
 
-const HashCtx = struct {
-    pub fn hash(_: @This(), key: ComplexT) u32 {
-        return @bitCast([2]CT{ key.re, key.im });
+    const Self = @This();
+
+    fn init(row: CT, col: CT) Self {
+        return .{ .row = row, .col = col };
     }
-    pub fn eql(_: @This(), a: ComplexT, b: ComplexT, _: usize) bool {
-        return a.re == b.re and a.im == b.im;
+    fn initA(arr: [2]CT) Self {
+        return .{ .row = arr[0], .col = arr[1] };
+    }
+    fn cast(self: Self) [2]u16 {
+        return .{ @intCast(self.row), @intCast(self.col) };
+    }
+    fn eq(self: Self, o: Point) bool {
+        return self.row == o.row and self.col == o.col;
+    }
+    fn addA(self: *Self, arr: [2]CT) Point {
+        return .{
+            .row = self.row + arr[0],
+            .col = self.col + arr[1],
+        };
     }
 };
 
-const DistanceMap = std.ArrayHashMap(ComplexT, u32, HashCtx, true);
-const Set = std.ArrayHashMap(ComplexT, void, HashCtx, true);
-const rotations = [3]ComplexT{ ComplexT.init(1, 0), rot_left, rot_right };
 const State = struct {
     count: u32,
-    pos: ComplexT,
-    dir: ComplexT,
+    pos: Point,
+    dir: Point,
 
     const Self = @This();
 
@@ -40,8 +50,79 @@ const State = struct {
     }
 };
 
-fn complexToUInt(c: ComplexT) [2]u16 {
-    return .{ @bitCast(c.re), @bitCast(c.im) };
+fn dijkstra(allocator: Allocator, matrix: []const []const u8, start_state: State) !u32 {
+    var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
+    defer pqueue.deinit();
+
+    var visited = try myf.initValueMatrix(allocator, matrix.len, matrix[0].len, false);
+    defer myf.freeMatrix(allocator, visited);
+
+    try pqueue.add(start_state);
+    while (pqueue.items.len != 0) {
+        var state = pqueue.remove();
+
+        const row, const col = state.pos.cast();
+        if (matrix[row][col] == 'E') return state.count;
+
+        if (visited[row][col]) continue;
+        visited[row][col] = true;
+
+        for (myf.getNeighborOffset(CT)) |next_dir| {
+            const next_pos = state.pos.addA(next_dir);
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+
+            const new_dir = Point.initA(next_dir);
+            var new_cost = state.count + 1;
+            if (!new_dir.eq(state.dir)) new_cost += 1000;
+
+            try pqueue.add(.{
+                .count = new_cost,
+                .pos = next_pos,
+                .dir = new_dir,
+            });
+        }
+    }
+    unreachable;
+}
+
+fn part2(allocator: Allocator, matrix: []const []const u8, start_state: State, min_value: u32) !u32 {
+    var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
+    defer pqueue.deinit();
+
+    var visited = try myf.initValueMatrix(allocator, matrix.len, matrix[0].len, false);
+    defer myf.freeMatrix(allocator, visited);
+
+    var visited_nodes: u32 = 0;
+
+    try pqueue.add(start_state);
+    while (pqueue.items.len != 0) {
+        var state = pqueue.remove();
+
+        const row, const col = state.pos.cast();
+        if (visited[row][col]) continue;
+        visited[row][col] = true;
+        visited_nodes += 1;
+
+        for (myf.getNeighborOffset(CT)) |next_dir| {
+            const next_pos = state.pos.addA(next_dir);
+            const next_row, const next_col = next_pos.cast();
+            if (matrix[next_row][next_col] == '#') continue;
+
+            const new_dir = Point.initA(next_dir);
+            var new_cost = state.count + 1;
+            if (!new_dir.eq(state.dir)) new_cost += 1000;
+
+            const next_state: State = .{
+                .count = new_cost,
+                .pos = next_pos,
+                .dir = new_dir,
+            };
+            if (try dijkstra(allocator, matrix, next_state) <= min_value)
+                try pqueue.add(next_state);
+        }
+    }
+    return visited_nodes;
 }
 
 pub fn main() !void {
@@ -71,119 +152,15 @@ pub fn main() !void {
     const mat = try myf.initValueMatrix(allocator, 10, 10, false);
     defer myf.freeMatrix(allocator, mat);
 
-    const min_value = try dijkstra(allocator, matrix, .{
+    const start_state: State = .{
         .count = 0,
-        .pos = ComplexT{ .re = @intCast(matrix.len - 2), .im = 1 },
-        .dir = ComplexT{ .re = 0, .im = 1 }, // Facing east
-    });
+        .pos = Point.init(@intCast(matrix.len - 2), 1),
+        .dir = Point.init(0, 1),
+    };
 
-    printa(min_value);
-    // const res = try part2(allocator, matrix, .{
-    //     .count = 0,
-    //     .pos = ComplexT{ .re = @intCast(matrix.len - 2), .im = 1 },
-    //     .dir = ComplexT{ .re = 0, .im = 1 }, // Facing east
-    // }, min_value);
-    // printa(res);
-}
-
-fn part2(allocator: Allocator, matrix: []const []const u8, curr_state: State, min_value: u32) !u32 {
-    var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
-    defer pqueue.deinit();
-    try pqueue.add(curr_state);
-
-    var all_positions = Set.init(allocator);
-    defer all_positions.deinit();
-
-    var visited = Set.init(allocator);
-    defer visited.deinit();
-
-    while (pqueue.items.len != 0) {
-        var state = pqueue.remove();
-        try all_positions.put(state.pos, {});
-
-        if (finishSymbol(matrix, state.pos, 'E')) continue;
-        if (visited.get(state.pos) != null) continue;
-        try visited.put(state.pos, {});
-
-        for (rotations, 0..) |rot, i| {
-            const new_rotation = state.dir.mul(rot);
-            const next_step = state.pos.add(new_rotation);
-            if (!inBounds(matrix, next_step)) continue;
-
-            var new_cost: u32 = if (i == 0) 0 else 1000;
-            new_cost += state.count + 1;
-
-            const next_state = State{
-                .count = new_cost,
-                .pos = next_step,
-                .dir = new_rotation,
-            };
-
-            const res = try dijkstra(allocator, matrix, next_state);
-            if (res == std.math.maxInt(u32)) continue;
-
-            if (res <= min_value) {
-                try pqueue.add(next_state);
-            }
-        }
-    }
-    return @intCast(all_positions.count());
-}
-
-fn dijkstra(allocator: Allocator, matrix: []const []const u8, curr_state: State) !u32 {
-    var pqueue = PriorityQueue(State, void, State.cmp).init(allocator, undefined);
-    defer pqueue.deinit();
-    try pqueue.add(curr_state);
-
-    var visited = Set.init(allocator);
-    defer visited.deinit();
-    var distances = DistanceMap.init(allocator);
-    defer distances.deinit();
-
-    var min_distance: u32 = std.math.maxInt(u32);
-    while (pqueue.items.len != 0) {
-        var state = pqueue.remove();
-
-        if (finishSymbol(matrix, state.pos, 'E')) {
-            min_distance = state.count;
-            break;
-        }
-        if (visited.get(state.pos) != null) continue;
-        try visited.put(state.pos, {});
-
-        for (rotations, 0..) |rot, i| {
-            const new_rotation = state.dir.mul(rot);
-            const next_step = state.pos.add(new_rotation);
-            if (!inBounds(matrix, next_step)) continue;
-
-            var new_cost: u32 = if (i == 0) 0 else 1000;
-            new_cost += state.count + 1;
-
-            const next_cost = distances.get(next_step) orelse std.math.maxInt(u32);
-
-            if (new_cost < next_cost) {
-                try distances.put(next_step, new_cost);
-                try pqueue.add(.{
-                    .count = new_cost,
-                    .pos = next_step,
-                    .dir = new_rotation,
-                });
-            }
-        }
-    }
-    return min_distance;
-}
-
-fn inBounds(matrix: []const []const u8, complex: ComplexT) bool {
-    const row, const col = complexToUInt(complex);
-    return matrix[row][col] != '#';
-}
-
-fn finishSymbol(matrix: []const []const u8, complex: ComplexT, scalar: u8) bool {
-    const row, const col = complexToUInt(complex);
-    return matrix[row][col] == scalar;
-}
-
-pub fn eql(a: ComplexT, b: ComplexT) bool {
-    return a.re == b.re and a.im == b.im;
+    const p1_value = try dijkstra(allocator, matrix, start_state);
+    try writer.print(
+        "Part 1: {d}\nPart 2: {d}\n",
+        .{ p1_value, try part2(allocator, matrix, start_state, p1_value) },
+    );
 }
