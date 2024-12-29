@@ -18,8 +18,6 @@ for d in data:
                 graph[uid].append(x)
                 all_children.add(x)
 
-bottom_key = (set(graph) - all_children).pop()
-
 
 def part2(graph: Graph, weights: dict[str, int], bottom_key: str):
     def anomaly(graph: Graph, weights: dict[str, int], key: str, result: list[int]):
@@ -38,5 +36,6 @@ def part2(graph: Graph, weights: dict[str, int], bottom_key: str):
     return res[0]
 
 
+bottom_key = (set(graph) - all_children).pop()
 print(f"Part 1: {bottom_key}")
 print(f"Part 2: {part2(graph, weights, bottom_key)}")
