@@ -40,4 +40,4 @@ def part2(inputs: list[int]):
 
 
 print(f"Part 1: {part1(list(map(int, raw_data.split(","))))}")
-print(f"Part 2: {part2(list(bytearray(list(raw_data.encode()) + [17,31,73,47,23])))}")
+print(f"Part 2: {part2((list(raw_data.encode()) + [17,31,73,47,23]))}")
