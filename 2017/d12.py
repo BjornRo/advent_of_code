@@ -29,7 +29,7 @@ def solver(graph: dict[int, set[int]]) -> tuple[int, int]:
         if 0 in visited:
             pid0 = len(visited)
         for v in visited:
-            graph.pop(v)
+            del graph[v]
     return pid0, groups
 
 
