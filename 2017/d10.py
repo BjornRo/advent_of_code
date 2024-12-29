@@ -18,7 +18,7 @@ def part1(inputs: list[int]) -> int:
     return circ_list[0] * circ_list[1]
 
 
-def part2(inputs: list[int]):
+def part2(inputs: list[int]) -> str:
     circ_list = list(range(256))
     skip_size = 0
     curr_position = 0
