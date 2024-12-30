@@ -3,12 +3,6 @@ from d10 import part2 as knot_hash
 with open("in/d14.txt") as f:
     data = f.read().rstrip()
 
-matrix = [list(map(int, f"{int(knot_hash(f"{data}-{i}"), 16):0128b}")) for i in range(128)]
-
-
-def part1(matrix: list[list[int]]):
-    return sum(sum(x) for x in matrix)
-
 
 def part2(matrix: list[list[int]]):
     DIM = 128
@@ -34,5 +28,6 @@ def part2(matrix: list[list[int]]):
     return regions
 
 
-print(f"Part 1: {part1(matrix)}")
+matrix = [list(map(int, f"{int(knot_hash(f"{data}-{i}"), 16):0128b}")) for i in range(128)]
+print(f"Part 1: {sum(sum(x) for x in matrix)}")
 print(f"Part 2: {part2(matrix)}")
