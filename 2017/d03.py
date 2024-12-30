@@ -42,7 +42,8 @@ def part2(number: int) -> int:
             pos += dir * complex(0, -1)
 
 
-data = 368078
+with open("in/d03.txt") as f:
+    data = int(f.read().rstrip())
 
 print(f"Part 1: {part1(data)}")
 print(f"Part 2: {part2(data)}")
