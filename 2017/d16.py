@@ -7,19 +7,12 @@ with open("in/d16.txt") as f:
 
 def dancing(line: list[str]) -> list[str]:
     for i in data:
-        match i[0]:
-            case "s":  # spin
-                num = int(i[1:])
-                line = line[-num:] + line[:-num]
-            case "x":  # exchange
-                x, y = map(int, i[1:].split("/"))
-                line[x], line[y] = line[y], line[x]
-            case "p":  # partner
-                x, y = i[1:].split("/")
-                x_i, y_i = line.index(x), line.index(y)
-                line[x_i], line[y_i] = line[y_i], line[x_i]
-            case x:
-                raise Exception(x)
+        if i[0] == "s":
+            num = -int(i[1:])
+            line = line[num:] + line[:num]
+            continue
+        x, y = map(int if i[0] == "x" else line.index, i[1:].split("/"))
+        line[x], line[y] = line[y], line[x]
     return line
 
 
