@@ -53,10 +53,8 @@ async def solver():
     a_queue = asyncio.Queue()
     p1_result = await program(0, signal, send_queue=a_queue, recv_queue=a_queue)
 
-    signal = asyncio.Event()
     a_queue = asyncio.Queue()
     b_queue = asyncio.Queue()
-
     task_a = asyncio.create_task(program(0, signal, send_queue=b_queue, recv_queue=a_queue))
     task_b = asyncio.create_task(program(1, signal, send_queue=a_queue, recv_queue=b_queue))
 
