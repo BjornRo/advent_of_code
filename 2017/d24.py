@@ -1,4 +1,5 @@
 from collections import defaultdict
+from heapq import heappop, heappush
 from typing import cast
 
 type Key = tuple[int, int]
@@ -27,7 +28,7 @@ def bridge_builder(graph: Graph, bridge: Value, connector: int, bridges: list[Ke
 
     if not available:
         res = sum(a + b for a, b in bridge)
-        bridges.append((len(bridge), res))
+        heappush(bridges, (-len(bridge), -res))
         return res
 
     max_val = 0
@@ -41,4 +42,4 @@ def bridge_builder(graph: Graph, bridge: Value, connector: int, bridges: list[Ke
 
 bridges: list[Key] = []
 print(f"Part 1: {max(bridge_builder(graph, [x], x[1], bridges) for x in start)}")
-print(f"Part 2: {sorted(bridges, key=lambda x: (x[0], x[1]), reverse=True)[0][1]}")
+print(f"Part 2: {-heappop(bridges)[1]}")
