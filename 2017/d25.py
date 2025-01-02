@@ -44,7 +44,7 @@ position = 0
 tape: dict[int, int] = defaultdict(int)
 
 for _ in range(int("".join(x for x in data[0] if x.isdigit()))):
-    next_state, value, direction = state.get_zero() if tape[position] == 0 else state.get_one()
+    next_state, value, direction = state.get_one() if tape[position] else state.get_zero()
     tape[position] = value
     position += direction
     state = states[next_state]

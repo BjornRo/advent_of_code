@@ -26,7 +26,7 @@ def solver(steps: list[str]) -> tuple[int, int]:
             case x:
                 raise Exception(x)
         max_max = max(max_max, manhattan_half(start, child_process))
-    return max_max, manhattan_half(start, child_process)
+    return manhattan_half(start, child_process), max_max
 
 
 p1, p2 = solver(data)
