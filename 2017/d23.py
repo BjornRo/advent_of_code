@@ -24,21 +24,23 @@ def program(a: int):
                     pc += int(val) - 1
             case _:
                 raise Exception
+        if a == 1 and registers["f"] == 1:
+            break
         pc += 1
-    return muls
+
+    return muls, registers
 
 
 def part2():
     not_prime = lambda a: a < 2 or any(a % x == 0 for x in range(2, int(a**0.5) + 1))
-    b = 79 * 100 + 100000
-    c = b + 17000
+    registers = program(1)[1]
 
     h = 0
-    for i in range(b, c + 17, 17):
+    for i in range(registers["b"], registers["c"] + 1, 17):
         if not_prime(i):
             h += 1
     return h
 
 
-print(f"Part 1: {program(0)}")
+print(f"Part 1: {program(0)[0]}")
 print(f"Part 2: {part2()}")
