@@ -11,10 +11,8 @@ async def program(uid: int, send_queue: asyncio.Queue, recv_queue: asyncio.Queue
     registers["p"] = uid
     sent = 0
     pc = 0
-    while pc <= len(data):
-        ins = data[pc]
-        pc += 1
-        match ins:
+    while pc < len(data):
+        match data[pc]:
             case "set", reg, val:
                 registers[reg] = reg_or_val(registers, val)
             case "add", reg, val:
@@ -36,6 +34,7 @@ async def program(uid: int, send_queue: asyncio.Queue, recv_queue: asyncio.Queue
                     return recv_queue._queue[-1]  # type:ignore
                 value = await recv_queue.get()
                 registers[reg] = value
+        pc += 1
 
 
 async def solver():
