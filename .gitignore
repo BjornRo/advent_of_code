@@ -2,6 +2,7 @@ in/
 .zig-cache/
 zig-out/
 __pycache__/
+target/
 *.exe
 *.o
 *.obj
