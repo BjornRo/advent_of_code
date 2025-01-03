@@ -1,0 +1,14 @@
+[package]
+name = "aoc"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "d1"
+path = "d01.rs"
+
+[[bin]]
+name = "d2"
+path = "d02.rs"
+
+[dependencies]
