@@ -15,4 +15,9 @@ path = "d02.rs"
 name = "d3"
 path = "d03.rs"
 
+[[bin]]
+name = "d4"
+path = "d04.rs"
+
 [dependencies]
+regex = "1.11.1"

@@ -2,7 +2,7 @@ use regex::Regex;
 use std::{collections::HashMap, fs};
 
 fn main() -> std::io::Result<()> {
-    let contents = fs::read_to_string("in/d03.txt")?;
+    let contents = fs::read_to_string("in/d04.txt")?;
 
     let re = Regex::new(r"#(\d+)[\s@]+(\d+),(\d+)[\s:]+(\d+)x(\d+)").unwrap();
 
