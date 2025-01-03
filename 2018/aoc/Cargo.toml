@@ -19,6 +19,14 @@ path = "d03.rs"
 name = "d4"
 path = "d04.rs"
 
+[[bin]]
+name = "d5"
+path = "d05.rs"
+
+[[bin]]
+name = "d6"
+path = "d06.rs"
+
 [dependencies]
 chrono = "0.4.39"
 regex = "1.11.1"
