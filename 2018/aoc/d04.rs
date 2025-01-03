@@ -68,5 +68,3 @@ fn main() -> std::io::Result<()> {
     println!("Part 2: {}", p2_guard.0 * p2_guard.1);
     Ok(())
 }
-
-// 160326 too high
