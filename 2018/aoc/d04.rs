@@ -1,41 +1,72 @@
+use chrono::{NaiveDateTime, TimeZone, Timelike, Utc};
 use regex::Regex;
 use std::{collections::HashMap, fs};
 
 fn main() -> std::io::Result<()> {
     let contents = fs::read_to_string("in/d04.txt")?;
 
-    let re = Regex::new(r"#(\d+)[\s@]+(\d+),(\d+)[\s:]+(\d+)x(\d+)").unwrap();
+    let re = Regex::new(r"\[([0-9\-\s:]+)\].+(#\d+|falls|wakes)").unwrap();
 
-    let mut grid: HashMap<(u16, u16), Vec<u16>> = HashMap::new();
-    let mut overlaps: HashMap<u16, bool> = HashMap::new();
-
-    for [id, col, row, width, height] in re
+    let mut partial_parsed = re
         .captures_iter(&contents)
-        .map(|c| c.extract().1.map(|x| x.parse::<u16>().unwrap()))
-    {
-        overlaps.insert(id, false);
-        for i in row..row + height {
-            for j in col..col + width {
-                let value = grid.entry((i, j)).or_insert_with(Vec::new);
-                value.push(id);
-                if value.len() >= 2 {
-                    for k in value {
-                        overlaps.insert(*k, true);
-                    }
+        .map(|c| {
+            let [time, rest] = c.extract().1;
+
+            let date = NaiveDateTime::parse_from_str(time, "%Y-%m-%d %H:%M").unwrap();
+            let absolute_time = date
+                .and_utc()
+                .signed_duration_since(Utc.with_ymd_and_hms(0, 1, 1, 0, 0, 0).unwrap())
+                .num_minutes() as u64;
+
+            (absolute_time, date.minute(), rest)
+        })
+        .collect::<Vec<(u64, u32, &str)>>();
+    partial_parsed.sort_by(|a, b| a.0.cmp(&b.0));
+
+    type GuardID = u64;
+    type TotalAsleep = u32;
+    type Minute = u64;
+    type Counter = HashMap<Minute, u8>;
+    let mut guards: HashMap<GuardID, (TotalAsleep, Counter)> = HashMap::new();
+
+    let mut guard_id: u64 = partial_parsed[0].2[1..].parse().unwrap();
+    let mut asleep_time = 0;
+
+    for (_, minute, rest) in &partial_parsed[1..] {
+        match rest.chars().nth(0).unwrap() {
+            'f' => asleep_time = *minute,
+            'w' => {
+                let entry = guards.entry(guard_id).or_insert((0, HashMap::new()));
+                entry.0 += *minute - asleep_time;
+                for i in asleep_time..*minute {
+                    *entry.1.entry(i as u64).or_insert(0) += 1;
                 }
             }
+            _ => guard_id = rest[1..].parse().unwrap(),
         }
     }
 
-    let p1_res = grid.values().into_iter().filter(|v| v.len() >= 2).count();
-    let p2_res = overlaps
+    let p1_guard = guards
         .iter()
-        .filter(|(_, v)| !*v)
-        .map(|(k, _)| k)
-        .last()
+        .map(|(guard_id, (total, inner_map))| {
+            let minute = inner_map.iter().max_by_key(|item| item.1).unwrap().0;
+            (guard_id, minute, total)
+        })
+        .max_by_key(|item| item.2)
         .unwrap();
 
-    println!("Part 1: {}", p1_res);
-    println!("Part 2: {}", p2_res);
+    let p2_guard = guards
+        .iter()
+        .map(|(guard_id, (_, inner_map))| {
+            let (time, count) = inner_map.iter().max_by_key(|item| item.1).unwrap();
+            (guard_id, time, count)
+        })
+        .max_by_key(|item| item.2)
+        .unwrap();
+
+    println!("Part 1: {}", p1_guard.0 * p1_guard.1);
+    println!("Part 2: {}", p2_guard.0 * p2_guard.1);
     Ok(())
 }
+
+// 160326 too high
