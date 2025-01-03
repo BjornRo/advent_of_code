@@ -27,6 +27,10 @@ path = "d05.rs"
 name = "d6"
 path = "d06.rs"
 
+[[bin]]
+name = "d7"
+path = "d07.rs"
+
 [dependencies]
 chrono = "0.4.39"
 regex = "1.11.1"
