@@ -32,7 +32,7 @@ fn part1(
             stack.push(step);
         }
     }
-    return visited.into_iter().collect::<String>();
+    visited.into_iter().collect::<String>()
 }
 
 #[derive(PartialEq, Clone)]
@@ -110,7 +110,7 @@ fn part2(
             .collect::<Vec<Task>>();
         seconds += 1;
     }
-    return seconds;
+    seconds
 }
 
 fn main() -> std::io::Result<()> {

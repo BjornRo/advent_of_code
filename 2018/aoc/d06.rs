@@ -21,9 +21,9 @@ impl Matrix {
         }
     }
 
-    fn set(&mut self, i: usize, j: usize, value: Option<usize>) {
-        if i < self.rows && j < self.cols {
-            let index = i * self.cols + j;
+    fn set(&mut self, i: i32, j: i32, value: Option<usize>) {
+        if 0 <= i && i < self.rows as i32 && 0 <= j && j < self.cols as i32 {
+            let index = i as usize * self.cols + j as usize;
             self.data[index] = value;
         }
     }
@@ -57,7 +57,7 @@ fn floodfill(matrix: &Matrix, point: (usize, usize), id: usize) -> Option<usize>
         }
     }
 
-    return Some(visited.len());
+    Some(visited.len())
 }
 
 fn main() -> std::io::Result<()> {
@@ -105,7 +105,7 @@ fn main() -> std::io::Result<()> {
                 .cloned()
                 .collect();
             if result.len() == 1 {
-                matrix.set(i, j, Some(result[0].0));
+                matrix.set(i as i32, j as i32, Some(result[0].0));
             }
         }
     }
