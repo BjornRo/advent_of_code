@@ -79,7 +79,6 @@ fn dfs(
 
 fn main() -> std::io::Result<()> {
     let content = fs::read_to_string("in/d10.txt")?;
-
     let re = Regex::new(r"<(.*)>.*<(.*)>").unwrap();
 
     let points: Vec<Point> = re
