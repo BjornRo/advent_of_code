@@ -22,16 +22,16 @@ fn solver(mut state: Vec<u8>, map: &[u8; 32], iterations: u64, sensitivity: u8) 
     for i in 0..iterations {
         next_state.clear();
 
-        let mut one = false;
+        let mut first_one_generated = false;
         let mut plot: usize = 0;
         for j in 0..state.len() {
             plot |= state[j] as usize;
             let result = map[plot];
-            if !one {
+            if !first_one_generated {
                 if result == 1 {
-                    offset += j as isize - 2;
-                    one = true;
+                    first_one_generated = true;
                     next_state.push(result);
+                    offset += j as isize - 2;
                 }
             } else {
                 next_state.push(result);

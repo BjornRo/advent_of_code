@@ -68,3 +68,42 @@ fn main() -> std::io::Result<()> {
     println!("Part 2: {},{},{}", p2x, p2y, kernel);
     Ok(())
 }
+
+#[allow(dead_code)]
+fn summed_area_table(serial_num: usize) {
+    // https://www.reddit.com/r/adventofcode/comments/a53r6i/2018_day_11_solutions/ebjogd7/
+    // Just implementing to better understand this data structure. Brute force terminates in 11secs.
+    let mut mat = [[0; DIMENSION + 1]; DIMENSION + 1];
+    for row in 1..=DIMENSION {
+        for col in 1..=DIMENSION {
+            let rack_id = row + 10;
+            let power_level = rack_id * col + serial_num;
+            let fuel_cell = (((power_level * rack_id) / 100) % 10) as isize - 5;
+            let rect_sum = mat[row - 1][col] + mat[row][col - 1] - mat[row - 1][col - 1];
+            mat[row][col] = fuel_cell + rect_sum;
+        }
+    }
+
+    let mut max_power: isize = 0;
+    let mut best_kernel: usize = 0;
+    let mut coord: (usize, usize) = (0, 0);
+    for i in 1..=DIMENSION {
+        for row in i..=DIMENSION {
+            for col in i..=DIMENSION {
+                let total =
+                    mat[row][col] - mat[row - i][col] - mat[row][col - i] + mat[row - i][col - i];
+                if total > max_power {
+                    max_power = total;
+                    best_kernel = i;
+                    coord = (row, col);
+                }
+            }
+        }
+    }
+    println!(
+        "{},{},{}",
+        coord.0 - best_kernel + 1,
+        coord.1 - best_kernel + 1,
+        best_kernel
+    );
+}
