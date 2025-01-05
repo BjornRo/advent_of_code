@@ -68,20 +68,3 @@ fn main() -> std::io::Result<()> {
     println!("Part 2: {},{},{}", p2x, p2y, kernel);
     Ok(())
 }
-
-// fn part2(matrix: &Matrix) -> ((usize, usize), usize) {
-//     let mut max_power: isize = 0;
-//     let mut best_kernel: usize = 0;
-//     let mut coord: (usize, usize) = (0, 0);
-
-//     let results: Vec<(isize, (usize, usize), usize)> = (1..=DIMENSION)
-//         .into_par_iter()
-//         .map(|k| {
-//             let (power, c) = scanner(matrix, k);
-//             (power, c, k)
-//         })
-//         .collect();
-//     println!("{:?}", results);
-
-//     (coord, best_kernel)
-// }
