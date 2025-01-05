@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::fs;
 
 fn str_to_u8(s: &str) -> u8 {
     s.chars()
@@ -8,12 +8,7 @@ fn str_to_u8(s: &str) -> u8 {
         .fold(0, |acc, (i, c)| acc | (c << i))
 }
 
-fn solver(
-    mut state: Vec<u8>,
-    map: &HashMap<u8, u8>,
-    iterations: u64,
-    sensitivity: u8,
-) -> (isize, isize) {
+fn solver(mut state: Vec<u8>, map: &[u8; 32], iterations: u64, sensitivity: u8) -> (isize, isize) {
     let mut next_state: Vec<u8> = vec![];
     let mut p1: isize = 0;
 
@@ -28,10 +23,10 @@ fn solver(
         next_state.clear();
 
         let mut one = false;
-        let mut plot: u8 = 0;
+        let mut plot: usize = 0;
         for j in 0..state.len() {
-            plot |= state[j];
-            let result = *map.get(&plot).unwrap_or(&0); // unwrap_or for testdata
+            plot |= state[j] as usize;
+            let result = map[plot];
             if !one {
                 if result == 1 {
                     offset += j as isize - 2;
@@ -46,7 +41,7 @@ fn solver(
         }
         // Push out the last bits
         for _ in 0..3 {
-            next_state.push(*map.get(&plot).unwrap_or(&0));
+            next_state.push(map[plot]);
             plot <<= 1;
             plot &= 31;
         }
@@ -89,13 +84,11 @@ fn main() -> std::io::Result<()> {
         .map(|c| (c == '#') as u8)
         .collect();
 
-    let map: HashMap<u8, u8> = mappings
-        .split("\n")
-        .map(|r| {
-            let (a, b) = r.split_once(" => ").unwrap();
-            (str_to_u8(a), (b == "#") as u8)
-        })
-        .collect();
+    let mut map = [0 as u8; 32];
+    mappings.split("\n").for_each(|r| {
+        let (a, b) = r.split_once(" => ").unwrap();
+        map[str_to_u8(a) as usize] = (b == "#") as u8;
+    });
 
     let (p1, p2) = solver(init_state, &map, 50000000000, 2);
     println!("Part 1: {}", p1);
