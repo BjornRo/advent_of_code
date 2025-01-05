@@ -13,7 +13,7 @@ fn scanner(matrix: &Matrix, kernel_size: usize) -> (isize, (usize, usize)) {
             let mut total_power = 0 as isize;
             for xk in x..x + kernel_size {
                 for yk in y..y + kernel_size {
-                    total_power += matrix[xk][yk] as isize;
+                    total_power += matrix[xk][yk];
                 }
             }
             if total_power > max_power {
