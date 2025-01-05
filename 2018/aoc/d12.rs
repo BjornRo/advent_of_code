@@ -54,6 +54,7 @@ fn part2(mut state: Vec<u8>, map: HashMap<u8, u8>, iterations: u64) {
     let mut next_state: Vec<u8> = vec![];
 
     let mut last_value: isize = 0;
+    let mut last_delta: isize = 0;
 
     let mut offset: isize = 0;
     for _i in 0..iterations {
@@ -90,8 +91,18 @@ fn part2(mut state: Vec<u8>, map: HashMap<u8, u8>, iterations: u64) {
             .enumerate()
             .map(|(i, &e)| if e == 1 { i as isize + offset } else { 0 })
             .sum();
-        println!("{} {:?}", _i, result - last_value);
+        let delta = result - last_value;
+        println!(
+            "{} {:?} {} {}",
+            _i,
+            result - last_value,
+            result,
+            delta == last_delta
+        );
+
+        std::thread::sleep(std::time::Duration::from_millis(150));
         last_value = result;
+        last_delta = delta;
     }
     let result: isize = state
         .iter()
