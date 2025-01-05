@@ -1,10 +1,14 @@
 #[allow(unused_imports)]
+use regex::Regex;
+#[allow(unused_imports)]
 use std::{collections::HashMap, collections::VecDeque, fs};
 
 #[allow(unused_mut)]
 #[allow(unused_variables)]
 fn main() -> std::io::Result<()> {
-    let value: usize = fs::read_to_string("in/d10.txt")?.parse().unwrap();
+    let content = fs::read_to_string("in/d10.txt")?;
+
+    let re = Regex::new(r"<(.*)>.*<(.*)>").unwrap();
 
     let points: Vec<Point> = re
         .captures_iter(&content)

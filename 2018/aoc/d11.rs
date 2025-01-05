@@ -1,4 +1,3 @@
-use rayon::prelude::*;
 use std::fs;
 
 const DIMENSION: usize = 300;
@@ -27,7 +26,6 @@ fn scanner(matrix: &Matrix, kernel_size: usize) -> (isize, (usize, usize)) {
 
 fn part2(matrix: &Matrix) -> ((usize, usize), usize) {
     let results: Vec<(isize, (usize, usize), usize)> = (1..=DIMENSION)
-        .into_par_iter()
         .map(|k| {
             let (power, c) = scanner(matrix, k);
             (power, c, k)
@@ -46,6 +44,7 @@ fn part2(matrix: &Matrix) -> ((usize, usize), usize) {
     }
     (coord, best_kernel)
 }
+
 fn main() -> std::io::Result<()> {
     let serial_num: usize = fs::read_to_string("in/d11.txt")?
         .trim_end()
