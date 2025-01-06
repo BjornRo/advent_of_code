@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 #[allow(unused_imports)]
 use std::collections::{BinaryHeap, HashMap, HashSet};
 #[allow(unused_imports)]
-use std::fs;
+use std::{fs, io};
 
 type Position = (i8, i8);
 // Order is important, most important to least (rules of the puzzle)
@@ -74,74 +74,66 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                 continue;
             }
 
-            let unit_positions: HashSet<Position> = units
+            let targets: Vec<&Unit> = units
                 .iter()
-                .filter(|u| u.alive())
-                .map(|u| u.position)
-                .collect();
-            let mut targets: Vec<&mut Unit> = units
-                .iter_mut()
                 .filter(|o| o.r#type != unit.r#type && o.alive())
                 .collect();
+
             if targets.len() == 0 {
                 println!("{:?}", units);
                 println!("{:?} wins", unit.r#type);
+
+                let result = units.iter().fold(0, |acc, u| {
+                    if u.r#type == unit.r#type {
+                        acc + u.hp
+                    } else {
+                        acc
+                    }
+                });
+                println!(
+                    "hp: {}, rounds: {}, outcome: {}",
+                    result,
+                    rounds,
+                    result as usize * rounds as usize
+                );
+
                 return;
             }
-
-            let end_positions: Vec<(Position, u8)> = targets
+            let unit_positions: HashMap<Position, UnitType> = units
                 .iter()
-                .enumerate()
-                .flat_map(|(j, o)| {
-                    let unit_positions = &unit_positions;
-                    OFFSETS.iter().filter_map(move |(dr, dc)| {
-                        let np @ (row, col) = (o.position.0 - dr, o.position.1 - dc);
-                        if unit.position == np {
-                            return Some((np, j as u8));
-                        }
-                        if !grid[row as usize][col as usize] || unit_positions.contains(&np) {
-                            None
-                        } else {
-                            Some((np, j as u8))
-                        }
-                    })
-                })
+                .filter(|u| u.alive())
+                .map(|u| (u.position, u.r#type.clone()))
                 .collect();
 
-            let attackable_targets: Vec<u8> = end_positions
-                .iter()
-                .filter(|&&(pos, _)| pos == unit.position)
-                .map(|&(_, uid)| uid)
-                .collect();
-
-            if attackable_targets.len() >= 1 {
-                let target = attackable_targets
+            let enemy_adjacent = OFFSETS.iter().any(|(dr, dc)| {
+                &unit.r#type
+                    != unit_positions
+                        .get(&(unit.position.0 + dr, unit.position.1 + dc))
+                        .unwrap_or(&unit.r#type)
+            });
+            if !enemy_adjacent {
+                let end_positions: Vec<Position> = targets
                     .iter()
-                    .min_by_key(|&&i| {
-                        (
-                            targets[i as usize].hp,
-                            targets[i as usize].position.0,
-                            targets[i as usize].position.1,
-                        )
-                    })
-                    .unwrap();
-                // if unit.r#type == UnitType::ELF {
-                //     println!("{:?}", targets[*target as usize]);
-                //     // println!("{:?}", targets);
-                // }
-                targets[*target as usize].hp -= unit.attack;
-            } else {
-                let mut paths: Vec<_> = end_positions
-                    .iter()
-                    .filter_map(|&(end_pos, _)| {
-                        dijkstra(end_pos, unit.position, grid, &unit_positions)
+                    .flat_map(|o| {
+                        OFFSETS.iter().filter_map(|(dr, dc)| {
+                            let np @ (row, col) = (o.position.0 - dr, o.position.1 - dc);
+                            if unit.position == np {
+                                return Some(np);
+                            }
+                            if !grid[row as usize][col as usize] || unit_positions.contains_key(&np)
+                            {
+                                None
+                            } else {
+                                Some(np)
+                            }
+                        })
                     })
                     .collect();
+                let mut paths: Vec<_> = end_positions
+                    .iter()
+                    .filter_map(|&end_pos| dijkstra(end_pos, unit.position, grid, &unit_positions))
+                    .collect();
 
-                // // println!("{:?}", units[i]);
-                // for i in units.clone() {
-                //     println!("{:?}", i);
-                // }
                 if paths.len() >= 1 {
                     paths.sort_unstable_by_key(|&(v, _)| v);
                     let (cost, _) = &paths[0];
@@ -160,43 +152,59 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                         })
                         .collect();
                     next_steps.sort_unstable();
-                    if unit.id == 2 {
-                        println!("{}, {:?}", rounds + 1, next_steps);
-                    }
                     units[i].position = next_steps[0];
-                    // for i in &units {
-                    //     println!("{:?}", i);
-                    // }
-                    // println!("over");
-                    // for i in &units {
-                    //     println!("{:?}", i);
-                    // }
-
-                    // println!("{:?}", paths[0].1.get(&(1, 2)));
-                    // println!("{:?}", paths[1].1.get(&(1, 2)));
-                    // println!("{:?}", paths[0].1.get(&(2, 1)));
-                    // println!("{:?}", paths[1].1.get(&(2, 1)));
-                    // println!("{:?}", paths[1]);
-
-                    // units[i].position.0 += paths[0].1 .0;
-                    // units[i].position.1 += paths[0].1 .1;
-
-                    // println!("{:?}", paths);
-                    // println!("{:?}", units[i]);
                 }
             }
-            // for i in &units {
-            //     if i.id == 0 {
-            //         println!("{:?}", i);
-            //     }
-            // }
-            // println!("over");
-            // return;
+            let adjacent: Vec<Position> = OFFSETS
+                .iter()
+                .map(|&(dr, dc)| (units[i].position.0 + dr, units[i].position.1 + dc))
+                .collect();
+            let mut targets: Vec<&mut Unit> = units
+                .iter_mut()
+                .filter(|u| adjacent.contains(&u.position) && u.r#type != unit.r#type && u.alive())
+                .collect();
+
+            if targets.len() >= 1 {
+                targets.sort_unstable_by_key(|u| (u.hp, u.position));
+                targets[0].hp -= unit.attack;
+            }
         }
         rounds += 1;
+        // println!("round {}", rounds);
+        // for i in &units {
+        //     println!("{:?}", i);
+        // }
+        // wait_input();
     }
     //
 }
+// if unit.r#type == UnitType::ELF {
+//     println!("{:?}", targets[*target as usize]);
+//     // println!("{:?}", targets);
+// }
+// // println!("{:?}", units[i]);
+// for i in units.clone() {
+//     println!("{:?}", i);
+// }
+// for i in &units {
+//     println!("{:?}", i);
+// }
+// println!("over");
+// for i in &units {
+//     println!("{:?}", i);
+// }
+
+// println!("{:?}", paths[0].1.get(&(1, 2)));
+// println!("{:?}", paths[1].1.get(&(1, 2)));
+// println!("{:?}", paths[0].1.get(&(2, 1)));
+// println!("{:?}", paths[1].1.get(&(2, 1)));
+// println!("{:?}", paths[1]);
+
+// units[i].position.0 += paths[0].1 .0;
+// units[i].position.1 += paths[0].1 .1;
+
+// println!("{:?}", paths);
+// println!("{:?}", units[i]);
 
 #[allow(unused_mut)]
 #[allow(unused_variables)]
@@ -241,7 +249,7 @@ fn dijkstra(
     start: Position,
     target: Position,
     grid: &Vec<Vec<bool>>,
-    unit_positions: &HashSet<Position>,
+    unit_positions: &HashMap<Position, UnitType>,
 ) -> Option<(u8, HashMap<Position, u8>)> {
     let mut costs: HashMap<Position, u8> = HashMap::new();
     let mut visited: HashSet<Position> = HashSet::new();
@@ -257,7 +265,7 @@ fn dijkstra(
         if node.position == target {
             return Some((node.cost - 1, costs));
         }
-        if visited.contains(&node.position) || unit_positions.contains(&node.position) {
+        if visited.contains(&node.position) || unit_positions.contains_key(&node.position) {
             continue;
         }
         visited.insert(node.position);
@@ -278,4 +286,12 @@ fn dijkstra(
         }
     }
     None
+}
+
+#[allow(dead_code)]
+fn wait_input() {
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
 }
