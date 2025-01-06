@@ -1,14 +1,8 @@
-#[allow(unused_imports)]
-use regex::Regex;
-#[allow(unused_imports)]
 use std::cmp::Ordering;
-#[allow(unused_imports)]
 use std::collections::{BinaryHeap, HashMap, HashSet};
-#[allow(unused_imports)]
-use std::{fs, io};
+use std::fs;
 
 type Position = (i8, i8);
-// Order is important, most important to least (rules of the puzzle)
 const OFFSETS: [Position; 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -39,9 +33,7 @@ enum UnitType {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 struct Unit {
-    id: u8,
     r#type: UnitType,
     hp: i16,
     attack: i16,
@@ -49,9 +41,8 @@ struct Unit {
 }
 
 impl Unit {
-    fn new(id: u8, r#type: UnitType, position: Position) -> Self {
+    fn new(r#type: UnitType, position: Position) -> Self {
         Unit {
-            id,
             r#type,
             hp: 200,
             attack: 3,
@@ -63,9 +54,8 @@ impl Unit {
     }
 }
 
-fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
+fn battlefield(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) -> (usize, bool) {
     let mut rounds = 0;
-    _ = rounds;
     loop {
         units.sort_unstable_by_key(|u| (u.position.0, u.position.1));
         for i in 0..units.len() {
@@ -132,19 +122,7 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                         })
                         .collect();
                     next_steps.sort_unstable();
-                    // if unit.r#type == UnitType::GOBLIN && units[i].id == 4 {
-                    //     println!("id {:?}", units[i].id);
-                    //     println!("pos {:?}", units[i].position);
-                    //     println!("ns {:?}", next_steps);
-                    //     println!("ends {:?}", end_positions);
-                    //     println!("{:?}", paths[0]);
-                    //     println!("{:?}", unit_positions);
-                    // }
                     units[i].position = next_steps[0];
-                    // println!("{} {:?}", units[i].id, next_steps);
-                    // for i in &units {
-                    //     println!("{:?}", i);
-                    // }
                 }
             }
             let adjacent: Vec<Position> = OFFSETS
@@ -166,16 +144,10 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                 .filter(|o| o.r#type != unit.r#type && o.alive())
                 .collect();
             if targets.len() == 0 {
-                for i in &units {
-                    if i.r#type == UnitType::ELF {
-                        println!("{:?}", i.alive());
-                    }
-                }
-                // println!("{:?}", units);
-                println!("{:?} wins", unit.r#type);
-                // for i in &units {
-                //     println!("{:?}", i);
-                // }
+                let all_elves_alive = units
+                    .iter()
+                    .filter(|u| u.r#type == UnitType::ELF)
+                    .all(|u| u.alive());
 
                 let result = units.iter().fold(0, |acc, u| {
                     if u.r#type == unit.r#type && u.alive() {
@@ -183,25 +155,14 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                     } else {
                         acc
                     }
-                });
-                println!(
-                    "hp: {}, rounds: {}, outcome: {}",
-                    result,
-                    rounds,
-                    result as usize * rounds as usize
-                );
+                }) as usize
+                    * rounds;
 
-                return;
+                return (result, all_elves_alive);
             }
         }
         rounds += 1;
-        // println!("round {}", rounds);
-        // for i in &units {
-        //     println!("{:?}", i);
-        // }
-        // wait_input();
     }
-    //
 }
 
 #[allow(dead_code)]
@@ -223,14 +184,8 @@ fn dijkstra(
 
     while let Some(node) = heap.pop() {
         if node.position == target {
-            // if start == (2, 1) {
-            //     println!("c {:?}", costs);
-            //     println!("st {:?},{:?}", start, target);
-            //     println!("u {:?}", unit_positions);
-            // }
             return Some((node.cost - 1, costs));
         }
-
         if visited.contains(&node.position) {
             continue;
         }
@@ -239,13 +194,6 @@ fn dijkstra(
             let np @ (nr, nc) = (node.position.0 + dr, node.position.1 + dc);
             if grid[nr as usize][nc as usize] && (!unit_positions.contains_key(&np) || np == target)
             {
-                // if start == (2, 1) {
-                //     println!("vx {:?}", np);
-                //     println!(
-                //         "tt {:?}",
-                //         !unit_positions.contains_key(&node.position) || np == target
-                //     );
-                // }
                 let new_cost = node.cost + 1;
                 let entry = costs.entry(np).or_insert(u8::MAX);
 
@@ -261,37 +209,6 @@ fn dijkstra(
     }
     None
 }
-
-// if unit.r#type == UnitType::ELF {
-//     println!("{:?}", targets[*target as usize]);
-//     // println!("{:?}", targets);
-// }
-// // println!("{:?}", units[i]);
-// for i in units.clone() {
-//     println!("{:?}", i);
-// }
-// for i in &units {
-//     println!("{:?}", i);
-// }
-// println!("over");
-// for i in &units {
-//     println!("{:?}", i);
-// }
-
-// println!("{:?}", paths[0].1.get(&(1, 2)));
-// println!("{:?}", paths[1].1.get(&(1, 2)));
-// println!("{:?}", paths[0].1.get(&(2, 1)));
-// println!("{:?}", paths[1].1.get(&(2, 1)));
-// println!("{:?}", paths[1]);
-
-// units[i].position.0 += paths[0].1 .0;
-// units[i].position.1 += paths[0].1 .1;
-
-// println!("{:?}", paths);
-// println!("{:?}", units[i]);
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
 fn main() -> std::io::Result<()> {
     let mut matrix: Vec<Vec<char>> = fs::read_to_string("in/d15.txt")?
         .trim_end()
@@ -301,7 +218,6 @@ fn main() -> std::io::Result<()> {
 
     let mut units: Vec<Unit> = vec![];
 
-    let mut id: u8 = 0;
     for i in 0..matrix.len() {
         for j in 0..matrix[0].len() {
             if let Some(r#type) = match matrix[i][j] {
@@ -310,16 +226,18 @@ fn main() -> std::io::Result<()> {
                 _ => None,
             } {
                 matrix[i][j] = '.';
-                units.push(Unit::new(id, r#type, (i as i8, j as i8)));
-                id += 1;
+                units.push(Unit::new(r#type, (i as i8, j as i8)));
             }
         }
     }
 
-    let mut matrix_bool: Vec<Vec<bool>> = matrix
+    let matrix_bool: Vec<Vec<bool>> = matrix
         .iter()
         .map(|row| row.into_iter().map(|&c| c == '.').collect())
         .collect();
+
+    let p1_result = battlefield(units.clone(), &matrix_bool).0;
+    let mut p2_result = 0;
 
     for i in 4..50 {
         for u in &mut units {
@@ -327,19 +245,14 @@ fn main() -> std::io::Result<()> {
                 u.attack = i
             }
         }
-        part1(units.clone(), &matrix_bool);
-        wait_input();
+        let (value, all_elves_alive) = battlefield(units.clone(), &matrix_bool);
+        if all_elves_alive {
+            p2_result = value;
+            break;
+        }
     }
 
-    println!("Part 1: {}", 1);
-    println!("Part 2: {}", 2);
+    println!("Part 1: {}", p1_result);
+    println!("Part 2: {}", p2_result);
     Ok(())
-}
-
-#[allow(dead_code)]
-fn wait_input() {
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
 }
