@@ -8,22 +8,22 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs;
 
 type Position = (i8, i8);
-const OFFSETS: [Position; 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+// Order is important, most important to least (rules of the puzzle)
+const OFFSETS: [Position; 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 struct Node {
     position: Position,
-    g_cost: u8,
-    h_cost: u8,
+    cost: u8,
 }
 impl Node {
-    fn f_cost(&self) -> u8 {
-        self.g_cost + self.h_cost
+    fn cost(&self) -> u8 {
+        self.cost
     }
 }
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.f_cost().cmp(&self.f_cost())
+        other.cost().cmp(&self.cost())
     }
 }
 impl PartialOrd for Node {
@@ -64,16 +64,21 @@ impl Unit {
 }
 
 fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
+    let mut rounds = 0;
+    _ = rounds;
     loop {
         units.sort_unstable_by_key(|u| (u.position.0, u.position.1));
-
         for i in 0..units.len() {
             let unit = units[i].clone();
             if !unit.alive() {
                 continue;
             }
 
-            let unit_positions: HashSet<Position> = units.iter().map(|u| u.position).collect();
+            let unit_positions: HashSet<Position> = units
+                .iter()
+                .filter(|u| u.alive())
+                .map(|u| u.position)
+                .collect();
             let mut targets: Vec<&mut Unit> = units
                 .iter_mut()
                 .filter(|o| o.r#type != unit.r#type && o.alive())
@@ -116,38 +121,79 @@ fn part1(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) {
                         (
                             targets[i as usize].hp,
                             targets[i as usize].position.0,
-                            targets[i as usize].position.0,
+                            targets[i as usize].position.1,
                         )
                     })
                     .unwrap();
+                // if unit.r#type == UnitType::ELF {
+                //     println!("{:?}", targets[*target as usize]);
+                //     // println!("{:?}", targets);
+                // }
                 targets[*target as usize].hp -= unit.attack;
             } else {
                 let mut paths: Vec<_> = end_positions
                     .iter()
                     .filter_map(|&(end_pos, _)| {
-                        a_star(units[i].position, end_pos, grid, &unit_positions)
+                        dijkstra(end_pos, unit.position, grid, &unit_positions)
                     })
                     .collect();
+
+                // // println!("{:?}", units[i]);
+                // for i in units.clone() {
+                //     println!("{:?}", i);
+                // }
                 if paths.len() >= 1 {
-                    paths.sort_unstable_by_key(|&(v, (dr, _))| (v, dr));
-                    units[i].position.0 += paths[0].1 .0;
-                    units[i].position.1 += paths[0].1 .1;
-                    if unit.r#type == UnitType::ELF {
-                        // println!("{:?}", unit);
-                        // println!("{:?}", targets);
-                        println!("{:?}", paths);
-                        // println!("{:?}", units[i]);
-                        for i in units.clone() {
-                            println!("{:?}", i);
-                        }
+                    paths.sort_unstable_by_key(|&(v, _)| v);
+                    let (cost, _) = &paths[0];
+                    let mut next_steps: Vec<Position> = paths
+                        .iter()
+                        .filter(|(pcost, _)| pcost == cost)
+                        .flat_map(|(_, map)| {
+                            OFFSETS.iter().filter_map(move |(dr, dc)| {
+                                let np = (unit.position.0 + dr, unit.position.1 + dc);
+                                if Some(cost) == map.get(&np) {
+                                    Some(np)
+                                } else {
+                                    None
+                                }
+                            })
+                        })
+                        .collect();
+                    next_steps.sort_unstable();
+                    if unit.id == 2 {
+                        println!("{}, {:?}", rounds + 1, next_steps);
                     }
+                    units[i].position = next_steps[0];
+                    // for i in &units {
+                    //     println!("{:?}", i);
+                    // }
+                    // println!("over");
+                    // for i in &units {
+                    //     println!("{:?}", i);
+                    // }
+
+                    // println!("{:?}", paths[0].1.get(&(1, 2)));
+                    // println!("{:?}", paths[1].1.get(&(1, 2)));
+                    // println!("{:?}", paths[0].1.get(&(2, 1)));
+                    // println!("{:?}", paths[1].1.get(&(2, 1)));
+                    // println!("{:?}", paths[1]);
+
+                    // units[i].position.0 += paths[0].1 .0;
+                    // units[i].position.1 += paths[0].1 .1;
+
                     // println!("{:?}", paths);
                     // println!("{:?}", units[i]);
                 }
             }
-
+            // for i in &units {
+            //     if i.id == 0 {
+            //         println!("{:?}", i);
+            //     }
+            // }
+            // println!("over");
             // return;
         }
+        rounds += 1;
     }
     //
 }
@@ -191,67 +237,43 @@ fn main() -> std::io::Result<()> {
 }
 
 #[allow(dead_code)]
-fn a_star(
+fn dijkstra(
     start: Position,
     target: Position,
     grid: &Vec<Vec<bool>>,
     unit_positions: &HashSet<Position>,
-) -> Option<(u8, Position)> {
-    // Option<(u8, Vec<Position>)>
-    fn manhattan_distance(a: Position, b: Position) -> u8 {
-        ((a.0 - b.0).abs() + (a.1 - b.1).abs()) as u8
-    }
+) -> Option<(u8, HashMap<Position, u8>)> {
+    let mut costs: HashMap<Position, u8> = HashMap::new();
+    let mut visited: HashSet<Position> = HashSet::new();
+    let mut heap = BinaryHeap::new();
 
-    let mut open_set = BinaryHeap::new();
-    // let mut came_from: HashMap<Position, Position> = HashMap::new();
-    let mut first_step: Option<Position> = None;
-    let mut g_costs: HashMap<Position, u8> = HashMap::new();
-
-    let start_node = Node {
+    costs.insert(start, 0);
+    heap.push(Node {
         position: start,
-        g_cost: 0,
-        h_cost: manhattan_distance(start, target),
-    };
-    open_set.push(start_node);
+        cost: 0,
+    });
 
-    while let Some(node) = open_set.pop() {
+    while let Some(node) = heap.pop() {
         if node.position == target {
-            // let mut path = vec![node.position];
-            // while let Some(prev_pos) = came_from.get(&path.last().unwrap().clone()) {
-            //     path.push(*prev_pos);
-            //     println!("{:?}", prev_pos);
-            // }
-            // path.reverse();
-            // return Some((node.g_cost, path));
-            return Some((node.g_cost, first_step.unwrap()));
+            return Some((node.cost - 1, costs));
         }
-
+        if visited.contains(&node.position) || unit_positions.contains(&node.position) {
+            continue;
+        }
+        visited.insert(node.position);
         for (dr, dc) in OFFSETS {
             let np @ (nr, nc) = (node.position.0 + dr, node.position.1 + dc);
-            if grid[nr as usize][nc as usize] && !unit_positions.contains(&np) {
-                let g_cost = node.g_cost + if dr == 0 { 1 } else { 2 };
-                let h_cost = manhattan_distance(np, target);
+            if grid[nr as usize][nc as usize] {
+                let new_cost = node.cost + 1;
+                let entry = costs.entry(np).or_insert(u8::MAX);
 
-                if let Some(&existing_g_cost) = g_costs.get(&np) {
-                    if g_cost >= existing_g_cost {
-                        continue;
-                    }
+                if new_cost < *entry {
+                    *entry = new_cost;
+                    heap.push(Node {
+                        position: np,
+                        cost: new_cost,
+                    });
                 }
-                g_costs.insert(np, g_cost);
-                let next_node = Node {
-                    position: np,
-                    g_cost,
-                    h_cost,
-                };
-                open_set.push(next_node);
-                // came_from.insert(np, node.position);
-            }
-        }
-        if first_step == None {
-            if let Some(pos) = open_set.peek() {
-                let (nr, nc) = pos.position;
-                let (r, c) = node.position;
-                first_step = Some((nr - r, nc - c));
             }
         }
     }
