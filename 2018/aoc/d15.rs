@@ -165,12 +165,11 @@ fn battlefield(mut units: Vec<Unit>, grid: &Vec<Vec<bool>>) -> (usize, bool) {
     }
 }
 
-#[allow(dead_code)]
 fn dijkstra(
     start: Position,
     target: Position,
     grid: &Vec<Vec<bool>>,
-    unit_positions: &HashMap<Position, UnitType>,
+    unit_pos: &HashMap<Position, UnitType>,
 ) -> Option<(u8, HashMap<Position, u8>)> {
     let mut costs: HashMap<Position, u8> = HashMap::new();
     let mut visited: HashSet<Position> = HashSet::new();
@@ -192,11 +191,9 @@ fn dijkstra(
         visited.insert(node.position);
         for (dr, dc) in OFFSETS {
             let np @ (nr, nc) = (node.position.0 + dr, node.position.1 + dc);
-            if grid[nr as usize][nc as usize] && (!unit_positions.contains_key(&np) || np == target)
-            {
+            if grid[nr as usize][nc as usize] && (!unit_pos.contains_key(&np) || np == target) {
                 let new_cost = node.cost + 1;
                 let entry = costs.entry(np).or_insert(u8::MAX);
-
                 if new_cost < *entry {
                     *entry = new_cost;
                     heap.push(Node {
@@ -209,6 +206,7 @@ fn dijkstra(
     }
     None
 }
+
 fn main() -> std::io::Result<()> {
     let mut matrix: Vec<Vec<char>> = fs::read_to_string("in/d15.txt")?
         .trim_end()
