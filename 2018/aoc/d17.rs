@@ -1,167 +1,109 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_assignments)]
-use regex::Regex;
 use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::{collections::HashMap, collections::VecDeque, fs};
+use std::{collections::VecDeque, fs};
 
-// ALL VALUES IN RANGES ARE INCLUSIVE!
 type Range = (usize, usize);
-type Position = (i16, i16);
+type Position = Range;
 
-#[derive(Debug, Clone)]
 struct ClayRanges {
     rows: Range,
     cols: Range,
 }
 
-#[derive(Debug, Clone)]
 enum WaterState {
     FILL,
     FLOW,
 }
 
-#[derive(Debug, Clone)]
 struct State {
-    pos: (i16, i16),
+    pos: Position,
     state: WaterState,
 }
 
-fn part1(clay_ranges: &Vec<ClayRanges>, max_cols: usize, max_rows: usize, well_col: usize) {
-    let mut grid = vec![vec!['.'; max_cols + 3]; max_rows + 1];
-    // println!("{:?}", clay_ranges);
-    // println!("{} {} {}", max_cols, max_rows, well_col);
+impl State {
+    fn new(pos: Position, state: WaterState) -> Self {
+        State { pos, state }
+    }
+}
 
-    grid[0][well_col] = '+';
+fn solver(clay_ranges: &Vec<ClayRanges>, cols: usize, rows: usize, well: usize) -> (usize, usize) {
+    let mut grid = vec![vec!['.'; cols + 3]; rows + 1];
+    grid[0][well] = '+';
     for range in clay_ranges {
-        let (ra, rb) = range.rows;
-        let (ca, cb) = range.cols;
-        for i in ra..=rb {
-            for j in ca..=cb {
-                grid[i][j] = '#';
-            }
-        }
+        (range.rows.0..=range.rows.1)
+            .flat_map(|i| (range.cols.0..=range.cols.1).map(move |j| (i, j)))
+            .for_each(|(i, j)| grid[i][j] = '#');
     }
-
-    waterfall(&mut grid, well_col);
-
-    print_grid(&grid);
-}
-
-fn print_grid(grid: &Vec<Vec<char>>) {
-    for r in grid {
-        let row_str: String = r.into_iter().collect();
-        println!("{}", row_str);
-    }
-}
-
-fn msleep(ms: usize) {
-    use std::thread::sleep;
-    use std::time::Duration;
-    sleep(Duration::from_millis(ms as u64));
+    waterfall(&mut grid, well);
+    grid.iter()
+        .flat_map(|row| row.iter())
+        .fold((0, 0), |(flow, fill), &cell| match cell {
+            '~' => (flow, fill + 1),
+            '|' => (flow + 1, fill),
+            _ => (flow, fill),
+        })
 }
 
 fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
-    use self::WaterState::*;
-    let mut queue: VecDeque<State> = vec![State {
-        pos: (1, start_col as i16),
-        state: FLOW,
-    }]
-    .into();
-
-    let mut water_spots: HashSet<(i16, i16)> = HashSet::new();
-
-    while !queue.is_empty() {
-        let current = queue.pop_front().unwrap();
-        let pos @ (row, col) = current.pos;
-        print_grid(grid);
-        msleep(500);
-
-        water_spots.insert(current.pos);
-
-        if matches!(current.state, FLOW) {
-            grid[row as usize][col as usize] = '|';
-            let np @ (nr, nc) = (row + 1, col);
-            if nr >= grid.len() as i16 {
-                continue;
+    fn fill_up(grid: &Vec<Vec<char>>, mut pos: Position, dir: i16) -> (Option<State>, Position) {
+        loop {
+            let next_pos @ (nr, nc) = (pos.0, (pos.1 as i16 + dir) as usize);
+            if grid[nr][nc] == '#' {
+                return (None, pos);
             }
-            let next_state = if grid[nr as usize][nc as usize] != '.' {
-                State { pos, state: FILL }
-            } else {
-                State {
-                    pos: np,
-                    state: FLOW,
-                }
-            };
-            queue.push_back(next_state);
-        } else {
-            // grid[row as usize][col as usize] = '~';
-            let mut overflowed = false;
-            // check left side
-            let mut left_pos = pos;
-            loop {
-                let np @ (nr, nc) = (left_pos.0, left_pos.1 - 1);
-                if grid[nr as usize][nc as usize] == '#' {
-                    break;
-                }
-                if grid[(nr + 1) as usize][nc as usize] == '.' {
-                    queue.push_back(State {
-                        pos: np,
-                        state: FLOW,
-                    });
-                    overflowed = true;
-                    break;
-                }
-                left_pos = np;
+            if ['.', '|'].contains(&grid[nr + 1][nc]) {
+                return (Some(State::new(next_pos, FLOW)), pos);
             }
-            let mut right_pos = pos;
-            loop {
-                let np @ (nr, nc) = (right_pos.0, right_pos.1 + 1);
-                if grid[nr as usize][nc as usize] == '#' {
-                    break;
-                }
-                if grid[(nr + 1) as usize][nc as usize] == '.' {
-                    queue.push_back(State {
-                        pos: np,
-                        state: FLOW,
-                    });
-                    overflowed = true;
-                    break;
-                }
-                right_pos = np;
-            }
-            let c = if overflowed { '|' } else { '~' };
-            grid[row as usize][left_pos.1 as usize..=right_pos.1 as usize]
-                .iter_mut()
-                .enumerate()
-                .for_each(|(i, elem)| {
-                    *elem = c;
-                    water_spots.insert((row, i as i16 + left_pos.1));
-                });
-            if !overflowed {
-                queue.push_back(State {
-                    pos: (row - 1, col),
-                    state: FILL,
-                });
-            }
-            // if overflowed {
-            //     println!("{:?}", queue);
-            //     break;
-            // }
+            pos = next_pos;
         }
     }
-    println!("{}", water_spots.len());
+    use self::WaterState::*;
+    let mut queue: VecDeque<State> = vec![State::new((1, start_col), FLOW)].into();
+    while let Some(current) = queue.pop_front() {
+        let pos @ (row, col) = current.pos;
+
+        if matches!(current.state, FLOW) && grid[row][col] == '|' {
+            continue;
+        }
+
+        if matches!(current.state, FLOW) {
+            grid[row][col] = '|';
+            let np @ (nr, nc) = (row + 1, col);
+            if nr < grid.len() && grid[nr][nc] != '|' {
+                queue.push_back(if grid[nr][nc] != '.' {
+                    State::new(pos, FILL)
+                } else {
+                    State::new(np, FLOW)
+                });
+            }
+        } else {
+            let mut overflowed = false;
+            let (next_state_l, left_pos) = fill_up(grid, pos, -1);
+            let (next_state_r, right_pos) = fill_up(grid, pos, 1);
+            for st in [next_state_l, next_state_r] {
+                if let Some(next_state) = st {
+                    queue.push_back(next_state);
+                    overflowed = true;
+                }
+            }
+
+            let c = if overflowed {
+                '|'
+            } else {
+                queue.push_back(State::new((row - 1, col), FILL));
+                '~'
+            };
+            grid[row][left_pos.1..=right_pos.1]
+                .iter_mut()
+                .for_each(|elem| *elem = c);
+        }
+    }
 }
 
 fn main() -> std::io::Result<()> {
-    let mut min_cols: usize = !0;
-    let mut max_cols: usize = 0;
-    let mut max_rows: usize = 0;
+    let (mut min_cols, mut max_cols): Position = (!0, 0);
+    let (mut min_rows, mut max_rows): Position = (!0, 0);
 
-    let clay_ranges: Vec<ClayRanges> = fs::read_to_string("in/d17t.txt")?
+    let clay_ranges: Vec<ClayRanges> = fs::read_to_string("in/d17.txt")?
         .trim_end()
         .lines()
         .map(|line| {
@@ -176,33 +118,32 @@ fn main() -> std::io::Result<()> {
                 .map(|(l, r)| (l.parse().unwrap(), r.parse().unwrap()))
                 .unwrap();
 
-            let result @ (rows, cols) = match left_var {
+            match left_var {
                 "y" => (left_range, right_range),
                 _ => (right_range, left_range),
-            };
-            result
+            }
         })
         .inspect(|&((ra, rb), (ca, cb))| {
             min_cols = min(min_cols, ca);
             max_cols = max(max_cols, cb);
-            max_rows = max(max(max_rows, ra), rb);
+            min_rows = min(min_rows, ra);
+            max_rows = max(max_rows, rb);
         })
         .collect::<Vec<(Range, Range)>>()
         .iter()
-        .map(|&(rows, (a, b))| ClayRanges {
-            rows,
-            cols: (a - min_cols + 1, b - min_cols + 1),
+        .map(|&((ra, rb), (ca, cb))| ClayRanges {
+            rows: (ra - min_rows + 1, rb - min_rows + 1),
+            cols: (ca - min_cols + 1, cb - min_cols + 1),
         })
         .collect();
 
-    part1(
+    let (flow, fill) = solver(
         &clay_ranges,
         max_cols - min_cols,
-        max_rows,
+        max_rows - min_rows + 1,
         500 - min_cols + 1,
     );
-
-    println!("Part 1: {}", 1);
-    println!("Part 2: {}", 2);
+    println!("Part 1: {}", flow + fill);
+    println!("Part 2: {}", fill);
     Ok(())
 }
