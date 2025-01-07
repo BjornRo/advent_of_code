@@ -1,10 +1,11 @@
-#[allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_mut)]
+#![allow(unused_variables)]
+#![allow(unused_assignments)]
 use regex::Regex;
-#[allow(unused_imports)]
 use std::{collections::HashMap, collections::VecDeque, fs};
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
 fn main() -> std::io::Result<()> {
     let content = fs::read_to_string("in/d10.txt")?;
 
