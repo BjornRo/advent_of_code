@@ -61,19 +61,17 @@ fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
     while let Some(current) = queue.pop_front() {
         let pos @ (row, col) = current.pos;
 
-        if matches!(current.state, FLOW) && grid[row][col] == '|' {
-            continue;
-        }
-
         if matches!(current.state, FLOW) {
-            grid[row][col] = '|';
-            let np @ (nr, nc) = (row + 1, col);
-            if nr < grid.len() && grid[nr][nc] != '|' {
-                queue.push_back(if grid[nr][nc] == '.' {
-                    State::new(np, FLOW)
-                } else {
-                    State::new(pos, FILL)
-                });
+            if grid[row][col] != '|' {
+                grid[row][col] = '|';
+                let np @ (nr, nc) = (row + 1, col);
+                if nr < grid.len() && grid[nr][nc] != '|' {
+                    queue.push_back(if grid[nr][nc] == '.' {
+                        State::new(np, FLOW)
+                    } else {
+                        State::new(pos, FILL)
+                    });
+                }
             }
         } else {
             let mut overflowed = false;
