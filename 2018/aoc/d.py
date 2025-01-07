@@ -1,7 +1,7 @@
-import re
 import sys
 from datetime import UTC, datetime
 from os.path import isfile
+from os import makedirs
 from pathlib import Path
 
 import requests
@@ -45,6 +45,7 @@ else:
 if date < datetime(year=year, month=12, day=day, hour=5, tzinfo=UTC):
     raise Exception("Current day is not open yet!")
 
+makedirs("in", exist_ok=True)
 input_file = input_file.format(day)
 example_file = example_file.format(day)
 if isfile(input_file):
