@@ -48,10 +48,20 @@ fn part1(clay_ranges: &Vec<ClayRanges>, max_cols: usize, max_rows: usize, well_c
 
     waterfall(&mut grid, well_col);
 
+    print_grid(&grid);
+}
+
+fn print_grid(grid: &Vec<Vec<char>>) {
     for r in grid {
         let row_str: String = r.into_iter().collect();
         println!("{}", row_str);
     }
+}
+
+fn msleep(ms: usize) {
+    use std::thread::sleep;
+    use std::time::Duration;
+    sleep(Duration::from_millis(ms as u64));
 }
 
 fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
@@ -67,6 +77,8 @@ fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
     while !queue.is_empty() {
         let current = queue.pop_front().unwrap();
         let pos @ (row, col) = current.pos;
+        print_grid(grid);
+        msleep(500);
 
         water_spots.insert(current.pos);
 
@@ -76,7 +88,7 @@ fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
             if nr >= grid.len() as i16 {
                 continue;
             }
-            let next_state = if grid[nr as usize][nc as usize] == '#' {
+            let next_state = if grid[nr as usize][nc as usize] != '.' {
                 State { pos, state: FILL }
             } else {
                 State {
@@ -183,7 +195,12 @@ fn main() -> std::io::Result<()> {
         })
         .collect();
 
-    part1(&clay_ranges, max_cols - min_cols, max_rows, 500 - min_cols);
+    part1(
+        &clay_ranges,
+        max_cols - min_cols,
+        max_rows,
+        500 - min_cols + 1,
+    );
 
     println!("Part 1: {}", 1);
     println!("Part 2: {}", 2);
