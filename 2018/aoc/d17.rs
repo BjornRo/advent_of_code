@@ -76,8 +76,8 @@ fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
             continue;
         }
         let mut overflowed = false;
-        let (next_state_l, lpos) = fill_up(grid, pos, -1);
-        let (next_state_r, rpos) = fill_up(grid, pos, 1);
+        let (next_state_l, (_, left)) = fill_up(grid, pos, -1);
+        let (next_state_r, (_, right)) = fill_up(grid, pos, 1);
         for st in [next_state_l, next_state_r] {
             if let Some(next_state) = st {
                 queue.push_back(next_state);
@@ -91,7 +91,7 @@ fn waterfall(grid: &mut Vec<Vec<char>>, start_col: usize) {
             queue.push_back(State::new((row - 1, col), FILL));
             '~'
         };
-        grid[row][lpos.1..=rpos.1].iter_mut().for_each(|e| *e = c);
+        grid[row][left..=right].iter_mut().for_each(|e| *e = c);
     }
 }
 
