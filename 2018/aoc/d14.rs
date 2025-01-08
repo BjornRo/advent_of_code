@@ -1,19 +1,5 @@
 use std::fs;
 
-fn main() -> std::io::Result<()> {
-    let input_vec: Vec<u8> = fs::read_to_string("in/d14.txt")?
-        .trim_end()
-        .chars()
-        .map(|c| (c as u8 - '0' as u8) as u8)
-        .collect();
-
-    let (p1, p2) = solver(vec![3, 7], input_vec);
-
-    println!("Part 1: {}", p1);
-    println!("Part 2: {}", p2);
-    Ok(())
-}
-
 fn solver(mut recipes: Vec<u8>, input_vec: Vec<u8>) -> (String, usize) {
     let p1_target = input_vec
         .iter()
@@ -58,4 +44,18 @@ fn solver(mut recipes: Vec<u8>, input_vec: Vec<u8>) -> (String, usize) {
             );
         }
     }
+}
+
+fn main() -> std::io::Result<()> {
+    let input_vec: Vec<u8> = fs::read_to_string("in/d14.txt")?
+        .trim_end()
+        .chars()
+        .map(|c| (c as u8 - '0' as u8) as u8)
+        .collect();
+
+    let (p1, p2) = solver(vec![3, 7], input_vec);
+
+    println!("Part 1: {}", p1);
+    println!("Part 2: {}", p2);
+    Ok(())
 }
