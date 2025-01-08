@@ -1,103 +1,92 @@
 use std::{collections::HashMap, fs};
+use GridTypes::*;
 
-const KERNEL: [(i8, i8); 8] = [
-    (1, 0),
-    (0, 1),
-    (-1, 0),
-    (0, -1),
-    (1, 1),
-    (1, -1),
-    (-1, -1),
-    (-1, 1),
-];
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+enum GridTypes {
+    Open,
+    Tree,
+    Lumberyard,
+}
 
-fn offset_add(row: usize, col: usize, (r, c): (i8, i8), dim: i8) -> Option<(usize, usize)> {
-    let (nr, nc) = (row as i8 + r, col as i8 + c);
-    if 0 <= nr && nr < dim && 0 <= nc && nc < dim {
-        Some((nr as usize, nc as usize))
-    } else {
-        None
+impl From<char> for GridTypes {
+    fn from(c: char) -> Self {
+        match c {
+            '.' => GridTypes::Open,
+            '|' => GridTypes::Tree,
+            '#' => GridTypes::Lumberyard,
+            _ => panic!(),
+        }
     }
 }
 
-fn segregation(mut grid: Vec<Vec<char>>) -> (usize, usize) {
-    let three_adj = |g: &Vec<Vec<char>>, i: usize, j: usize, symbol: char| {
-        KERNEL
-            .iter()
-            .filter_map(|&d| offset_add(i, j, d, g.len() as i8))
-            .fold(0, |acc, (r, c)| acc + (g[r][c] == symbol) as u8)
-            >= 3
-    };
-    let mut tmp_grid = grid.clone();
-
-    let mut map: HashMap<String, usize> = HashMap::new();
-    let mut map_value: HashMap<usize, usize> = HashMap::new();
-
-    let mut p1_result: usize = 0;
-    let mut p2_result: usize = 0;
-    for m in 0..1000000000 {
-        for i in 0..grid.len() {
-            for j in 0..grid[0].len() {
-                let symbol = match grid[i][j] {
-                    '.' => '|',
-                    '|' => '#',
-                    '#' => '.',
-                    _ => panic!(),
-                };
-                if symbol == '.' {
-                    let result = KERNEL
-                        .iter()
-                        .filter_map(|&d| offset_add(i, j, d, grid.len() as i8))
-                        .fold((false, false), |(lumberyard, tree), (r, c)| {
-                            match grid[r][c] {
-                                '#' => (true, tree),
-                                '|' => (lumberyard, true),
-                                _ => (lumberyard, tree),
-                            }
-                        });
-                    if result == (true, true) {
-                        continue;
-                    }
-                } else {
-                    if !three_adj(&grid, i, j, symbol) {
-                        continue;
-                    }
-                }
-                tmp_grid[i][j] = symbol;
+fn accumulator(g: &Vec<Vec<GridTypes>>, i: usize, j: usize) -> (usize, usize) {
+    #[rustfmt::skip]
+    const KERNEL: [(i8, i8); 8] = [(1, 0), (0, 1), (-1, 0), (0, -1), (1, 1),(1, -1), (-1, -1),(-1, 1)];
+    KERNEL
+        .iter()
+        .filter_map(|&(r, c)| {
+            let (nr, nc) = (i as i8 + r, j as i8 + c);
+            if 0 <= nr && nr < g.len() as i8 && 0 <= nc && nc < g.len() as i8 {
+                return Some((nr as usize, nc as usize));
             }
-        }
-        grid = tmp_grid.clone();
+            None
+        })
+        .fold((0, 0), |(trees, lumberyard), (r, c)| match g[r][c] {
+            Open => (trees, lumberyard),
+            Tree => (trees + 1, lumberyard),
+            Lumberyard => (trees, lumberyard + 1),
+        })
+}
 
-        let (trees, lumberyards) =
-            grid.iter()
-                .flat_map(|row| row.iter())
-                .fold((0, 0), |(tree, lumberyard), c| match c {
-                    '#' => (tree, lumberyard + 1),
-                    '|' => (tree + 1, lumberyard),
-                    _ => (tree, lumberyard),
-                });
+fn segregation(mut grid: Vec<Vec<GridTypes>>) -> (usize, usize) {
+    let mut index: usize = 0;
 
-        if p1_result == 0 && m == 9 {
-            p1_result = trees * lumberyards;
-        }
+    let mut map: HashMap<Vec<Vec<GridTypes>>, usize> = HashMap::new();
+    let mut map_value: Vec<usize> = vec![];
+    loop {
+        let (mut n_trees, mut n_lumberyards) = (0, 0);
+        grid = grid
+            .iter()
+            .enumerate()
+            .map(|(i, row)| {
+                row.iter()
+                    .enumerate()
+                    .map({
+                        let grid = &grid;
+                        move |(j, c)| {
+                            let (trees, lumberyards) = accumulator(&grid, i, j);
+                            match c {
+                                Open if trees >= 3 => Tree,
+                                Tree if lumberyards >= 3 => Lumberyard,
+                                Lumberyard if lumberyards < 1 || trees < 1 => Open,
+                                _ => c.clone(),
+                            }
+                        }
+                    })
+                    .inspect(|c| match c {
+                        Tree => n_trees += 1,
+                        Lumberyard => n_lumberyards += 1,
+                        _ => {}
+                    })
+                    .collect()
+            })
+            .collect();
 
-        map_value.insert(m, trees * lumberyards);
-        let key: String = grid.iter().flat_map(|row| row.iter()).collect();
-        let idx = *map.entry(key).or_insert(m);
-        if idx != m {
-            let calc_index = ((1_000_000_000 - idx) % (m - idx)) + idx - 1;
-            p2_result = *map_value.get(&calc_index).unwrap();
-            break;
+        map_value.push(n_trees * n_lumberyards);
+        let map_index = *map.entry(grid.clone()).or_insert(index);
+        if map_index != index {
+            let calc_index = ((1_000_000_000 - map_index) % (index - map_index)) + map_index - 1;
+            return (map_value[9], map_value[calc_index]);
         }
+        index += 1;
     }
-    (p1_result, p2_result)
 }
 
 fn main() -> std::io::Result<()> {
-    let matrix: Vec<Vec<char>> = fs::read_to_string("in/d18.txt")?
+    let matrix: Vec<Vec<GridTypes>> = fs::read_to_string("in/d18.txt")?
         .trim_end()
         .lines()
-        .map(|row| row.chars().collect())
+        .map(|row| row.chars().map(|c| c.into()).collect())
         .collect();
 
     let (p1, p2) = segregation(matrix);
