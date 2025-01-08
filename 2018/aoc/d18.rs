@@ -34,7 +34,7 @@ fn segregation(mut grid: Vec<Vec<char>>) -> (usize, usize) {
     let mut map_value: HashMap<usize, usize> = HashMap::new();
 
     let mut p1_result: usize = 0;
-    let mut calc_idx = 0;
+    let mut p2_result: usize = 0;
     for m in 0..1000000000 {
         for i in 0..grid.len() {
             for j in 0..grid[0].len() {
@@ -85,11 +85,12 @@ fn segregation(mut grid: Vec<Vec<char>>) -> (usize, usize) {
         let key: String = grid.iter().flat_map(|row| row.iter()).collect();
         let idx = *map.entry(key).or_insert(m);
         if idx != m {
-            calc_idx = ((1_000_000_000 - idx) % (m - idx)) + idx - 1;
+            let calc_index = ((1_000_000_000 - idx) % (m - idx)) + idx - 1;
+            p2_result = *map_value.get(&calc_index).unwrap();
             break;
         }
     }
-    (p1_result, *map_value.get(&calc_idx).unwrap())
+    (p1_result, p2_result)
 }
 
 fn main() -> std::io::Result<()> {
