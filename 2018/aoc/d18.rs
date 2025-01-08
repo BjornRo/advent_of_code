@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fs};
 
-type Position = (i8, i8);
-const KERNEL: [Position; 8] = [
+const KERNEL: [(i8, i8); 8] = [
     (1, 0),
     (0, 1),
     (-1, 0),
@@ -12,7 +11,7 @@ const KERNEL: [Position; 8] = [
     (-1, 1),
 ];
 
-fn offset_add(row: usize, col: usize, (r, c): Position, dim: i8) -> Option<(usize, usize)> {
+fn offset_add(row: usize, col: usize, (r, c): (i8, i8), dim: i8) -> Option<(usize, usize)> {
     let (nr, nc) = (row as i8 + r, col as i8 + c);
     if 0 <= nr && nr < dim && 0 <= nc && nc < dim {
         Some((nr as usize, nc as usize))
@@ -20,7 +19,7 @@ fn offset_add(row: usize, col: usize, (r, c): Position, dim: i8) -> Option<(usiz
         None
     }
 }
-// 202272
+
 fn segregation(mut grid: Vec<Vec<char>>) -> (usize, usize) {
     let three_adj = |g: &Vec<Vec<char>>, i: usize, j: usize, symbol: char| {
         KERNEL
@@ -100,7 +99,7 @@ fn main() -> std::io::Result<()> {
         .map(|row| row.chars().collect())
         .collect();
 
-    let (p1, p2) = segregation(matrix.clone());
+    let (p1, p2) = segregation(matrix);
     println!("Part 1: {}", p1);
     println!("Part 2: {}", p2);
     Ok(())
