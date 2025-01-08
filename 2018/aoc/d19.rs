@@ -8,7 +8,7 @@ use regex::Regex;
 use std::{collections::HashMap, collections::VecDeque, fs};
 
 fn main() -> std::io::Result<()> {
-    let content = fs::read_to_string("in/d10.txt")?;
+    let content = fs::read_to_string("in/d19t.txt")?;
 
     let re = Regex::new(r"<(.*)>.*<(.*)>").unwrap();
 
