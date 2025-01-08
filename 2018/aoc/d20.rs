@@ -8,9 +8,11 @@ use regex::Regex;
 use std::{collections::HashMap, collections::VecDeque, fs};
 
 // 4646 too high
+// 4246 too low
 fn door_frames(string: &Vec<char>, mut index: usize) -> (usize, usize) {
     let mut steps: usize = 0;
     let mut msteps: Vec<char> = vec![];
+    let (mut row, mut col): (isize, isize) = (0, 0);
     loop {
         match string[index] {
             '(' => {
@@ -30,15 +32,28 @@ fn door_frames(string: &Vec<char>, mut index: usize) -> (usize, usize) {
             '|' | ')' | '$' => {
                 break;
             }
-            _ => {
+            c => {
+                match c {
+                    'N' => row -= 1,
+                    'S' => row += 1,
+                    'E' => col += 1,
+                    'W' => col -= 1,
+                    _ => panic!(),
+                }
                 msteps.push(string[index]);
                 steps += 1
             }
-        }
+        };
         index += 1;
     }
-    println!("{:?} {}", msteps, msteps.len());
-    return (steps, index);
+    println!("{:?}", msteps);
+    println!("{} {:?}", msteps.len(), (row, col));
+    let mat_dist = row.abs() + col.abs();
+    if mat_dist != 0 {
+        (steps, index)
+    } else {
+        (0, index)
+    }
 }
 
 fn main() -> std::io::Result<()> {
