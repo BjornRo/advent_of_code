@@ -1,93 +1,93 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_assignments)]
-#![allow(unused_must_use)]
-use regex::Regex;
-use std::{collections::HashMap, collections::VecDeque, fs};
+use std::fs;
 
-fn addr(reg: &mut Vec<usize>, a: usize, b: usize, c: usize) {
-    reg[c] = reg[a] + reg[b];
-}
-fn addi(reg: &mut Vec<usize>, a: usize, b: usize, c: usize) {
-    reg[c] = reg[a] + b;
-}
-fn setr(reg: &mut Vec<usize>, a: usize, b: usize, c: usize) {
-    reg[c] = reg[a];
-}
-fn seti(reg: &mut Vec<usize>, a: usize, b: usize, c: usize) {
-    reg[c] = a;
-}
+type Func = Box<dyn Fn(&mut Vec<usize>)>;
 
-#[derive(Debug)]
 struct Instruction {
-    func: fn(&mut Vec<usize>, usize, usize, usize),
-    args: (u8, u8, u8),
+    func: Func,
 }
 impl Instruction {
-    fn apply(&self, registers: &mut Vec<usize>) {
-        (self.func)(
-            registers,
-            self.args.0 as usize,
-            self.args.1 as usize,
-            self.args.2 as usize,
-        )
+    fn apply(&self, regs: &mut Vec<usize>) {
+        (self.func)(regs);
     }
 }
 
 impl From<&str> for Instruction {
+    #[rustfmt::skip]
     fn from(value: &str) -> Self {
         value
             .split_once(" ")
             .map(|(func, args)| {
-                let [a, b, c]: [u8; 3] = args
+                let [a, b, c]: [usize; 3] = args
                     .split_whitespace()
-                    .map(|s| s.parse::<u8>().unwrap())
-                    .collect::<Vec<u8>>()
+                    .map(|s| s.parse().unwrap())
+                    .collect::<Vec<usize>>()
                     .try_into()
                     .expect("");
                 Instruction {
                     func: match func {
-                        "seti" => seti,
-                        "setr" => seti,
-                        "addi" => addi,
-                        "addr" => addr,
+                        "seti" => Box::new(move |reg: &mut Vec<usize>| reg[c] = a),
+                        "setr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a]),
+                        "addi" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] + b),
+                        "addr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] + reg[b]),
+                        "muli" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] * b),
+                        "mulr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] * reg[b]),
+                        "bani" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] & b),
+                        "banr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] & reg[b]),
+                        "bori" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] | b),
+                        "borr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = reg[a] | reg[b]),
+                        "gtri" => Box::new(move |reg: &mut Vec<usize>| reg[c] = (reg[a] > b) as usize),
+                        "gtir" => Box::new(move |reg: &mut Vec<usize>| reg[c] = (a > reg[b]) as usize),
+                        "gtrr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = (reg[a] > reg[b]) as usize),
+                        "eqir" => Box::new(move |reg: &mut Vec<usize>| reg[c] = (a == reg[b]) as usize),
+                        "eqri" => Box::new(move |reg: &mut Vec<usize>| reg[c] = (reg[a] == b) as usize),
+                        "eqrr" => Box::new(move |reg: &mut Vec<usize>| reg[c] = if reg[a] == reg[b] { 1 } else { 0 }),
                         _ => panic!(),
                     },
-                    args: (a, b, c),
                 }
             })
             .unwrap()
     }
 }
 
-fn part1(mut ip: usize, ins: &Vec<Instruction>) {
+fn part1(ip: usize, ins: &Vec<Instruction>) -> usize {
     let mut registers = vec![0 as usize; 6];
-    while ip < registers.len() {
+    while registers[ip] < ins.len() {
         let instruction = &ins[registers[ip]];
         instruction.apply(&mut registers);
-        ip = registers[ip];
-        println!("{:?}", registers);
+        registers[ip] += 1;
     }
-    println!("{:?}", registers);
+    registers[0]
+}
+
+fn part2(ip: usize, ins: &Vec<Instruction>) -> usize {
+    let mut registers = vec![0 as usize; 6];
+    registers[0] = 1;
+    let mut last_ip = registers[ip];
+    loop {
+        let instruction = &ins[registers[ip]];
+        instruction.apply(&mut registers);
+        registers[ip] += 1;
+        if last_ip > registers[ip] {
+            break;
+        }
+        last_ip = registers[ip];
+    }
+    let max_value = *registers.iter().max().unwrap();
+    (1..max_value + 1).fold(0, |acc, x| if max_value % x == 0 { acc + x } else { acc })
 }
 
 fn main() -> std::io::Result<()> {
-    let (ip, instructions) = fs::read_to_string("in/d19t.txt")?
+    let (ip, instructions) = fs::read_to_string("in/d19.txt")?
         .trim_end()
         .split_once("\n")
         .map(|(rip, rins)| {
-            let ip = rip.chars().last().unwrap() as u8 - '0' as u8;
+            let ip = (rip.chars().last().unwrap() as u8 - '0' as u8) as usize;
             let ins = rins.lines().map(|r| r.into()).collect::<Vec<Instruction>>();
             (ip, ins)
         })
         .unwrap();
 
-    part1(ip as usize, &instructions);
-
-    println!("{:?}", instructions);
-    println!("Part 1: {}", 1);
-    println!("Part 2: {}", 2);
+    println!("Part 1: {}", part1(ip, &instructions));
+    println!("Part 2: {}", part2(ip, &instructions));
     Ok(())
 }
