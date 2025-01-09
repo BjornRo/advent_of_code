@@ -65,9 +65,9 @@ fn region_value(region_type: RegionType) -> usize {
 fn part1(depth: isize, target @ (row, col): Pos, memo: &mut Map) -> usize {
     let mut sum: usize = 0;
     for i in 0..=row {
-        sum += (0..=col)
-            .map(|j| region_value(calc_erosion((i, j), depth, target, memo)))
-            .sum::<usize>();
+        for j in 0..=col {
+            sum += region_value(calc_erosion((i, j), depth, target, memo));
+        }
     }
     sum
 }
