@@ -112,21 +112,17 @@ fn part2(depth: isize, target: Pos, memo: &mut Map) -> Option<usize> {
             if nr < 0 || nc < 0 {
                 continue;
             }
-            let (mut new_equip, mut new_g_cost) = (equip, g_cost);
+            let (mut new_equip, mut new_g_cost) = (equip, g_cost + 1);
             if pos == np {
-                new_g_cost += 7;
+                new_g_cost += 6;
                 new_equip = *region_equip(erosion(pos, depth, target, memo))
                     .iter()
                     .filter(|&&next_equip| next_equip != equip)
                     .next()
                     .unwrap();
-            } else {
-                if !region_equip(erosion(np, depth, target, memo)).contains(&new_equip) {
-                    continue;
-                }
-                new_g_cost += 1;
+            } else if !region_equip(erosion(np, depth, target, memo)).contains(&new_equip) {
+                continue;
             }
-
             if let Some(&existing_g_cost) = g_costs.get(&(np, new_equip)) {
                 if new_g_cost >= existing_g_cost {
                     continue;
