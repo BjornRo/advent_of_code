@@ -112,8 +112,7 @@ fn part2(depth: isize, target: Pos, memo: &mut Map) -> Option<usize> {
             if nr < 0 || nc < 0 {
                 continue;
             }
-            let mut new_g_cost = g_cost;
-            let mut new_equip = equip;
+            let (mut new_equip, mut new_g_cost) = (equip, g_cost);
             if pos == np {
                 new_g_cost += 7;
                 new_equip = *region_equip(erosion(pos, depth, target, memo))
