@@ -64,10 +64,8 @@ fn region_value(region_type: RegionType) -> usize {
 
 fn part1(depth: isize, target @ (row, col): Pos, memo: &mut Map) -> usize {
     let mut sum: usize = 0;
-    for i in 0..=row {
-        for j in 0..=col {
-            sum += region_value(calc_erosion((i, j), depth, target, memo));
-        }
+    for (i, j) in (0..=row).flat_map(|i| (0..=col).map(move |j| (i, j))) {
+        sum += region_value(calc_erosion((i, j), depth, target, memo));
     }
     sum
 }
@@ -98,7 +96,7 @@ fn main() -> std::io::Result<()> {
 
     let p1 = part1(depth, target, &mut memo);
     print(p1);
-    print(&memo);
+    // print(&memo);
     let p2 = part2(depth, target, &memo);
 
     // println!("Part 1: {}", 1);
