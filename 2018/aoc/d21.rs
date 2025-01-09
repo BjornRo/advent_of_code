@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 
 fn main() -> std::io::Result<()> {
-    let content = fs::read_to_string("in/d10.txt")?;
+    let content = fs::read_to_string("in/d21t.txt")?;
 
     let re = Regex::new(r"<(.*)>.*<(.*)>").unwrap();
 
