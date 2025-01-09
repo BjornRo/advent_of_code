@@ -1,69 +1,85 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_assignments)]
-#![allow(unused_must_use)]
-use regex::Regex;
-use std::{collections::HashMap, collections::VecDeque, fs};
+use std::cmp::max;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::fs;
 
-// 4646 too high
-// 4246 too low
-fn door_frames(string: &Vec<char>, mut index: usize) -> (usize, usize) {
-    let mut steps: usize = 0;
-    let mut msteps: Vec<char> = vec![];
-    let (mut row, mut col): (isize, isize) = (0, 0);
+type Pos = (isize, isize);
+type Graph = HashMap<Pos, Vec<Pos>>;
+
+struct State {
+    pos: Pos,
+    steps: usize,
+    visited: HashSet<Pos>,
+}
+
+impl State {
+    fn new(pos: Pos, steps: usize, visited: HashSet<Pos>) -> Self {
+        State {
+            pos,
+            steps,
+            visited,
+        }
+    }
+    fn get(&mut self) -> (Pos, usize, &mut HashSet<Pos>) {
+        (self.pos, self.steps, &mut self.visited)
+    }
+}
+
+fn door_frames(string: &Vec<char>, graph: &mut Graph, mut index: usize, mut pos: Pos) -> usize {
     loop {
         match string[index] {
+            '|' | ')' | '$' => break,
             '(' => {
-                let mut sub_steps = 0;
-                loop {
-                    let (rec_steps, new_index) = door_frames(string, index + 1);
-                    if rec_steps > sub_steps {
-                        sub_steps = rec_steps;
-                    }
-                    index = new_index;
-                    if string[new_index] == ')' {
-                        steps += sub_steps;
-                        break;
-                    };
+                while string[index] != ')' {
+                    index = door_frames(string, graph, index + 1, pos);
                 }
-            }
-            '|' | ')' | '$' => {
-                break;
             }
             c => {
-                match c {
-                    'N' => row -= 1,
-                    'S' => row += 1,
-                    'E' => col += 1,
-                    'W' => col -= 1,
-                    _ => panic!(),
-                }
-                msteps.push(string[index]);
-                steps += 1
+                let next_pos = match c {
+                    'N' => (pos.0 - 1, pos.1),
+                    'S' => (pos.0 + 1, pos.1),
+                    'E' => (pos.0, pos.1 + 1),
+                    _w => (pos.0, pos.1 - 1),
+                };
+                graph.entry(pos).or_insert_with(Vec::new).push(next_pos);
+                pos = next_pos
             }
         };
         index += 1;
     }
-    println!("{:?}", msteps);
-    println!("{} {:?}", msteps.len(), (row, col));
-    let mat_dist = row.abs() + col.abs();
-    if mat_dist != 0 {
-        (steps, index)
-    } else {
-        (0, index)
+    index
+}
+
+fn house_of_doors(graph: &Graph, start_pos: Pos) -> (usize, usize) {
+    let mut doors_1k: HashMap<Pos, usize> = HashMap::new();
+    let mut max_doors: usize = 0;
+
+    let mut queue: VecDeque<State> = vec![State::new(start_pos, 0, HashSet::new())].into();
+    while let Some(mut state) = queue.pop_front() {
+        let (pos, steps, visited) = state.get();
+        if visited.contains(&pos) {
+            max_doors = max(max_doors, steps - 1);
+            continue;
+        }
+        doors_1k.insert(pos, steps);
+        visited.insert(pos);
+
+        for next_pos in graph.get(&pos).unwrap_or(&vec![]) {
+            queue.push_back(State::new(*next_pos, steps + 1, visited.clone()));
+        }
     }
+    (max_doors, doors_1k.values().filter(|&&x| x >= 1000).count())
 }
 
 fn main() -> std::io::Result<()> {
-    let string: Vec<char> = fs::read_to_string("in/d20t.txt")?
+    let string: Vec<char> = fs::read_to_string("in/d20.txt")?
         .trim_end()
         .chars()
         .collect();
 
-    println!("{:?}", door_frames(&string, 1));
-    println!("Part 1: {}", 1);
-    println!("Part 2: {}", 2);
+    let mut graph: Graph = HashMap::new();
+    door_frames(&string, &mut graph, 1, (0, 0));
+    let (p1, p2) = house_of_doors(&graph, (0, 0));
+    println!("Part 1: {}", p1);
+    println!("Part 2: {}", p2);
     Ok(())
 }
