@@ -59,15 +59,14 @@ fn looper(ip: usize, ins: &Vec<Instruction>) -> (usize, usize) {
     loop {
         let reg_ip = registers[ip];
         ins[reg_ip].apply(&mut registers);
-        if reg_ip == 30 {
+        if reg_ip == ins.len() - 1 {
             if first_terminate == 0 {
                 first_terminate = registers[5];
             }
-            if map.insert(registers[5]) {
-                last_terminate = registers[5];
-            } else {
+            if !map.insert(registers[5]) {
                 break;
             }
+            last_terminate = registers[5];
         }
         registers[ip] += 1;
     }
