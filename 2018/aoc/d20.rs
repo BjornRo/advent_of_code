@@ -2,25 +2,20 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 
-type Pos = (isize, isize);
+type Pos = (i8, i8);
 type Graph = HashMap<Pos, Vec<Pos>>;
 
 struct State {
     pos: Pos,
-    steps: usize,
     visited: HashSet<Pos>,
 }
 
 impl State {
-    fn new(pos: Pos, steps: usize, visited: HashSet<Pos>) -> Self {
-        State {
-            pos,
-            steps,
-            visited,
-        }
+    fn new(pos: Pos, visited: HashSet<Pos>) -> Self {
+        State { pos, visited }
     }
-    fn get(&mut self) -> (Pos, usize, &mut HashSet<Pos>) {
-        (self.pos, self.steps, &mut self.visited)
+    fn get(&mut self) -> (Pos, &mut HashSet<Pos>) {
+        (self.pos, &mut self.visited)
     }
 }
 
@@ -38,7 +33,7 @@ fn door_frames(string: &Vec<char>, graph: &mut Graph, mut index: usize, mut pos:
                     'N' => (pos.0 - 1, pos.1),
                     'S' => (pos.0 + 1, pos.1),
                     'E' => (pos.0, pos.1 + 1),
-                    _w => (pos.0, pos.1 - 1),
+                    _w_ => (pos.0, pos.1 - 1),
                 };
                 graph.entry(pos).or_insert_with(Vec::new).push(next_pos);
                 pos = next_pos
@@ -50,24 +45,26 @@ fn door_frames(string: &Vec<char>, graph: &mut Graph, mut index: usize, mut pos:
 }
 
 fn house_of_doors(graph: &Graph, start_pos: Pos) -> (usize, usize) {
-    let mut doors_1k: HashMap<Pos, usize> = HashMap::new();
+    let mut doors_1k: HashSet<Pos> = HashSet::new();
     let mut max_doors: usize = 0;
 
-    let mut queue: VecDeque<State> = vec![State::new(start_pos, 0, HashSet::new())].into();
+    let mut queue: VecDeque<State> = vec![State::new(start_pos, HashSet::new())].into();
     while let Some(mut state) = queue.pop_front() {
-        let (pos, steps, visited) = state.get();
+        let (pos, visited) = state.get();
         if visited.contains(&pos) {
-            max_doors = max(max_doors, steps - 1);
+            max_doors = max(max_doors, visited.len() - 1);
             continue;
         }
-        doors_1k.insert(pos, steps);
+        if visited.len() >= 1000 {
+            doors_1k.insert(pos);
+        }
         visited.insert(pos);
 
         for next_pos in graph.get(&pos).unwrap_or(&vec![]) {
-            queue.push_back(State::new(*next_pos, steps + 1, visited.clone()));
+            queue.push_back(State::new(*next_pos, visited.clone()));
         }
     }
-    (max_doors, doors_1k.values().filter(|&&x| x >= 1000).count())
+    (max_doors, doors_1k.len())
 }
 
 fn main() -> std::io::Result<()> {
