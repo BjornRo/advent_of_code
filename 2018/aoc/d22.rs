@@ -102,8 +102,7 @@ fn part2(depth: isize, target: Pos, memo: &mut Map) -> Option<usize> {
         vec![Node::new((0, 0), Torch, 0, manhattan((0, 0), target))].into();
     let mut g_costs: HashMap<(Pos, Equip), usize> = HashMap::new();
 
-    while let Some(node) = heap.pop() {
-        let (pos @ (row, col), equip, g_cost) = node.get();
+    while let Some((pos @ (row, col), equip, g_cost)) = heap.pop().map(|n| n.get()) {
         if pos == target && equip == Torch {
             return Some(g_cost);
         }
