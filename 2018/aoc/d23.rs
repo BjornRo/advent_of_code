@@ -24,9 +24,11 @@ struct Nanobot {
 }
 impl Nanobot {
     fn manhattan(&self, o: &Nanobot) -> isize {
-        let (a0, a1, a2) = self.pos;
-        let (b0, b1, b2) = o.pos;
-        (a0 - b0).abs() + (a1 - b1).abs() + (a2 - b2).abs()
+        manhattan(self.pos, o.pos)
+    }
+    fn overlaps(&self, o: &Nanobot) -> bool {
+        let d = self.manhattan(o);
+        d < (self.radius + o.radius)
     }
 }
 impl Ord for Nanobot {
@@ -49,36 +51,51 @@ impl From<[isize; 4]> for Nanobot {
     }
 }
 
-fn part1(nanobots: &Vec<Nanobot>) -> usize {
-    nanobots
-        .iter()
-        .filter(|r| nanobots[0].manhattan(r) <= nanobots[0].radius)
-        .count()
+fn overlap_midpoint(a: Point, b: Point) -> Point {
+    ((a.0 + b.0) / 2, (a.1 + b.1) / 2, (a.2 + b.2) / 2)
+}
+
+fn manhattan(a: Point, b: Point) -> isize {
+    let (a0, a1, a2) = a;
+    let (b0, b1, b2) = b;
+    (a0 - b0).abs() + (a1 - b1).abs() + (a2 - b2).abs()
 }
 
 fn part2(nanobots: &Vec<Nanobot>) {
-    let selfhattan = |(a, b, c): PointF| a.abs() + b.abs() + c.abs();
     let manfloatan = |(a, b, c): PointF, (d, e, f): Point| {
         (a - d as f64).abs() + (b - e as f64).abs() + (c - f as f64).abs()
     };
 
     // K means-ish. We have 1 cluster. Take first point as mean of each point as init guess.
     // let best_points: Vec<PointF> = vec![];
-    let point @ (p0, p1, p2) = nanobots.iter().fold((0.0, 0.0, 0.0), |acc, bot| {
-        let (a, b, c) = bot.pos;
-        let (a0, a1, a2) = acc;
-        (a0 + a as f64, a1 + b as f64, a2 + c as f64)
-    });
-    let n_points = nanobots.len() as f64;
-    let centroid @ (c0, c1, c2) = (p0 / n_points, p1 / n_points, p2 / n_points);
 
-    let icentroid = (c0 as isize, c1 as isize, c2 as isize);
+    let overlapping_points: HashSet<Point> = HashSet::new();
+    let mut sum: usize = 0;
+    for i in nanobots {
+        for j in nanobots {
+            if i == j {
+                continue;
+            }
+            if i.overlaps(&j) {}
+        }
+    }
+    print(nanobots.len());
+}
 
-    print(selfhattan(centroid));
+fn get_overlapping_edges(a: Nanobot, b: Nanobot) {
+    let mid_point = overlap_midpoint(a.pos, b.pos);
+    let mut edge_point: Point = mid_point;
+    loop {
+        // Walk right until border is found.
+        if a.radius < manhattan(a.pos, edge_point) {
+            break;
+        }
+        edge_point = (edge_point.0, edge_point.1 + 1)
+    }
 }
 
 fn main() -> std::io::Result<()> {
-    let content = fs::read_to_string("in/d23tt.txt")?;
+    let content = fs::read_to_string("in/d23.txt")?;
     let re = Regex::new(r"(-*\d+).(-*\d+).(-*\d+).+r=(\d+)").unwrap();
 
     let mut nanobots: Vec<Nanobot> = re
@@ -93,3 +110,31 @@ fn main() -> std::io::Result<()> {
     // println!("Part 2: {}", 2);
     Ok(())
 }
+
+fn part1(nanobots: &Vec<Nanobot>) -> usize {
+    nanobots
+        .iter()
+        .filter(|r| nanobots[0].manhattan(r) <= nanobots[0].radius)
+        .count()
+}
+
+// fn part2(nanobots: &Vec<Nanobot>) {
+//     let selfhattan = |(a, b, c): PointF| a.abs() + b.abs() + c.abs();
+//     let manfloatan = |(a, b, c): PointF, (d, e, f): Point| {
+//         (a - d as f64).abs() + (b - e as f64).abs() + (c - f as f64).abs()
+//     };
+
+//     // K means-ish. We have 1 cluster. Take first point as mean of each point as init guess.
+//     // let best_points: Vec<PointF> = vec![];
+//     let point @ (p0, p1, p2) = nanobots.iter().fold((0.0, 0.0, 0.0), |acc, bot| {
+//         let (a, b, c) = bot.pos;
+//         let (a0, a1, a2) = acc;
+//         (a0 + a as f64, a1 + b as f64, a2 + c as f64)
+//     });
+//     let n_points = nanobots.len() as f64;
+//     let centroid @ (c0, c1, c2) = (p0 / n_points, p1 / n_points, p2 / n_points);
+
+//     let icentroid = (c0 as isize, c1 as isize, c2 as isize);
+
+//     print(selfhattan(centroid));
+// }
