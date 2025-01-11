@@ -87,7 +87,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
                 visited_bots = bots.into_iter().collect();
             }
         }
-        visited_bots.into_iter().collect()
+        visited_bots.drain().collect()
     };
 
     // Get the ranges that all spheres overlap to reduce search space.
