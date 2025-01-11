@@ -71,7 +71,6 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
     // Find the set with the most overlaps, use visited to reduce comparisons
     let bots: Vec<&Nanobot> = {
         let mut visited_bots: HashSet<&Nanobot> = HashSet::new();
-        let mut max_overlaps: usize = 0;
         for i in nanobots {
             if visited_bots.contains(&i) {
                 continue;
@@ -82,8 +81,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
                 }
                 acc
             });
-            if bots.len() > max_overlaps {
-                max_overlaps = bots.len();
+            if bots.len() > visited_bots.len() {
                 visited_bots = bots.into_iter().collect();
             }
         }
