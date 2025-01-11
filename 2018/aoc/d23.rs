@@ -10,19 +10,11 @@ struct Nanobot {
     pos: Point,
     radius: isize,
 }
-impl Nanobot {
-    fn overlaps(&self, o: &Nanobot) -> bool {
-        manhattan(self.pos, o.pos) <= (self.radius + o.radius)
-    }
-}
-
 impl From<[isize; 4]> for Nanobot {
     fn from(i: [isize; 4]) -> Self {
-        let [a, b, c, d] = i;
-        Nanobot {
-            pos: (a, b, c),
-            radius: d,
-        }
+        let [a, b, c, radius] = i;
+        let pos = (a, b, c);
+        Nanobot { pos, radius }
     }
 }
 
@@ -30,10 +22,6 @@ fn manhattan(a: Point, b: Point) -> isize {
     let (a0, a1, a2) = a;
     let (b0, b1, b2) = b;
     (a0 - b0).abs() + (a1 - b1).abs() + (a2 - b2).abs()
-}
-
-fn point_within(nanobot: &Nanobot, point: Point) -> bool {
-    manhattan(nanobot.pos, point) <= nanobot.radius
 }
 
 fn sq_sum_manhattan_radius(list: &Vec<&Nanobot>, pos: Point) -> isize {
@@ -70,13 +58,14 @@ fn part1(nanobots: &Vec<Nanobot>) -> usize {
 fn part2(nanobots: &Vec<Nanobot>) -> usize {
     let bots: Vec<&Nanobot> = {
         // Find the set with the most overlaps, use visited to reduce comparisons
+        let overlaps = |a: &Nanobot, b: &Nanobot| manhattan(a.pos, b.pos) <= (a.radius + b.radius);
         let mut visited_bots: HashSet<&Nanobot> = HashSet::new();
         for i in nanobots {
             if visited_bots.contains(&i) {
                 continue;
             }
             let bots: Vec<&Nanobot> = nanobots.iter().fold(vec![], |mut acc, j| {
-                if acc.iter().all(|b| b.overlaps(j)) {
+                if acc.iter().all(|&b| overlaps(b, j)) {
                     acc.push(j);
                 }
                 acc
@@ -91,6 +80,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
     // Generate sets for the gradient descent to minimize into.
     // bots_not_overlap is our target for gradient descent.
     // Then if we find an overlap, repartition again.
+    let point_within = |b: &Nanobot, point: Point| manhattan(b.pos, point) <= b.radius;
     let partition = |p: Point| -> (Vec<&Nanobot>, Vec<&Nanobot>) {
         bots.iter().partition(|bot| point_within(bot, p))
     };
