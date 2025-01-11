@@ -88,13 +88,6 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
         visited_bots.drain().collect()
     };
 
-    // Get the ranges that all spheres overlap to reduce search space.
-    // Get the midpoint of the valid ranges
-    let mut pos: Point = find_overlap_range(&bots)
-        .map(|p| (p.0 + p.1) / 2)
-        .try_into()
-        .unwrap();
-
     // Generate sets for the gradient descent to minimize into.
     // bots_not_overlap is our target for gradient descent.
     // Then if we find an overlap, repartition again.
@@ -102,6 +95,12 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
         bots.iter().partition(|bot| point_within(bot, p))
     };
 
+    // Get the ranges that all spheres overlap to reduce search space.
+    // Then get the midpoint of the valid ranges
+    let mut pos: Point = find_overlap_range(&bots)
+        .map(|p| (p.0 + p.1) / 2)
+        .try_into()
+        .unwrap();
     let (mut bots_overlap, mut bots_not_overlap) = partition(pos);
     let mut min_sum: isize = isize::MAX;
     let mut visit: HashSet<Point> = HashSet::new();
