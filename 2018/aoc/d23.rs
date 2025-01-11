@@ -107,10 +107,8 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
     let mut visit: HashSet<Point> = HashSet::new();
     let mut factor: isize = 1 << 20; // Adjust to terminate. 49 loops for my input (instant)
     loop {
-        if bots.len() == bots_overlap.len() {
-            if !visit.insert(pos) {
-                break;
-            }
+        if bots.len() == bots_overlap.len() && !visit.insert(pos) {
+            break;
         }
 
         let mut best_score = min_sum;
