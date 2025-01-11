@@ -3,14 +3,9 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::{fs, isize};
 
-#[allow(dead_code)]
-fn print<T: std::fmt::Debug>(x: T) {
-    println!("{:?}", x);
-}
-
 type Point = (isize, isize, isize);
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 struct Nanobot {
     pos: Point,
     radius: isize,
@@ -20,6 +15,7 @@ impl Nanobot {
         manhattan(self.pos, o.pos) <= (self.radius + o.radius)
     }
 }
+
 impl From<[isize; 4]> for Nanobot {
     fn from(i: [isize; 4]) -> Self {
         let [a, b, c, d] = i;
@@ -29,25 +25,15 @@ impl From<[isize; 4]> for Nanobot {
         }
     }
 }
+
 fn manhattan(a: Point, b: Point) -> isize {
     let (a0, a1, a2) = a;
     let (b0, b1, b2) = b;
     (a0 - b0).abs() + (a1 - b1).abs() + (a2 - b2).abs()
 }
 
-fn part1(nanobots: &Vec<Nanobot>) -> usize {
-    nanobots
-        .iter()
-        .filter(|o| manhattan(nanobots[0].pos, o.pos) <= nanobots[0].radius)
-        .count()
-}
-
 fn point_within(nanobot: &Nanobot, point: Point) -> bool {
     manhattan(nanobot.pos, point) <= nanobot.radius
-}
-
-fn count_overlaps(list: &Vec<&Nanobot>, pos: Point) -> usize {
-    list.iter().filter(|bot| point_within(bot, pos)).count()
 }
 
 fn sq_sum_manhattan_radius(list: &Vec<&Nanobot>, pos: Point) -> isize {
@@ -58,7 +44,7 @@ fn sq_sum_manhattan_radius(list: &Vec<&Nanobot>, pos: Point) -> isize {
     })
 }
 
-fn find_overlap_range(bots: &Vec<&Nanobot>) -> ((isize, isize), (isize, isize), (isize, isize)) {
+fn find_overlap_range(bots: &Vec<&Nanobot>) -> [(isize, isize); 3] {
     let ((a, b, c), r) = (bots[0].pos, bots[0].radius);
     let (mut min_a, mut max_a) = (a - r, a + r);
     let (mut min_b, mut max_b) = (b - r, b + r);
@@ -71,38 +57,45 @@ fn find_overlap_range(bots: &Vec<&Nanobot>) -> ((isize, isize), (isize, isize), 
         (min_c, max_c) = (min_c.max(c - r), max_c.min(c + r));
     }
 
-    ((min_a, max_a), (min_b, max_b), (min_c, max_c))
+    [(min_a, max_a), (min_b, max_b), (min_c, max_c)]
 }
 
-fn part2(nanobots: &Vec<Nanobot>) -> isize {
+fn part1(nanobots: &Vec<Nanobot>) -> usize {
+    nanobots
+        .iter()
+        .filter(|o| manhattan(nanobots[0].pos, o.pos) <= nanobots[0].radius)
+        .count()
+}
+
+fn part2(nanobots: &Vec<Nanobot>) -> usize {
     // Find the set with the most overlaps, use visited to reduce comparisons
-    // goal (18090900, 53369449, 57983828) = 978 overlaps. This function takes sooo
-    // long time.
-    let mut visited_bots: HashSet<&Nanobot> = HashSet::new();
-    let mut max_overlaps: usize = 0;
-    for i in nanobots {
-        if visited_bots.contains(&i) {
-            continue;
-        }
-        let mut bots: Vec<&Nanobot> = vec![];
-        for j in nanobots {
-            if bots.iter().all(|b| b.overlaps(&j)) {
-                bots.push(j);
+    let bots: Vec<&Nanobot> = {
+        let mut visited_bots: HashSet<&Nanobot> = HashSet::new();
+        let mut max_overlaps: usize = 0;
+        for i in nanobots {
+            if visited_bots.contains(&i) {
+                continue;
+            }
+            let bots: Vec<&Nanobot> = nanobots.iter().fold(vec![], |mut acc, j| {
+                if acc.iter().all(|b| b.overlaps(j)) {
+                    acc.push(j);
+                }
+                acc
+            });
+            if bots.len() > max_overlaps {
+                max_overlaps = bots.len();
+                visited_bots = bots.into_iter().collect();
             }
         }
-        if bots.len() > max_overlaps {
-            visited_bots.clear();
-            max_overlaps = bots.len();
-            visited_bots.extend(bots);
-        }
-    }
-    let bots: Vec<&Nanobot> = visited_bots.into_iter().collect();
+        visited_bots.into_iter().collect()
+    };
 
     // Get the ranges that all spheres overlap to reduce search space.
-    #[allow(unused_variables)]
-    let (a @ (min_a, max_a), b @ (min_b, max_b), c @ (min_c, max_c)) = find_overlap_range(&bots);
-    let mid = |p: (isize, isize)| (p.0 + p.1) / 2;
-    let mut pos = (mid(a), mid(b), mid(c));
+    // Get the midpoint of the valid ranges
+    let mut pos: Point = find_overlap_range(&bots)
+        .map(|p| (p.0 + p.1) / 2)
+        .try_into()
+        .unwrap();
 
     // Generate sets for the gradient descent to minimize into.
     // bots_not_overlap is our target for gradient descent.
@@ -114,6 +107,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> isize {
     let (mut bots_overlap, mut bots_not_overlap) = partition(pos);
     let mut min_sum: isize = isize::MAX;
     let mut visit: HashSet<Point> = HashSet::new();
+    let mut factor: isize = 1 << 20; // Adjust to terminate. 49 loops for my input (instant)
     loop {
         if bots.len() == bots_overlap.len() {
             if visit.contains(&pos) {
@@ -121,7 +115,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> isize {
                     .iter()
                     .map(|p| manhattan(*p, (0, 0, 0)))
                     .min()
-                    .unwrap();
+                    .unwrap() as usize;
             }
             visit.insert(pos);
         }
@@ -134,21 +128,26 @@ fn part2(nanobots: &Vec<Nanobot>) -> isize {
                     if i == 0 && j == 0 && k == 0 {
                         continue;
                     }
-                    let new_pos = (pos.0 + i, pos.1 + j, pos.2 + k);
+                    let new_pos = (pos.0 + i * factor, pos.1 + j * factor, pos.2 + k * factor);
                     let new_dist = sq_sum_manhattan_radius(&bots_not_overlap, new_pos);
                     if new_dist < min_sum || bots.len() == bots_overlap.len() {
-                        let new_overlaps = count_overlaps(&bots, new_pos);
+                        let new_overlaps =
+                            bots.iter().filter(|bot| point_within(bot, new_pos)).count();
                         if new_overlaps > bots_overlap.len() {
                             (bots_overlap, bots_not_overlap) = partition(new_pos);
                         }
-                        if new_overlaps >= bots_overlap.len() {
-                            if best_score > new_dist {
-                                best_score = new_dist;
-                                best_pos = new_pos;
-                            }
+                        if new_overlaps >= bots_overlap.len() && best_score > new_dist {
+                            (best_score, best_pos) = (new_dist, new_pos);
                         }
                     }
                 }
+            }
+        }
+        if best_score >= min_sum {
+            if factor > 1 {
+                factor /= 2;
+            } else {
+                factor = 1;
             }
         }
         min_sum = best_score;
