@@ -108,14 +108,9 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
     let mut factor: isize = 1 << 20; // Adjust to terminate. 49 loops for my input (instant)
     loop {
         if bots.len() == bots_overlap.len() {
-            if visit.contains(&pos) {
-                return visit
-                    .iter()
-                    .map(|p| manhattan(*p, (0, 0, 0)))
-                    .min()
-                    .unwrap() as usize;
+            if !visit.insert(pos) {
+                break;
             }
-            visit.insert(pos);
         }
 
         let mut best_score = min_sum;
@@ -151,6 +146,11 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
         min_sum = best_score;
         pos = best_pos;
     }
+    visit
+        .iter()
+        .map(|p| manhattan(*p, (0, 0, 0)))
+        .min()
+        .unwrap() as usize
 }
 
 fn main() -> std::io::Result<()> {
