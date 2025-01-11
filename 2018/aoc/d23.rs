@@ -68,8 +68,8 @@ fn part1(nanobots: &Vec<Nanobot>) -> usize {
 }
 
 fn part2(nanobots: &Vec<Nanobot>) -> usize {
-    // Find the set with the most overlaps, use visited to reduce comparisons
     let bots: Vec<&Nanobot> = {
+        // Find the set with the most overlaps, use visited to reduce comparisons
         let mut visited_bots: HashSet<&Nanobot> = HashSet::new();
         for i in nanobots {
             if visited_bots.contains(&i) {
