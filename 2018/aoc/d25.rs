@@ -1,35 +1,18 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_assignments)]
-#![allow(unused_must_use)]
-use regex::Regex;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
-#[allow(dead_code)]
-fn print<T: std::fmt::Debug>(x: T) {
-    println!("{:?}", x);
-}
-
 type Point = Vec<isize>;
-
-fn manhattan(a: &Point, b: &Point) -> isize {
-    a.iter().zip(b).fold(0, |acc, (a, b)| acc + (a - b).abs())
-}
 
 fn part1(points: &Vec<Point>) -> usize {
     let mut graph: HashMap<&Point, Vec<&Point>> = HashMap::new();
     for i in points {
         graph.insert(i, vec![]);
         for j in points {
-            if i == j {
-                continue;
-            }
-            if manhattan(i, j) <= 3 {
-                graph.get_mut(&i).unwrap().push(j);
-                graph.entry(j).or_insert_with(Vec::new).push(i);
+            if i != j {
+                if i.iter().zip(j).fold(0, |acc, (a, b)| acc + (a - b).abs()) <= 3 {
+                    graph.get_mut(&i).unwrap().push(j);
+                    graph.entry(j).or_insert_with(Vec::new).push(i);
+                }
             }
         }
     }
@@ -54,7 +37,7 @@ fn part1(points: &Vec<Point>) -> usize {
 }
 
 fn main() -> std::io::Result<()> {
-    let mut data: Vec<Vec<isize>> = fs::read_to_string("in/d25.txt")?
+    let data: Vec<Vec<isize>> = fs::read_to_string("in/d25.txt")?
         .trim_end()
         .lines()
         .map(|line| line.split(",").map(|x| x.parse().unwrap()).collect())
