@@ -136,9 +136,10 @@ fn parse_block(raw_block: &str, unit_type: UnitType) -> Vec<Unit> {
         .collect()
 }
 
-fn part1(mut groups: Vec<Unit>) -> isize {
+fn solver(mut groups: Vec<Unit>) -> [isize; 2] {
     use UnitType::*;
     let mut selected_targets: HashSet<TargetType> = HashSet::new();
+    let mut result: [isize; 2] = [-1, -1];
     loop {
         selected_targets.clear();
         groups.sort_unstable_by_key(|x| (-x.effective_power(), -x.initative));
@@ -163,9 +164,6 @@ fn part1(mut groups: Vec<Unit>) -> isize {
                 continue;
             }
             targets.sort_unstable_by_key(|(_, myp, p, i, _)| (-myp, -p, -i));
-            print(&groups[i]);
-            print(&targets);
-            print("");
             let t = targets[0];
             let (id, _, _, _, ut) = t;
             selected_targets.insert((id, ut));
@@ -177,7 +175,6 @@ fn part1(mut groups: Vec<Unit>) -> isize {
             if let Some((id, unit_type)) = groups[i].target {
                 let mut damage = groups[i].effective_power();
                 let dmg_type = groups[i].damage_type;
-                print(&groups[i]);
                 let mut target = groups
                     .iter_mut()
                     .find_map(|x| {
@@ -188,27 +185,26 @@ fn part1(mut groups: Vec<Unit>) -> isize {
                         }
                     })
                     .unwrap();
-                print(&target);
                 if target.weak.contains(&dmg_type) {
                     damage *= 2;
                 }
                 let lost_units = damage / target.hp;
-                print(damage);
-                print(lost_units);
                 target.units -= lost_units;
             }
             groups[i].target = None;
         }
-        print("new round");
         groups.retain(|x| x.units > 0);
-        if !groups.iter().any(|x| x.r#type == Immune) {
-            print("Infect wins");
-            print(&groups);
-            return groups.iter().map(|x| x.units).sum();
-        } else if !groups.iter().any(|x| x.r#type == Infection) {
-            print("Immune wins");
-            return groups.iter().map(|x| x.units).sum();
+        let new_result = groups.iter().fold([0, 0], |[imm, inf], x| match x.r#type {
+            Immune => [imm + x.units, inf],
+            Infection => [imm, inf + x.units],
+        });
+        if new_result.contains(&0) {
+            return new_result;
+        } else if new_result == result {
+            // Deadlock
+            return [0, 0];
         }
+        result = new_result;
     }
 }
 
@@ -216,11 +212,28 @@ fn main() -> std::io::Result<()> {
     let binding = fs::read_to_string("in/d24.txt")?;
     let (immune, infection) = binding.trim_end().split_once("\n\n").unwrap();
 
-    let immune = parse_block(immune, UnitType::Immune);
+    let mut immune = parse_block(immune, UnitType::Immune);
     let infection = parse_block(infection, UnitType::Infection);
 
-    // println!("{:?}", content);
-    println!("Part 1: {}", part1([immune.clone(), infection].concat()));
-    // println!("Part 2: {}", 2);
+    let mut p2 = 0;
+    for i in 1..1 << 32 {
+        let mut immune = immune.clone();
+        for m in immune.iter_mut() {
+            m.damage += i;
+        }
+        p2 = solver([immune, infection.clone()].concat())[0];
+        if p2 > 0 {
+            break;
+        }
+    }
+
+    println!(
+        "Part 1: {}",
+        solver([immune.clone(), infection.clone()].concat())
+            .iter()
+            .find(|&&x| x != 0)
+            .unwrap()
+    );
+    println!("Part 2: {}", p2);
     Ok(())
 }
