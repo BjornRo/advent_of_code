@@ -99,6 +99,10 @@ path = "d23.rs"
 name = "d24"
 path = "d24.rs"
 
+[[bin]]
+name = "d25"
+path = "d25.rs"
+
 [dependencies]
 chrono = "0.4.39"
 num = "0.4.3"

@@ -1,18 +1,8 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_assignments)]
-#![allow(unused_must_use)]
 use regex::Regex;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
 use std::fs;
 
-#[allow(dead_code)]
-fn print<T: std::fmt::Debug>(x: T) {
-    println!("{:?}", x);
-}
-
+use UnitType::*;
 type ID = usize;
 type TargetType = (ID, UnitType);
 
@@ -62,7 +52,6 @@ fn str_to_damagetype(raw_str: &str) -> DamageType {
 }
 
 fn str_to_damagetype_vec(raw_str: &str) -> Vec<DamageType> {
-    use DamageType::*;
     raw_str
         .split_whitespace()
         .skip(2)
@@ -137,7 +126,6 @@ fn parse_block(raw_block: &str, unit_type: UnitType) -> Vec<Unit> {
 }
 
 fn solver(mut groups: Vec<Unit>) -> [isize; 2] {
-    use UnitType::*;
     let mut selected_targets: HashSet<TargetType> = HashSet::new();
     let mut result: [isize; 2] = [-1, -1];
     loop {
@@ -164,8 +152,7 @@ fn solver(mut groups: Vec<Unit>) -> [isize; 2] {
                 continue;
             }
             targets.sort_unstable_by_key(|(_, myp, p, i, _)| (-myp, -p, -i));
-            let t = targets[0];
-            let (id, _, _, _, ut) = t;
+            let (id, _, _, _, ut) = targets[0];
             selected_targets.insert((id, ut));
             groups[i].target = Some((id, ut));
         }
@@ -175,7 +162,7 @@ fn solver(mut groups: Vec<Unit>) -> [isize; 2] {
             if let Some((id, unit_type)) = groups[i].target {
                 let mut damage = groups[i].effective_power();
                 let dmg_type = groups[i].damage_type;
-                let mut target = groups
+                let target = groups
                     .iter_mut()
                     .find_map(|x| {
                         if x.id == id && x.r#type == unit_type {
@@ -188,10 +175,8 @@ fn solver(mut groups: Vec<Unit>) -> [isize; 2] {
                 if target.weak.contains(&dmg_type) {
                     damage *= 2;
                 }
-                let lost_units = damage / target.hp;
-                target.units -= lost_units;
+                target.units -= damage / target.hp;
             }
-            groups[i].target = None;
         }
         groups.retain(|x| x.units > 0);
         let new_result = groups.iter().fold([0, 0], |[imm, inf], x| match x.r#type {
@@ -212,8 +197,8 @@ fn main() -> std::io::Result<()> {
     let binding = fs::read_to_string("in/d24.txt")?;
     let (immune, infection) = binding.trim_end().split_once("\n\n").unwrap();
 
-    let mut immune = parse_block(immune, UnitType::Immune);
-    let infection = parse_block(infection, UnitType::Infection);
+    let immune = parse_block(immune, Immune);
+    let infection = parse_block(infection, Infection);
 
     let mut p2 = 0;
     for i in 1..1 << 32 {
