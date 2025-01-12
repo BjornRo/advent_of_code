@@ -6,15 +6,16 @@ type Point = Vec<isize>;
 fn part1(points: &Vec<Point>) -> usize {
     let mut graph: HashMap<&Point, Vec<&Point>> = HashMap::new();
     for i in points {
-        graph.insert(i, vec![]);
+        let mut neighbors = vec![];
         for j in points {
             if i != j {
                 if i.iter().zip(j).fold(0, |acc, (a, b)| acc + (a - b).abs()) <= 3 {
-                    graph.get_mut(&i).unwrap().push(j);
+                    neighbors.push(j);
                     graph.entry(j).or_insert_with(Vec::new).push(i);
                 }
             }
         }
+        graph.insert(i, neighbors);
     }
 
     let mut num_constellations: usize = 0;

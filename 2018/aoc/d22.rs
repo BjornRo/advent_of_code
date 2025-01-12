@@ -153,9 +153,7 @@ fn main() -> std::io::Result<()> {
         .unwrap();
 
     let mut memo: HashMap<Pos, isize> = HashMap::new();
-    let p1 = part1(depth, target, &mut memo);
-    let p2 = part2(depth, target, &mut memo).unwrap();
-    println!("Part 1: {}", p1);
-    println!("Part 2: {}", p2);
+    println!("Part 1: {}", part1(depth, target, &mut memo));
+    println!("Part 2: {}", part2(depth, target, &mut memo).unwrap());
     Ok(())
 }
