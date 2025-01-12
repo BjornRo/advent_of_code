@@ -4,12 +4,12 @@ use std::fs;
 type Point = Vec<isize>;
 
 fn part1(points: &Vec<Point>) -> usize {
-    let mut graph: HashMap<&Point, Vec<&Point>> = HashMap::new();
-    for i in points {
+    let mut graph: HashMap<usize, Vec<usize>> = HashMap::new();
+    for (i, ii) in points.iter().enumerate() {
         let mut neighbors = vec![];
-        for j in points {
+        for (j, jj) in points.iter().enumerate() {
             if i != j {
-                if i.iter().zip(j).fold(0, |acc, (a, b)| acc + (a - b).abs()) <= 3 {
+                if ii.iter().zip(jj).fold(0, |acc, (a, b)| acc + (a - b).abs()) <= 3 {
                     neighbors.push(j);
                     graph.entry(j).or_insert_with(Vec::new).push(i);
                 }
@@ -19,18 +19,18 @@ fn part1(points: &Vec<Point>) -> usize {
     }
 
     let mut num_constellations: usize = 0;
-    let mut visited: HashSet<&Point> = HashSet::new();
-    for i in points {
-        if visited.contains(&i) {
+    let mut visited: HashSet<usize> = HashSet::new();
+    for id in 0..points.len() {
+        if visited.contains(&id) {
             continue;
         }
-        let mut stack = vec![i];
-        while let Some(point) = stack.pop() {
-            if visited.contains(point) {
+        let mut stack = vec![id];
+        while let Some(id) = stack.pop() {
+            if visited.contains(&id) {
                 continue;
             }
-            visited.insert(point);
-            stack.extend(graph.get(point).unwrap());
+            visited.insert(id);
+            stack.extend(graph.get(&id).unwrap());
         }
         num_constellations += 1;
     }
