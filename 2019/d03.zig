@@ -33,10 +33,10 @@ const PointHashCtx = struct {
         return a.eq(b);
     }
 };
-const Set = std.HashMap(Point, usize, PointHashCtx, 90);
+const HashMap = std.HashMap(Point, usize, PointHashCtx, 90);
 
 fn solver(allocator: Allocator, steps: [2][]const []const u8) ![2]usize {
-    var visited = Set.init(allocator);
+    var visited = HashMap.init(allocator);
     defer visited.deinit();
 
     var p1_result = ~@as(usize, 0);
@@ -46,7 +46,6 @@ fn solver(allocator: Allocator, steps: [2][]const []const u8) ![2]usize {
         var count: usize = 0;
         var pos = Point.init(0, 0);
         for (sub_steps) |step| {
-            const n_steps = try std.fmt.parseInt(u16, step[1..], 10);
             const direction = switch (step[0]) {
                 'U' => Point.init(-1, 0),
                 'D' => Point.init(1, 0),
@@ -54,18 +53,18 @@ fn solver(allocator: Allocator, steps: [2][]const []const u8) ![2]usize {
                 'L' => Point.init(0, -1),
                 else => unreachable,
             };
-            for (0..n_steps) |_| {
+            for (0..try std.fmt.parseInt(u16, step[1..], 10)) |_| {
                 count += 1;
                 pos = pos.add(direction);
                 if (i == 0) {
                     try visited.put(pos, count);
-                } else {
-                    if (visited.contains(pos)) {
-                        var res = visited.get(pos).? + count;
-                        if (res < p2_result) p2_result = res;
-                        res = @intCast(myf.manhattan(Point.init(0, 0).toArr(), pos.toArr()));
-                        if (res < p1_result) p1_result = res;
-                    }
+                    continue;
+                }
+                if (visited.contains(pos)) {
+                    var res: usize = @intCast(myf.manhattan(.{ 0, 0 }, pos.toArr()));
+                    if (res < p1_result) p1_result = res;
+                    res = visited.get(pos).? + count;
+                    if (res < p2_result) p2_result = res;
                 }
             }
         }
@@ -93,12 +92,9 @@ pub fn main() !void {
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
-    var list = [2]std.ArrayList([]const u8){
-        std.ArrayList([]const u8).init(allocator),
-        std.ArrayList([]const u8).init(allocator),
-    };
-    defer list[0].deinit();
-    defer list[1].deinit();
+    const ListType = std.ArrayList([]const u8);
+    var list = [2]ListType{ ListType.init(allocator), ListType.init(allocator) };
+    defer for (list) |l| l.deinit();
 
     var idx: usize = 0;
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
