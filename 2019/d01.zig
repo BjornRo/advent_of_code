@@ -1,12 +1,5 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
-const Deque = @import("mylib/deque.zig").Deque;
-const PriorityQueue = std.PriorityQueue;
-const print = std.debug.print;
-const printa = myf.printAny;
-const prints = myf.printStr;
-const expect = std.testing.expect;
-const time = std.time;
 const Allocator = std.mem.Allocator;
 
 fn fuel(value: *u32) void {
@@ -15,10 +8,10 @@ fn fuel(value: *u32) void {
 }
 
 pub fn main() !void {
-    const start = time.nanoTimestamp();
+    const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
     defer {
-        const end = time.nanoTimestamp();
+        const end = std.time.nanoTimestamp();
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
