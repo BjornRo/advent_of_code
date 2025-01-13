@@ -20,11 +20,14 @@ const Point = struct {
     fn toArr(self: Self) [2]CT {
         return .{ self.row, self.col };
     }
+    fn hash(self: Self) u64 {
+        return std.hash.CityHash64.hash(&@as([4]u8, @bitCast(self.toArr())));
+    }
 };
 
 const PointHashCtx = struct {
     pub fn hash(_: @This(), key: Point) u64 {
-        return @bitCast([4]CT{ key.row, 0, key.col, 0 });
+        return key.hash();
     }
     pub fn eql(_: @This(), a: Point, b: Point) bool {
         return a.eq(b);
