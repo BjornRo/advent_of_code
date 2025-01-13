@@ -56,7 +56,7 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("Part 1: {d}\nPart2: {d}\n", .{
+    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
         try machine(allocator, op_list.items, 12, 2),
         p2,
     });
