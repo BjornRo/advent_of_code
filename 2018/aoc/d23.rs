@@ -26,9 +26,9 @@ fn manhattan(a: Point, b: Point) -> isize {
 
 fn sq_sum_manhattan_radius(list: &Vec<&Nanobot>, pos: Point) -> isize {
     list.iter().fold(0, |acc, bot| {
-        let m = manhattan(pos, bot.pos);
-        let radius_penalty = bot.radius - m;
-        acc + m * m + radius_penalty * radius_penalty
+        let dist = manhattan(pos, bot.pos);
+        let radius_adjustment = bot.radius - dist;
+        acc + (dist * dist) + (radius_adjustment * radius_adjustment)
     })
 }
 
@@ -48,11 +48,9 @@ fn find_overlap_range(bots: &Vec<&Nanobot>) -> [(isize, isize); 3] {
     [(min_a, max_a), (min_b, max_b), (min_c, max_c)]
 }
 
-fn part1(nanobots: &Vec<Nanobot>) -> usize {
-    nanobots
-        .iter()
-        .filter(|o| manhattan(nanobots[0].pos, o.pos) <= nanobots[0].radius)
-        .count()
+fn part1(bots: &Vec<Nanobot>) -> usize {
+    let reaches = |pos| (manhattan(bots[0].pos, pos) <= bots[0].radius);
+    bots.iter().fold(0, |acc, b| acc + reaches(b.pos) as usize)
 }
 
 fn part2(nanobots: &Vec<Nanobot>) -> usize {
@@ -82,26 +80,24 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
     // Then if we find an overlap, repartition again.
     let point_within = |b: &Nanobot, point: Point| manhattan(b.pos, point) <= b.radius;
     let partition = |p: Point| -> (Vec<&Nanobot>, Vec<&Nanobot>) {
-        bots.iter().partition(|bot| point_within(bot, p))
+        bots.iter().partition(|b| point_within(b, p))
     };
 
     // Get the ranges that all spheres overlap to reduce search space.
     // Then get the midpoint of the valid ranges
-    let mut pos: Point = find_overlap_range(&bots)
-        .map(|p| (p.0 + p.1) / 2)
-        .try_into()
-        .unwrap();
+    let ranges = find_overlap_range(&bots);
+    let mut pos: Point = ranges.map(|(a, b)| (a + b) / 2).try_into().unwrap();
+
     let (mut bots_overlap, mut bots_not_overlap) = partition(pos);
-    let mut min_sum: isize = isize::MAX;
     let mut visit: HashSet<Point> = HashSet::new();
+    let mut min_sum: isize = isize::MAX;
     let mut factor: isize = 1 << 20; // Adjust to terminate. 49 loops for my input (instant)
     loop {
         if bots.len() == bots_overlap.len() && !visit.insert(pos) {
             break;
         }
 
-        let mut best_score = min_sum;
-        let mut best_pos = pos;
+        let (mut best_score, mut best_pos) = (min_sum, pos);
         for i in -1..=1 {
             for j in -1..=1 {
                 for k in -1..=1 {
@@ -111,8 +107,7 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
                     let new_pos = (pos.0 + i * factor, pos.1 + j * factor, pos.2 + k * factor);
                     let new_dist = sq_sum_manhattan_radius(&bots_not_overlap, new_pos);
                     if new_dist < min_sum || bots.len() == bots_overlap.len() {
-                        let new_overlaps =
-                            bots.iter().filter(|bot| point_within(bot, new_pos)).count();
+                        let new_overlaps = bots.iter().filter(|b| point_within(b, new_pos)).count();
                         if new_overlaps > bots_overlap.len() {
                             (bots_overlap, bots_not_overlap) = partition(new_pos);
                         }
@@ -123,15 +118,10 @@ fn part2(nanobots: &Vec<Nanobot>) -> usize {
                 }
             }
         }
-        if best_score >= min_sum {
-            if factor > 1 {
-                factor /= 2;
-            } else {
-                factor = 1;
-            }
+        if best_score >= min_sum && factor > 1 {
+            factor /= 2;
         }
-        min_sum = best_score;
-        pos = best_pos;
+        (min_sum, pos) = (best_score, best_pos);
     }
     visit
         .iter()
