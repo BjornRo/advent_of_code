@@ -181,9 +181,9 @@ pub fn manhattan(a: anytype, b: anytype) u32 {
                 return @abs(x1 - y1) + @abs(x2 - y2);
             }
         },
-        else => @compileError("Wrong type, should be int/uint"),
+        else => @compileError("Not a slice"),
     }
-    return @abs(a[0] - b[0]) + @abs(a[1] - b[1]);
+    return @intCast(@abs(a[0] - b[0]) + @abs(a[1] - b[1]));
 }
 
 pub fn euclidean(a: anytype, b: anytype) f64 {
