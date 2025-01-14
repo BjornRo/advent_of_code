@@ -15,45 +15,93 @@ fn get_op(value: anytype) struct {
     p3: @TypeOf(value),
 } {
     const op_code = @mod(value, 100);
-    const param_1 = @mod(value / 100, 10);
-    const param_2 = @mod(value / 1000, 10);
-    const param_3 = @mod(value / 10000, 10);
+    const param_1 = @mod(@divFloor(value, 100), 10);
+    const param_2 = @mod(@divFloor(value, 1000), 10);
+    const param_3 = @mod(@divFloor(value, 10000), 10);
     return .{ .op = op_code, .p1 = param_1, .p2 = param_2, .p3 = param_3 };
 }
 
 fn machine(allocator: Allocator, ops: []i32) !@TypeOf(ops[0]) {
-    var op = try allocator.alloc(u32, ops.len);
+    var op = try allocator.alloc(i32, ops.len);
     defer allocator.free(op);
     @memcpy(op, ops);
 
-    var input: @TypeOf(ops[0]) = 0;
+    const input: @TypeOf(ops[0]) = 5;
     var output: @TypeOf(ops[0]) = 0;
 
     var i: u32 = 0;
-    const ins = op[i];
     while (true) {
-        switch (ins) {
-            1 => op[i + 3] = op[op[i + 1]] + op[op[i + 2]],
-            2 => op[i + 3] = op[op[i + 1]] + op[op[i + 2]],
+        const mode_op = get_op(op[i]);
+        switch (mode_op.op) {
+            1 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                op[@intCast(op[i + 3])] = param_1 + param_2;
+                i += 4;
+            },
+            2 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                op[@intCast(op[i + 3])] = param_1 * param_2;
+                i += 4;
+            },
             3 => {
-                op[i + 1] = input;
+                op[@intCast(op[i + 1])] = input;
+                i += 2;
             },
             4 => {
-                output = op[i + 1];
+                output = op[@intCast(op[i + 1])];
+                i += 2;
             },
-            99 => {
-                return op[0];
-            },
-            else => {
-                if (ins < 0) unreachable;
-                const mode_op = get_op(op[i]);
-                switch (mode_op.op) {
-                    1 => {},
+            5 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                if (param_1 != 0) {
+                    const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                    i = @intCast(param_2);
+                } else {
+                    i += 3;
                 }
             },
+            6 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                if (param_1 == 0) {
+                    const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                    i = @intCast(param_2);
+                } else {
+                    i += 3;
+                }
+            },
+            7 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                if (param_1 < param_2) {
+                    op[@intCast(op[i + 3])] = 1;
+                } else {
+                    op[@intCast(op[i + 3])] = 0;
+                }
+                i += 4;
+            },
+            8 => {
+                const param_1 = if (mode_op.p1 == 0) op[@intCast(op[i + 1])] else op[i + 1];
+                const param_2 = if (mode_op.p2 == 0) op[@intCast(op[i + 2])] else op[i + 2];
+                if (param_1 == param_2) {
+                    op[@intCast(op[i + 3])] = 1;
+                } else {
+                    op[@intCast(op[i + 3])] = 0;
+                }
+                i += 4;
+            },
+            99 => {
+                break;
+            },
+            else => unreachable,
         }
-        i += 4;
     }
+
+    print(op);
+    print(input);
+    print(output);
+    return 1;
 }
 
 pub fn main() !void {
@@ -83,18 +131,10 @@ pub fn main() !void {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\n"), ',');
     while (in_iter.next()) |raw_value| try op_list.append(try std.fmt.parseInt(i32, raw_value, 10));
 
-    var p2: usize = 0;
-    outer: for (0..100) |i| {
-        for (0..100) |j| {
-            if (try machine(allocator, op_list.items, @intCast(i), @intCast(j)) == 19690720) {
-                p2 = 100 * i + j;
-                break :outer;
-            }
-        }
-    }
+    _ = try machine(allocator, op_list.items);
 
-    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try machine(allocator, op_list.items, 12, 2),
-        p2,
-    });
+    // std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
+    //     try machine(allocator, op_list.items, 12, 2),
+    //     p2,
+    // });
 }
