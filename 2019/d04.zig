@@ -28,8 +28,8 @@ fn password_validation(password: []const u8) !?[2]bool {
 fn solver(range: Range) ![2]u32 {
     var p1_sum: u32 = 0;
     var p2_sum: u32 = 0;
+    var buf: [6]u8 = undefined;
     for (range.start..range.end + 1) |pwd| {
-        var buf: [6]u8 = undefined;
         _ = try std.fmt.bufPrint(&buf, "{d}", .{pwd});
         if (try password_validation(&buf)) |result| {
             const p1, const p2 = result;
