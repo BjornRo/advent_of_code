@@ -30,8 +30,9 @@ fn machine(allocator: Allocator, ops: []i32) !@TypeOf(ops[0]) {
     var output: @TypeOf(ops[0]) = 0;
 
     var i: u32 = 0;
+    const ins = op[i];
     while (true) {
-        switch (op[i]) {
+        switch (ins) {
             1 => op[i + 3] = op[op[i + 1]] + op[op[i + 2]],
             2 => op[i + 3] = op[op[i + 1]] + op[op[i + 2]],
             3 => {
@@ -40,11 +41,15 @@ fn machine(allocator: Allocator, ops: []i32) !@TypeOf(ops[0]) {
             4 => {
                 output = op[i + 1];
             },
-            99 => return op[0],
-            _ => {
-                //
-                const iop = 1 % 100;
-                _ = iop;
+            99 => {
+                return op[0];
+            },
+            else => {
+                if (ins < 0) unreachable;
+                const mode_op = get_op(op[i]);
+                switch (mode_op.op) {
+                    1 => {},
+                }
             },
         }
         i += 4;
