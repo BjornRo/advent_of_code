@@ -68,46 +68,36 @@ fn machine(state: *State, input_value: @TypeOf(state.registers[0])) bool {
     }
 }
 
-fn part1(allocator: Allocator, ops: []const i32, start_state: []const i32) !usize {
-    var perm_state: [5]i32 = undefined;
-    @memcpy(&perm_state, start_state);
-
-    var perm_iter = permutate(i32, &perm_state);
-    var max_signal: i32 = 0;
-    while (perm_iter.next()) |phase_sequence| {
-        var input_signal: i32 = 0;
-        for (phase_sequence) |phase| {
-            var state: State = .{ .registers = try allocator.dupe(@TypeOf(ops[0]), ops), .phase = phase };
-            defer allocator.free(state.registers);
-
-            while (!machine(&state, input_signal)) {}
-            input_signal = state.output;
-        }
-        if (input_signal > max_signal) max_signal = input_signal;
-    }
-    return @intCast(max_signal);
-}
-
-fn part2(allocator: Allocator, ops: []const i32, start_state: []const i32) !usize {
-    var state: [5]i32 = undefined;
-    @memcpy(&state, start_state);
+fn part2(allocator: Allocator, ops: []const i32, start_state: []const i32, part1: bool) !usize {
+    var permutation_state: [5]i32 = undefined;
+    @memcpy(&permutation_state, start_state);
 
     var max_signal: i32 = 0;
-    var perm_iter = permutate(i32, &state);
+    var perm_iter = permutate(i32, &permutation_state);
     while (perm_iter.next()) |phase_sequence| {
-        var states: [5]State = undefined;
-        for (&states, phase_sequence) |*s, phase| s.* = State{
-            .registers = try allocator.dupe(@TypeOf(ops[0]), ops),
-            .phase = phase,
-        };
-        defer for (&states) |*s| allocator.free(s.*.registers);
-
         var input_signal: i32 = 0;
-        var curr_state: u8 = 0;
-        while (!machine(&states[curr_state], input_signal)) {
-            input_signal = states[curr_state].output;
-            curr_state += 1;
-            if (curr_state >= states.len) curr_state = 0;
+        if (part1) {
+            for (phase_sequence) |phase| {
+                var state: State = .{ .registers = try allocator.dupe(@TypeOf(ops[0]), ops), .phase = phase };
+                defer allocator.free(state.registers);
+
+                while (!machine(&state, input_signal)) {}
+                input_signal = state.output;
+            }
+        } else {
+            var curr_state: u8 = 0;
+            var states: [5]State = undefined;
+            for (&states, phase_sequence) |*s, phase| s.* = State{
+                .registers = try allocator.dupe(@TypeOf(ops[0]), ops),
+                .phase = phase,
+            };
+            defer for (&states) |*s| allocator.free(s.*.registers);
+
+            while (!machine(&states[curr_state], input_signal)) {
+                input_signal = states[curr_state].output;
+                curr_state += 1;
+                if (curr_state >= states.len) curr_state = 0;
+            }
         }
         if (input_signal > max_signal) max_signal = input_signal;
     }
@@ -139,8 +129,8 @@ pub fn main() !void {
     while (in_iter.next()) |raw_value| try op_list.append(try std.fmt.parseInt(i32, raw_value, 10));
 
     std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try part1(allocator, op_list.items, &[_]i32{ 0, 1, 2, 3, 4 }),
-        try part2(allocator, op_list.items, &[_]i32{ 5, 6, 7, 8, 9 }),
+        try part2(allocator, op_list.items, &[_]i32{ 0, 1, 2, 3, 4 }, true),
+        try part2(allocator, op_list.items, &[_]i32{ 5, 6, 7, 8, 9 }, false),
     });
 }
 
