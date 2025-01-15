@@ -52,7 +52,8 @@ pub fn main() !void {
     while (rev_it.next()) |layer| {
         for (layer, 0..) |row, i| {
             for (0..WIDTH) |j| {
-                if (row[j] != 2) image[i][j] = if (row[j] == 0) ' ' else '#';
+                if (row[j] != 2)
+                    image[i][j] = if (row[j] == 0) ' ' else '#';
             }
         }
     }
