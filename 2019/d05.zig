@@ -71,7 +71,7 @@ pub fn main() !void {
     var op_list = std.ArrayList(i32).init(allocator);
     defer op_list.deinit();
 
-    var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\n"), ',');
+    var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try op_list.append(try std.fmt.parseInt(i32, raw_value, 10));
 
     std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
