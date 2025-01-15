@@ -63,7 +63,7 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d06t.txt");
+    const input = @embedFile("in/d06.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     var graph = Graph.init(allocator);
@@ -81,15 +81,21 @@ test "example" {
         if (!res.found_existing) res.value_ptr.* = node0;
         // try res.value_ptr.*.append(node0);
     }
-    prints(intToString(graph.get(intArrToInt("LAA")).?));
+    _ = part1(&graph);
 }
 
 fn part1(graph: *Graph) usize {
     var sum: usize = 0;
     var key_it = graph.keyIterator();
+
     while (key_it.next()) |key| {
-        //
+        var curr = key.*;
+        while (graph.get(curr)) |next| {
+            curr = next;
+            sum += 1;
+        }
     }
     //
+    print(sum);
     return 1;
 }

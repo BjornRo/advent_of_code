@@ -3,13 +3,9 @@ const myf = @import("mylib/myfunc.zig");
 const Allocator = std.mem.Allocator;
 
 fn get_value(value: anytype, comptime param_num: usize, op: []const i32, i: usize) @TypeOf(value) {
-    const factor: @TypeOf(value) = switch (param_num) {
-        1 => 100,
-        2 => 1000,
-        else => unreachable,
-    };
-    const idx = i + param_num;
-    return if (@mod(@divFloor(value, factor), 10) == 0) op[@intCast(op[idx])] else op[idx];
+    const position = @mod(@divFloor(value, if (param_num == 1) 100 else 1000), 10) == 0;
+    const item = op[i + param_num];
+    return if (position) op[@intCast(item)] else item;
 }
 
 fn machine(allocator: Allocator, ops: []i32, input_value: @TypeOf(ops[0])) !@TypeOf(ops[0]) {
@@ -17,9 +13,7 @@ fn machine(allocator: Allocator, ops: []i32, input_value: @TypeOf(ops[0])) !@Typ
     defer allocator.free(op);
     @memcpy(op, ops);
 
-    const input: @TypeOf(op[0]) = input_value;
     var output: @TypeOf(op[0]) = 0;
-
     var i: u32 = 0;
     while (true) {
         const value = op[i];
@@ -33,19 +27,15 @@ fn machine(allocator: Allocator, ops: []i32, input_value: @TypeOf(ops[0])) !@Typ
                 i += 4;
             },
             3 => {
-                op[@intCast(op[i + 1])] = input;
+                op[@intCast(op[i + 1])] = input_value;
                 i += 2;
             },
             4 => {
                 output = op[@intCast(op[i + 1])];
                 i += 2;
             },
-            5 => {
-                i = if (get_value(value, 1, op, i) != 0) @intCast(get_value(value, 2, op, i)) else i + 3;
-            },
-            6 => {
-                i = if (get_value(value, 1, op, i) == 0) @intCast(get_value(value, 2, op, i)) else i + 3;
-            },
+            5 => i = if (get_value(value, 1, op, i) != 0) @intCast(get_value(value, 2, op, i)) else i + 3,
+            6 => i = if (get_value(value, 1, op, i) == 0) @intCast(get_value(value, 2, op, i)) else i + 3,
             7 => {
                 op[@intCast(op[i + 3])] = if (get_value(value, 1, op, i) < get_value(value, 2, op, i)) 1 else 0;
                 i += 4;
@@ -54,11 +44,10 @@ fn machine(allocator: Allocator, ops: []i32, input_value: @TypeOf(ops[0])) !@Typ
                 op[@intCast(op[i + 3])] = if (get_value(value, 1, op, i) == get_value(value, 2, op, i)) 1 else 0;
                 i += 4;
             },
-            99 => break,
+            99 => return output,
             else => unreachable,
         }
     }
-    return output;
 }
 
 pub fn main() !void {
