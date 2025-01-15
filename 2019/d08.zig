@@ -30,9 +30,7 @@ pub fn main() !void {
     defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     const input_attributes = try myf.getInputAttributes(input);
     // End setup
-
-    const loops = input_attributes.row_len / WIDTH;
-    const n_layers = loops / HEIGHT;
+    const n_layers = input_attributes.row_len / WIDTH / HEIGHT;
 
     const layers = try allocator.alloc([HEIGHT]Vec25, n_layers);
     defer allocator.free(layers);
