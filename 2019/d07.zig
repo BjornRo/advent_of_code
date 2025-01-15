@@ -128,7 +128,7 @@ pub fn main() !void {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try op_list.append(try std.fmt.parseInt(i32, raw_value, 10));
 
-    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
         try part2(allocator, op_list.items, &[_]i32{ 0, 1, 2, 3, 4 }, true),
         try part2(allocator, op_list.items, &[_]i32{ 5, 6, 7, 8, 9 }, false),
     });

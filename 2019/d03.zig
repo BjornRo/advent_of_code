@@ -105,5 +105,5 @@ pub fn main() !void {
     }
 
     const p1, const p2 = try solver(allocator, .{ list[0].items, list[1].items });
-    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
 }

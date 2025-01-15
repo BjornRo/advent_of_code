@@ -89,5 +89,5 @@ pub fn main() !void {
         if (!res.found_existing) res.value_ptr.* = node0;
     }
 
-    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{ part1(&graph), try part2(allocator, &graph) });
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ part1(&graph), try part2(allocator, &graph) });
 }

@@ -42,5 +42,5 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("Part 1: {d}\nPart2: {d}\n", .{ p1_sum, p2_sum });
+    try writer.print("Part 1: {d}\nPart2: {d}\n", .{ p1_sum, p2_sum });
 }

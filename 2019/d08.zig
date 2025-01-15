@@ -8,6 +8,10 @@ const prints = myf.printStr;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
+const WIDTH = 25;
+const HEIGHT = 6;
+const Vec25 = @Vector(WIDTH, u8);
+
 pub fn main() !void {
     const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -16,38 +20,17 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var buffer: [70_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input_attributes = try myf.getInputAttributes(input);
     // End setup
 
-    // std.debug.print("{s}\n", .{input});
-    // std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
-}
-
-const WIDTH = 25;
-const HEIGHT = 6;
-const PIXELS = WIDTH * HEIGHT;
-
-const Vec25 = @Vector(25, u8);
-
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d08.txt");
-    const input_attributes = try myf.getInputAttributes(input);
     const loops = input_attributes.row_len / WIDTH;
     const n_layers = loops / HEIGHT;
 
@@ -62,23 +45,37 @@ test "example" {
             index += WIDTH;
         }
     }
+
+    try writer.print("Part 1: {d}\nPart 2:\n\n", .{part1(&layers)});
+    var image: [HEIGHT][WIDTH]u8 = undefined;
+    var rev_it = std.mem.reverseIterator(layers);
+    while (rev_it.next()) |layer| {
+        for (layer, 0..) |row, i| {
+            for (0..WIDTH) |j| {
+                if (row[j] != 2) image[i][j] = if (row[j] == 0) ' ' else '#';
+            }
+        }
+    }
+    for (image) |row| try writer.print("  {s}\n", .{row});
+}
+
+fn part1(image: *const []const [6]Vec25) u16 {
     var min_zeroes: u8 = 255;
     var min_layer: u8 = 0;
-    for (0..n_layers) |i| {
+    for (0..image.len) |i| {
         var total_zeroes: u8 = 0;
-        for (0..HEIGHT) |j| total_zeroes += std.simd.countElementsWithValue(layers[i][j], 0);
+        for (0..HEIGHT) |j|
+            total_zeroes += std.simd.countElementsWithValue(image.*[i][j], 0);
         if (total_zeroes < min_zeroes) {
             min_zeroes = total_zeroes;
             min_layer = @intCast(i);
         }
     }
-    var total_ones: u8 = 0;
-    var total_twos: u8 = 0;
-    for (0..HEIGHT) |i| {
-        const row = layers[min_layer][i];
-        total_ones += std.simd.countElementsWithValue(row, 1);
-        total_twos += std.simd.countElementsWithValue(row, 2);
+    var total_ones: u16 = 0;
+    var total_twos: u16 = 0;
+    for (image.*[min_layer]) |row| {
+        total_ones += @intCast(std.simd.countElementsWithValue(row, 1));
+        total_twos += @intCast(std.simd.countElementsWithValue(row, 2));
     }
-    print(total_ones);
-    print(total_twos);
+    return total_ones * total_twos;
 }

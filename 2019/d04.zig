@@ -81,5 +81,5 @@ pub fn main() !void {
     };
 
     const p1, const p2 = try solver(range);
-    std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
 }
