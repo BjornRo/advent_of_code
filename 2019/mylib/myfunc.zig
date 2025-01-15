@@ -47,7 +47,7 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
     };
 }
 
-pub fn readFile(allocator: Allocator, filename: []u8) ![]u8 {
+pub fn readFile(allocator: Allocator, filename: []const u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
     const file_size = (try file.stat()).size;
