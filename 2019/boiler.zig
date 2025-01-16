@@ -31,7 +31,7 @@ pub fn main() !void {
     // End setup
 
     // std.debug.print("{s}\n", .{input});
-    // std.debug.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
+    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
 
 }
 

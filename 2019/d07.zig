@@ -68,7 +68,7 @@ fn machine(state: *State, input_value: @TypeOf(state.registers[0])) bool {
     }
 }
 
-fn part2(allocator: Allocator, ops: []const i32, start_state: []const i32, part1: bool) !usize {
+fn solver(allocator: Allocator, ops: []const i32, start_state: []const i32, part1: bool) !usize {
     var permutation_state: [5]i32 = undefined;
     @memcpy(&permutation_state, start_state);
 
@@ -129,8 +129,8 @@ pub fn main() !void {
     while (in_iter.next()) |raw_value| try op_list.append(try std.fmt.parseInt(i32, raw_value, 10));
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try part2(allocator, op_list.items, &[_]i32{ 0, 1, 2, 3, 4 }, true),
-        try part2(allocator, op_list.items, &[_]i32{ 5, 6, 7, 8, 9 }, false),
+        try solver(allocator, op_list.items, &[_]i32{ 0, 1, 2, 3, 4 }, true),
+        try solver(allocator, op_list.items, &[_]i32{ 5, 6, 7, 8, 9 }, false),
     });
 }
 
