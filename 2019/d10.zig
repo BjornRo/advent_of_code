@@ -108,18 +108,33 @@ pub fn bresenham_collision(grid: Map, a: Point, b: Point) ?Point {
 // The 200th asteroid to be vaporized is at 8,2.
 // The 201st asteroid to be vaporized is at 10,9.
 // The 299th and final asteroid to be vaporized is at 11,1.
-fn part2(grid: *Map, grid_dim: CT, station_point: Point) !void {
-    var laser_aim: Point = Point.init(0, station_point.col);
-    var direction = Point.init(@divExact(ENHANCE, 3) * 2, ENHANCE);
+fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !void {
+    var visited = Map.init(allocator);
+    defer visited.deinit();
+    const laser_start = Point.init(0, station_point.col);
+    var laser_aim: Point = laser_start;
+    var direction = Point.init(0, 1);
 
     var vaporized: u16 = 0;
     while (true) {
+        if (laser_start.eq(laser_aim)) {
+            for (visited.keys()) |point| {
+                _ = grid.swapRemove(point);
+                vaporized += 1;
+                std.debug.print("vapor {d}: {d},{d}\n", .{
+                    vaporized,
+                    @divExact(point.col, ENHANCE),
+                    @divExact(point.row, ENHANCE),
+                });
+                if (vaporized == 20) {
+                    return;
+                }
+            }
+            visited.clearRetainingCapacity();
+        }
         if (bresenham_collision(grid.*, station_point, laser_aim)) |point| {
-            print(laser_aim);
-            _ = grid.swapRemove(point);
-            vaporized += 1;
-            if (vaporized == 10) {
-                break;
+            if (!visited.contains(point)) {
+                try visited.put(point, {});
             }
             // print(point);
             // std.debug.print("vapor: {d}: {d},{d}\n", .{
@@ -129,11 +144,11 @@ fn part2(grid: *Map, grid_dim: CT, station_point: Point) !void {
             //     // @divExact(point.col, ENHANCE),
             //     // @divExact(point.row, ENHANCE),
             // });
-            std.debug.print("vapor {d}: {d},{d}\n", .{
-                vaporized,
-                @divExact(point.col, ENHANCE),
-                @divExact(point.row, ENHANCE),
-            });
+            // std.debug.print("vapor {d}: {d},{d}\n", .{
+            //     vaporized,
+            //     @divExact(point.row, ENHANCE),
+            //     @divExact(point.col, ENHANCE),
+            // });
         }
         const next_pos = laser_aim.add(direction);
         if (!(0 <= next_pos.row and next_pos.row < grid_dim and
@@ -181,7 +196,7 @@ test "example" {
     }
     const stats = try part1(grid);
     print(stats);
-    _ = try part2(&grid, @intCast(input_attributes.row_len * ENHANCE), stats.point);
+    _ = try part2(allocator, &grid, @intCast(input_attributes.row_len * ENHANCE), Point.init(13 * ENHANCE, 11 * ENHANCE));
 }
 
 fn part1(grid: Map) !struct { visible: u16, point: Point } {
