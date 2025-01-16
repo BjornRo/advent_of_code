@@ -71,6 +71,7 @@ const Point = struct {
 };
 
 const Map = std.ArrayHashMap(Point, void, Point.HashCtx, true);
+const ENHANCE = 9;
 
 pub fn bresenham_collision(grid: Map, a: Point, b: Point) ?Point {
     const drow: CT = @intCast(@abs(b.row - a.row));
@@ -96,9 +97,20 @@ pub fn bresenham_collision(grid: Map, a: Point, b: Point) ?Point {
     return null;
 }
 
+// The 1st asteroid to be vaporized is at 11,12.
+// The 2nd asteroid to be vaporized is at 12,1.
+// The 3rd asteroid to be vaporized is at 12,2.
+// The 10th asteroid to be vaporized is at 12,8.
+// The 20th asteroid to be vaporized is at 16,0.
+// The 50th asteroid to be vaporized is at 16,9.
+// The 100th asteroid to be vaporized is at 10,16.
+// The 199th asteroid to be vaporized is at 9,6.
+// The 200th asteroid to be vaporized is at 8,2.
+// The 201st asteroid to be vaporized is at 10,9.
+// The 299th and final asteroid to be vaporized is at 11,1.
 fn part2(grid: *Map, grid_dim: CT, station_point: Point) !void {
     var laser_aim: Point = Point.init(0, station_point.col);
-    var direction = Point.init(0, 1);
+    var direction = Point.init(@divExact(ENHANCE, 3) * 2, ENHANCE);
 
     var vaporized: u16 = 0;
     while (true) {
@@ -110,10 +122,17 @@ fn part2(grid: *Map, grid_dim: CT, station_point: Point) !void {
                 break;
             }
             // print(point);
-            std.debug.print("vapor: {d}: {d},{d}\n", .{
+            // std.debug.print("vapor: {d}: {d},{d}\n", .{
+            //     vaporized,
+            //     point.row,
+            //     point.col,
+            //     // @divExact(point.row, ENHANCE),
+            //     // @divExact(point.col, ENHANCE),
+            // });
+            std.debug.print("vapor {d}: {d},{d}\n", .{
                 vaporized,
-                @divFloor(point.col, 9),
-                @divFloor(point.row, 9),
+                @divExact(point.row, ENHANCE),
+                @divExact(point.col, ENHANCE),
             });
         }
         const next_pos = laser_aim.add(direction);
@@ -152,7 +171,6 @@ test "example" {
     var grid = Map.init(allocator);
     defer grid.deinit();
 
-    const ENHANCE = 9;
     var i: CT = 0;
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
