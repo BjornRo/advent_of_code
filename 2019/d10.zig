@@ -80,6 +80,7 @@ fn part1(grid: Map) !struct { visible: u16, point: Point } {
 
 fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !CT {
     var visited = Map.init(allocator);
+    try visited.ensureTotalCapacity(200);
     defer visited.deinit();
 
     const FACTOR = grid_dim * ENHANCE * 5;
@@ -92,19 +93,10 @@ fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !
     var laser_aim: Point = laser_start;
     var direction = Point.init(0, 1);
 
-    var vaporized: u16 = 0;
     while (true) {
-        if (laser_start.eq(laser_aim)) {
-            for (visited.keys()) |point| {
-                _ = grid.swapRemove(point);
-                vaporized += 1;
-                if (vaporized == 200)
-                    return @divExact(point.col, ENHANCE) * 100 + @divExact(point.row, ENHANCE);
-            }
-            visited.clearRetainingCapacity();
-        }
         if (bresenham_collision(grid.*, station_point, laser_aim)) |point| {
-            if (!visited.contains(point)) try visited.put(point, {});
+            if (!visited.getOrPutAssumeCapacity(point).found_existing and visited.count() == 200)
+                return @divExact(point.col, ENHANCE) * 100 + @divExact(point.row, ENHANCE);
         }
         const next_pos = laser_aim.add(direction);
         if (!(min_laser_row <= next_pos.row and next_pos.row < max_laser_row and
