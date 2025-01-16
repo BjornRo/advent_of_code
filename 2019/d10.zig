@@ -97,21 +97,16 @@ pub fn bresenham_collision(grid: Map, a: Point, b: Point) ?Point {
     return null;
 }
 
-// The 1st asteroid to be vaporized is at 11,12.
-// The 2nd asteroid to be vaporized is at 12,1.
-// The 3rd asteroid to be vaporized is at 12,2.
-// The 10th asteroid to be vaporized is at 12,8.
-// The 20th asteroid to be vaporized is at 16,0.
-// The 50th asteroid to be vaporized is at 16,9.
-// The 100th asteroid to be vaporized is at 10,16.
-// The 199th asteroid to be vaporized is at 9,6.
-// The 200th asteroid to be vaporized is at 8,2.
-// The 201st asteroid to be vaporized is at 10,9.
-// The 299th and final asteroid to be vaporized is at 11,1.
 fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !void {
     var visited = Map.init(allocator);
     defer visited.deinit();
-    const laser_start = Point.init(0, station_point.col);
+
+    const min_laser_row = (station_point.row - grid_dim) * ENHANCE * 3;
+    const max_laser_row = (station_point.row + grid_dim) * ENHANCE * 3;
+    const min_laser_col = (station_point.col - grid_dim) * ENHANCE * 3;
+    const max_laser_col = (station_point.col + grid_dim) * ENHANCE * 3;
+
+    const laser_start = Point.init(min_laser_row, station_point.col);
     var laser_aim: Point = laser_start;
     var direction = Point.init(0, 1);
 
@@ -126,7 +121,9 @@ fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !
                     @divExact(point.col, ENHANCE),
                     @divExact(point.row, ENHANCE),
                 });
-                if (vaporized == 20) {
+                if (vaporized == 200) {
+                    const x = @divExact(point.col, ENHANCE) * 100 + @divExact(point.row, ENHANCE);
+                    print(x);
                     return;
                 }
             }
@@ -151,8 +148,8 @@ fn part2(allocator: Allocator, grid: *Map, grid_dim: CT, station_point: Point) !
             // });
         }
         const next_pos = laser_aim.add(direction);
-        if (!(0 <= next_pos.row and next_pos.row < grid_dim and
-            0 <= next_pos.col and next_pos.col < grid_dim))
+        if (!(min_laser_row <= next_pos.row and next_pos.row < max_laser_row and
+            min_laser_col <= next_pos.col and next_pos.col < max_laser_col))
         {
             direction = direction.mul(Point.init(0, -1));
         }
@@ -180,7 +177,7 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d10t.txt");
+    const input = @embedFile("in/d10.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     var grid = Map.init(allocator);
@@ -196,7 +193,7 @@ test "example" {
     }
     const stats = try part1(grid);
     print(stats);
-    _ = try part2(allocator, &grid, @intCast(input_attributes.row_len * ENHANCE), Point.init(13 * ENHANCE, 11 * ENHANCE));
+    _ = try part2(allocator, &grid, @intCast(input_attributes.row_len * ENHANCE), stats.point);
 }
 
 fn part1(grid: Map) !struct { visible: u16, point: Point } {
