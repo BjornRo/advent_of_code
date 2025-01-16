@@ -57,10 +57,9 @@ pub fn bresenham_collision(grid: Map, a: Point, b: Point) ?Point {
             err += drow;
             point.col += scol;
         }
-        if (point.eq(b)) break;
+        if (point.eq(b)) return null;
         if (grid.contains(point)) return point;
     }
-    return null;
 }
 
 fn part1(grid: Map) !struct { visible: u16, point: Point } {
