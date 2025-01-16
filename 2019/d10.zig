@@ -126,13 +126,13 @@ fn part2(grid: *Map, grid_dim: CT, station_point: Point) !void {
             //     vaporized,
             //     point.row,
             //     point.col,
-            //     // @divExact(point.row, ENHANCE),
             //     // @divExact(point.col, ENHANCE),
+            //     // @divExact(point.row, ENHANCE),
             // });
             std.debug.print("vapor {d}: {d},{d}\n", .{
                 vaporized,
-                @divExact(point.row, ENHANCE),
                 @divExact(point.col, ENHANCE),
+                @divExact(point.row, ENHANCE),
             });
         }
         const next_pos = laser_aim.add(direction);
