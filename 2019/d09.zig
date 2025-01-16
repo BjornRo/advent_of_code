@@ -3,7 +3,6 @@ const myf = @import("mylib/myfunc.zig");
 const Allocator = std.mem.Allocator;
 
 const ProgT = i64;
-const Registers = std.ArrayList(ProgT);
 
 const Machine = struct {
     registers: []ProgT,
@@ -63,7 +62,7 @@ const Machine = struct {
     }
 };
 
-fn runner(registers: Registers, input_value: ProgT) !ProgT {
+fn runner(registers: std.ArrayList(ProgT), input_value: ProgT) !ProgT {
     var regs = try registers.clone();
     defer regs.deinit();
     var machine = Machine{ .input_value = input_value, .registers = regs.items };
