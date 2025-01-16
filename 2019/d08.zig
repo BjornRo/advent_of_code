@@ -1,11 +1,5 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
-const Deque = @import("mylib/deque.zig").Deque;
-const PriorityQueue = std.PriorityQueue;
-const printd = std.debug.print;
-const print = myf.printAny;
-const prints = myf.printStr;
-const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const WIDTH = 25;
