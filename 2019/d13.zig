@@ -64,10 +64,10 @@ const Machine = struct {
     }
 
     pub fn runTriplet(self: *Self) ?struct { point: Point, tile: ProgT } {
-        const c = if (self.run()) |row| row else return null;
-        const r = if (self.run()) |col| col else return null;
-        const tile = if (self.run()) |row| row else return null;
-        return .{ .point = Point.init(@intCast(r), @intCast(c)), .tile = tile };
+        const col = if (self.run()) |col| col else return null;
+        const row = if (self.run()) |row| row else return null;
+        const tile = if (self.run()) |tile| tile else return null;
+        return .{ .point = Point.init(@intCast(row), @intCast(col)), .tile = tile };
     }
 
     pub fn run(self: *Self) ?ProgT {
