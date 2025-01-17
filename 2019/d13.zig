@@ -88,7 +88,7 @@ const Machine = struct {
     }
 };
 
-fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize {
+fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]u16 {
     machine.registers[0] = 2;
 
     var matrix: [][]u8 = undefined;
@@ -98,8 +98,8 @@ fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize
     var started = false;
     var paddle_pos: Point = undefined;
 
-    var p1_result: usize = 0;
-    var p2_result: usize = 0;
+    var p1_result: u16 = 0;
+    var p2_result: u16 = 0;
     while (machine.runTriplet()) |result| {
         if (print_game and !matrix_init) {
             matrix = try myf.initValueMatrix(allocator, 23, 37, @as(u8, ' '));
