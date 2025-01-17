@@ -526,6 +526,10 @@ pub fn waitForInput() void {
     }
 }
 
+pub fn slowDown(ms: usize) void {
+    std.time.sleep(ms * 1_000_000);
+}
+
 pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8) ![]const u8 {
     var list = std.ArrayList(u8).init(allocator);
 
