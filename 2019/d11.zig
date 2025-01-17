@@ -52,7 +52,6 @@ const Machine = struct {
     relative_base: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
-    output: ProgT = 0,
 
     const Self = @This();
 

@@ -1,17 +1,10 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
-const Deque = @import("mylib/deque.zig").Deque;
-const PriorityQueue = std.PriorityQueue;
-const printd = std.debug.print;
-const print = myf.printAny;
 const prints = myf.printStr;
-const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
-const CT = i16;
 const ProgT = i64;
-
-const Map = std.ArrayHashMap(Point, Tile, Point.HashCtx, true);
+const CT = i16;
 
 const Tile = enum { Empty, Wall, Block, Paddle, Ball };
 
@@ -23,33 +16,12 @@ const Point = struct {
     fn init(row: CT, col: CT) Self {
         return .{ .row = row, .col = col };
     }
-    fn add(self: Self, o: Point) Point {
-        return Self.init(self.row + o.row, self.col + o.col);
-    }
     fn eq(self: Self, o: Point) bool {
         return self.row == o.row and self.col == o.col;
-    }
-    fn update(self: *Self, o: Point) void {
-        self.row += o.row;
-        self.col += o.col;
     }
     fn cast(self: Self) [2]u16 {
         return .{ @intCast(self.row), @intCast(self.col) };
     }
-    fn mul(self: Point, other: Point) Point {
-        return Point.init(
-            self.row * other.row - self.col * other.col,
-            self.row * other.col + self.col * other.row,
-        );
-    }
-    const HashCtx = struct {
-        pub fn hash(_: @This(), key: Self) u32 {
-            return std.hash.uint32(@bitCast([2]CT{ key.row, key.col }));
-        }
-        pub fn eql(_: @This(), a: Self, b: Self, _: usize) bool {
-            return a.eq(b);
-        }
-    };
 };
 
 const Machine = struct {
@@ -58,7 +30,6 @@ const Machine = struct {
     relative_base: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
-    output: ProgT = 0,
 
     const Self = @This();
 
@@ -71,7 +42,7 @@ const Machine = struct {
         return @mod(self.pc_value, 100);
     }
 
-    pub fn get_value(self: *Self, param: u32, add_pc: u32) ProgT {
+    fn get_value(self: *Self, param: u32, add_pc: u32) ProgT {
         const offset = self.pc + param;
         const item = switch (@mod(@divFloor(self.registers[self.pc], get_factor(param)), 10)) {
             0 => self.registers[offset], // position
@@ -82,7 +53,7 @@ const Machine = struct {
         return self.registers[@intCast(item)];
     }
 
-    pub fn set_value(self: *Self, param: u32, put_value: ProgT) void {
+    fn set_value(self: *Self, param: u32, put_value: ProgT) void {
         const item = self.registers[self.pc + param];
         const index = switch (@mod(@divFloor(self.registers[self.pc], get_factor(param)), 10)) {
             0 => item, // position
@@ -92,13 +63,20 @@ const Machine = struct {
         self.registers[@intCast(index)] = put_value;
     }
 
-    pub fn run(self: *Self) ?CT {
+    pub fn runTriplet(self: *Self) ?struct { point: Point, tile: ProgT } {
+        const c = if (self.run()) |row| row else return null;
+        const r = if (self.run()) |col| col else return null;
+        const tile = if (self.run()) |row| row else return null;
+        return .{ .point = Point.init(@intCast(r), @intCast(c)), .tile = tile };
+    }
+
+    pub fn run(self: *Self) ?ProgT {
         while (true) {
             switch (self.set_pc_value_get_op()) {
                 1 => self.set_value(3, self.get_value(1, 0) + self.get_value(2, 0)),
                 2 => self.set_value(3, self.get_value(1, 0) * self.get_value(2, 0)),
                 3 => self.set_value(1, self.input_value),
-                4 => return @intCast(self.get_value(1, 2)),
+                4 => return self.get_value(1, 2),
                 5 => self.pc = if (self.get_value(1, 0) != 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
                 6 => self.pc = if (self.get_value(1, 0) == 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
                 7 => self.set_value(3, if (self.get_value(1, 0) < self.get_value(2, 0)) 1 else 0),
@@ -110,33 +88,53 @@ const Machine = struct {
     }
 };
 
-fn part1(allocator: Allocator, machine: *Machine) !struct { count: usize, map: Map } {
-    var map = Map.init(allocator);
-    var position = Point.init(0, 0);
-    while (true) {
-        if (machine.run()) |col| position.col = col else break;
-        if (machine.run()) |row| position.row = row else break;
-        if (machine.run()) |tile_id| try map.put(position, @enumFromInt(tile_id)) else break;
-    }
-
-    var count: usize = 0;
-    for (map.values()) |v| {
-        if (v == .Block) count += 1;
-    }
-    return .{ .count = count, .map = map };
-}
-
-fn part2(_: Allocator, machine: *Machine, map: *Map) !usize {
+fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize {
     machine.registers[0] = 2;
 
-    _ = map;
+    var matrix: [][]u8 = undefined;
+    var matrix_init = false;
+    defer if (matrix_init) myf.freeMatrix(allocator, matrix);
 
-    // while (true) {
-    //     if (machine.run()) |col| position.col = col else break;
-    //     if (machine.run()) |row| position.row = row else break;
-    //     if (machine.run()) |tile_id| try map.put(position, @enumFromInt(tile_id)) else break;
-    // }
-    return 1;
+    var started = false;
+    var paddle_pos: Point = undefined;
+
+    var p1_result: usize = 0;
+    var p2_result: usize = 0;
+    while (true) {
+        if (machine.runTriplet()) |result| {
+            if (print_game and !matrix_init) {
+                matrix = try myf.initValueMatrix(allocator, 23, 37, @as(u8, ' '));
+                matrix_init = true;
+            }
+            if (Point.init(0, -1).eq(result.point)) {
+                started = true;
+                if (result.tile > p2_result) p2_result = @intCast(result.tile);
+            } else {
+                const row, const col = result.point.cast();
+                const tile_type: Tile = @enumFromInt(result.tile);
+                if (!started and tile_type == .Block) p1_result += 1;
+
+                if (tile_type == .Paddle) {
+                    paddle_pos = result.point;
+                } else if (tile_type == .Ball)
+                    machine.input_value = if (paddle_pos.col < col) 1 else if (paddle_pos.col > col) -1 else 0;
+
+                if (print_game) {
+                    matrix[row][col] = switch (tile_type) {
+                        .Ball => 'O',
+                        .Block => 'X',
+                        .Empty => ' ',
+                        .Paddle => '=',
+                        .Wall => '#',
+                    };
+                }
+            }
+            if (print_game and started and result.tile != 0) {
+                for (matrix) |row| prints(row);
+                myf.slowDown(5);
+            }
+        } else return .{ p1_result, p2_result };
+    }
 }
 
 pub fn main() !void {
@@ -147,12 +145,9 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-    // var buffer: [35_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var buffer: [90_000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -170,13 +165,6 @@ pub fn main() !void {
 
     var machine = Machine{ .input_value = 0, .registers = registers.items };
 
-    var result = try part1(allocator, &machine);
-    defer result.map.deinit();
-    print(result.count);
-
-    _ = try part2(allocator, &machine, &result.map);
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
+    const p1, const p2 = try breakout(allocator, &machine, false);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ p1, p2 });
 }
