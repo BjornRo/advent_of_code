@@ -111,7 +111,6 @@ fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize
         } else {
             const row, const col = result.point.cast();
             const tile_type: Tile = @enumFromInt(result.tile);
-
             switch (tile_type) {
                 .Block => {
                     if (!started) p1_result += 1;
