@@ -1,5 +1,11 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
+const Deque = @import("mylib/deque.zig").Deque;
+const PriorityQueue = std.PriorityQueue;
+const printd = std.debug.print;
+const print = myf.printAny;
+const prints = myf.printStr;
+const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const ProgT = i64;
@@ -67,7 +73,6 @@ fn runner(registers: std.ArrayList(ProgT), input_value: ProgT) !ProgT {
     var machine = Machine{ .input_value = input_value, .registers = regs.items };
     return machine.run();
 }
-
 pub fn main() !void {
     const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -76,9 +81,12 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    var buffer: [25_000]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+    // var buffer: [35_000]u8 = undefined;
+    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    // const allocator = fba.allocator();
 
     const filename = try myf.getAppArg(allocator, 1);
     const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
@@ -87,12 +95,26 @@ pub fn main() !void {
     // End setup
 
     var op_list = std.ArrayList(ProgT).init(allocator);
-    try op_list.ensureTotalCapacityPrecise(1280);
+    try op_list.ensureTotalCapacityPrecise(10000);
     defer op_list.deinit();
 
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| op_list.appendAssumeCapacity(try std.fmt.parseInt(ProgT, raw_value, 10));
-    for (0..1280 - op_list.items.len) |_| op_list.appendAssumeCapacity(0);
+    for (0..10000 - op_list.items.len) |_| op_list.appendAssumeCapacity(0);
 
-    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ try runner(op_list, 1), try runner(op_list, 2) });
+    _ = try runner(op_list, 1);
+
+    // std.debug.print("{s}\n", .{input});
+    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
+
+}
+
+test "example" {
+    const allocator = std.testing.allocator;
+    var list = std.ArrayList(i8).init(allocator);
+    defer list.deinit();
+
+    const input = @embedFile("in/d14t.txt");
+    const input_attributes = try myf.getInputAttributes(input);
+    print(input_attributes);
 }
