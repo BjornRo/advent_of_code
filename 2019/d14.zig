@@ -9,16 +9,15 @@ const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const NameValue = struct {
-    value: u32,
+    value: u64,
     name: []const u8,
 };
 const RequireList = std.ArrayList(NameValue);
 const ProductionMap = struct {
-    produces: u32,
+    produces: u64,
     requires: std.ArrayList(NameValue),
 };
-// const Result = struct { ore: u32, remainder: std.StringHashMap(usize) };
-const Leftovers = std.StringHashMap(u32);
+const Leftovers = std.StringHashMap(u64);
 const Map = std.StringHashMap(ProductionMap);
 
 pub fn main() !void {
@@ -50,7 +49,7 @@ pub fn main() !void {
 
 fn parseElement(raw_elem: []const u8) !NameValue {
     var elem_it = std.mem.tokenizeScalar(u8, raw_elem, ' ');
-    const value = try std.fmt.parseInt(u32, elem_it.next().?, 10);
+    const value = try std.fmt.parseInt(u64, elem_it.next().?, 10);
     return .{ .name = elem_it.next().?, .value = value };
 }
 
@@ -70,10 +69,7 @@ fn parseLine(allocator: Allocator, line: []const u8, map: *Map) !void {
 
 test "example" {
     const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d14t.txt");
+    const input = @embedFile("in/d14.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     var map = Map.init(allocator);
@@ -90,33 +86,47 @@ test "example" {
     var leftovers = Leftovers.init(allocator);
     defer leftovers.deinit();
 
-    print(try dfs(allocator, &map, "FUEL", 1, &leftovers));
+    print(try binarySearch(allocator, &map, 1, 1000000000));
 }
 
-fn calc_factor(requires: u32, produces: u32) u32 {
-    return (requires + produces - 1) / requires;
+fn binarySearch(allocator: Allocator, map: *const Map, min: u64, max: u64) !u64 {
+    var leftovers = Leftovers.init(allocator);
+    defer leftovers.deinit();
+    var lo = min;
+    var hi = max;
+
+    while (lo < hi) {
+        leftovers.clearRetainingCapacity();
+        const mid = lo + (hi - lo + 1) / 2;
+        if (try dfs(allocator, map, "FUEL", mid, &leftovers) <= 1_000_000_000_000) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return lo;
 }
 
-fn dfs(allocator: Allocator, map: *const Map, symbol: []const u8, requires: u32, leftovers: *Leftovers) !u32 {
+fn dfs(allocator: Allocator, map: *const Map, symbol: []const u8, requires: u64, leftovers: *Leftovers) !u64 {
     if (map.get(symbol)) |production_map| {
-        var ores: u32 = 0;
+        var ores: u64 = 0;
         const produces = production_map.produces;
+        const factor = (requires + produces - 1) / produces;
 
-        const requires_list = production_map.requires.items;
-        for (requires_list) |requirement| {
-            const leftover = leftovers.get(requirement.name) orelse 0;
-            if (leftover >= requirement.value) {
-                try leftovers.put(requirement.name, leftover - requirement.value);
-            } else {
-                const adj_requires = requires - leftover;
-                const factor = (adj_requires + produces - 1) / produces;
-                const total_requires = factor * requirement.value;
-                try leftovers.put(requirement.name, produces * factor - adj_requires);
-                ores += try dfs(allocator, map, requirement.name, total_requires, leftovers);
+        (try leftovers.getOrPutValue(symbol, 0)).value_ptr.* += factor * produces - requires;
+
+        for (production_map.requires.items) |requirement| {
+            const adj_requirement_value = factor * requirement.value;
+            const leftover = try leftovers.getOrPutValue(requirement.name, 0);
+            if (leftover.value_ptr.* >= adj_requirement_value) {
+                leftover.value_ptr.* -= adj_requirement_value;
+                continue;
             }
+            const diff_requirement = adj_requirement_value - leftover.value_ptr.*;
+            leftover.value_ptr.* = 0;
+            ores += try dfs(allocator, map, requirement.name, diff_requirement, leftovers);
         }
         return ores;
     }
-    print(requires);
     return requires;
 }
