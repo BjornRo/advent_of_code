@@ -111,12 +111,15 @@ fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize
         } else {
             const row, const col = result.point.cast();
             const tile_type: Tile = @enumFromInt(result.tile);
-            if (!started and tile_type == .Block) p1_result += 1;
 
-            if (tile_type == .Paddle) {
-                paddle_pos = result.point;
-            } else if (tile_type == .Ball)
-                machine.input_value = if (paddle_pos.col < col) 1 else if (paddle_pos.col > col) -1 else 0;
+            switch (tile_type) {
+                .Block => {
+                    if (!started) p1_result += 1;
+                },
+                .Paddle => paddle_pos = result.point,
+                .Ball => machine.input_value = if (paddle_pos.col < col) 1 else if (paddle_pos.col > col) -1 else 0,
+                else => {},
+            }
 
             if (print_game) {
                 matrix[row][col] = switch (tile_type) {
