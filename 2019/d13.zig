@@ -100,41 +100,40 @@ fn breakout(allocator: Allocator, machine: *Machine, print_game: bool) ![2]usize
 
     var p1_result: usize = 0;
     var p2_result: usize = 0;
-    while (true) {
-        if (machine.runTriplet()) |result| {
-            if (print_game and !matrix_init) {
-                matrix = try myf.initValueMatrix(allocator, 23, 37, @as(u8, ' '));
-                matrix_init = true;
-            }
-            if (Point.init(0, -1).eq(result.point)) {
-                started = true;
-                if (result.tile > p2_result) p2_result = @intCast(result.tile);
-            } else {
-                const row, const col = result.point.cast();
-                const tile_type: Tile = @enumFromInt(result.tile);
-                if (!started and tile_type == .Block) p1_result += 1;
+    while (machine.runTriplet()) |result| {
+        if (print_game and !matrix_init) {
+            matrix = try myf.initValueMatrix(allocator, 23, 37, @as(u8, ' '));
+            matrix_init = true;
+        }
+        if (Point.init(0, -1).eq(result.point)) {
+            started = true;
+            if (result.tile > p2_result) p2_result = @intCast(result.tile);
+        } else {
+            const row, const col = result.point.cast();
+            const tile_type: Tile = @enumFromInt(result.tile);
+            if (!started and tile_type == .Block) p1_result += 1;
 
-                if (tile_type == .Paddle) {
-                    paddle_pos = result.point;
-                } else if (tile_type == .Ball)
-                    machine.input_value = if (paddle_pos.col < col) 1 else if (paddle_pos.col > col) -1 else 0;
+            if (tile_type == .Paddle) {
+                paddle_pos = result.point;
+            } else if (tile_type == .Ball)
+                machine.input_value = if (paddle_pos.col < col) 1 else if (paddle_pos.col > col) -1 else 0;
 
-                if (print_game) {
-                    matrix[row][col] = switch (tile_type) {
-                        .Ball => 'O',
-                        .Block => 'X',
-                        .Empty => ' ',
-                        .Paddle => '=',
-                        .Wall => '#',
-                    };
-                }
+            if (print_game) {
+                matrix[row][col] = switch (tile_type) {
+                    .Ball => 'O',
+                    .Block => 'X',
+                    .Empty => ' ',
+                    .Paddle => '=',
+                    .Wall => '#',
+                };
             }
-            if (print_game and started and result.tile != 0) {
-                for (matrix) |row| prints(row);
-                myf.slowDown(5);
-            }
-        } else return .{ p1_result, p2_result };
+        }
+        if (print_game and started and result.tile != 0) {
+            for (matrix) |row| prints(row);
+            myf.slowDown(5);
+        }
     }
+    return .{ p1_result, p2_result };
 }
 
 pub fn main() !void {
