@@ -35,9 +35,8 @@ pub fn main() !void {
 
 }
 
-fn part1(allocator: Allocator, values: []const i16, phase: u32) !void {
+fn FFT(allocator: Allocator, values: []const i16, phase: u32) ![]i16 {
     var output = try allocator.alloc(i16, values.len);
-    defer allocator.free(output);
     @memcpy(output, values);
 
     var iter_arr = try allocator.alloc(i16, values.len);
@@ -71,7 +70,16 @@ fn part1(allocator: Allocator, values: []const i16, phase: u32) !void {
         output = iter_arr;
         iter_arr = tmp;
     }
-    print(output);
+    return output;
+}
+
+fn part1(allocator: Allocator, values: []const i16, phase: u32) ![8]u8 {
+    var return_value: [8]u8 = undefined;
+    const output = try FFT(allocator, values, phase);
+    defer allocator.free(output);
+
+    for (0..return_value.len) |i| return_value[i] = @intCast(output[i] + '0');
+    return return_value;
 }
 
 test "example" {
@@ -79,7 +87,7 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d16t.txt");
+    const input = @embedFile("in/d16.txt");
 
     const input_trim = std.mem.trimRight(u8, input, "\r\n");
 
@@ -87,5 +95,5 @@ test "example" {
     defer allocator.free(values);
     for (input_trim, 0..) |v, i| values[i] = @intCast(v - '0');
 
-    try part1(allocator, values, 2);
+    prints(try part1(allocator, values, 100));
 }
