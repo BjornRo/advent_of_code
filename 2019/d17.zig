@@ -11,7 +11,6 @@ const Allocator = std.mem.Allocator;
 const ProgT = i64;
 const CT = i16;
 
-const Map = std.ArrayHashMap(Point, void, Point.HashCtx, true);
 const Point = struct {
     row: CT,
     col: CT,
@@ -20,44 +19,47 @@ const Point = struct {
     fn init(row: CT, col: CT) Self {
         return .{ .row = row, .col = col };
     }
+    fn initA(arr: [2]CT) Self {
+        return .{ .row = arr[0], .col = arr[1] };
+    }
     fn add(self: Self, o: Point) Point {
         return Self.init(self.row + o.row, self.col + o.col);
     }
-    fn sub(self: Self, o: Point) Point {
-        return Self.init(self.row - o.row, self.col - o.col);
-    }
-    fn eq(self: Self, o: Point) bool {
-        return self.row == o.row and self.col == o.col;
+    fn mul(self: Point, other: Point) Point {
+        return Point.init(
+            self.row * other.row - self.col * other.col,
+            self.row * other.col + self.col * other.row,
+        );
     }
     fn cast(self: Self) [2]u16 {
         return .{ @intCast(self.row), @intCast(self.col) };
     }
-    const HashCtx = struct {
-        pub fn hash(_: @This(), key: Self) u32 {
-            return std.hash.uint32(@bitCast([2]CT{ key.row, key.col }));
-        }
-        pub fn eql(_: @This(), a: Self, b: Self, _: usize) bool {
-            return a.eq(b);
-        }
-    };
+};
+
+const CharIterator = struct {
+    str: []const u8,
+    index: usize = 0,
+
+    fn next(self: *CharIterator) ?u8 {
+        if (self.index >= self.str.len) return null;
+        defer self.index += 1;
+        return self.str[self.index];
+    }
 };
 
 const Machine = struct {
-    registers: []ProgT,
-    input_value: ProgT,
+    registers: std.ArrayList(ProgT),
+    input_value: ?CharIterator = null,
     relative_base: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
 
     const Self = @This();
 
-    pub fn clone(self: Self, allocator: Allocator) !Machine {
-        return Machine{
-            .registers = try allocator.dupe(ProgT, self.registers),
-            .input_value = self.input_value,
-            .pc_value = self.pc_value,
-            .pc = self.pc,
-        };
+    pub fn init(registers: std.ArrayList(ProgT), register_size: usize) !Machine {
+        var regs = registers;
+        for (0..register_size - registers.items.len) |_| try regs.append(0);
+        return Machine{ .registers = regs };
     }
 
     fn get_factor(param: u32) ProgT {
@@ -65,38 +67,38 @@ const Machine = struct {
     }
 
     fn set_pc_value_get_op(self: *Self) ProgT {
-        self.pc_value = self.registers[@intCast(self.pc)];
+        self.pc_value = self.registers.items[@intCast(self.pc)];
         return @mod(self.pc_value, 100);
     }
 
     fn get_value(self: *Self, param: u32, add_pc: u32) ProgT {
         const offset = self.pc + param;
-        const item = switch (@mod(@divFloor(self.registers[self.pc], get_factor(param)), 10)) {
-            0 => self.registers[offset],
+        const item = switch (@mod(@divFloor(self.registers.items[self.pc], get_factor(param)), 10)) {
+            0 => self.registers.items[offset],
             1 => offset,
-            else => self.relative_base + self.registers[offset],
+            else => self.relative_base + self.registers.items[offset],
         };
         self.pc += add_pc;
-        return self.registers[@intCast(item)];
+        return self.registers.items[@intCast(item)];
     }
 
     fn set_value(self: *Self, param: u32, put_value: ProgT) void {
-        const item = self.registers[self.pc + param];
-        const index = switch (@mod(@divFloor(self.registers[self.pc], get_factor(param)), 10)) {
-            0 => item, // position
-            else => self.relative_base + item, // relative
+        const item = self.registers.items[self.pc + param];
+        const index = switch (@mod(@divFloor(self.registers.items[self.pc], get_factor(param)), 10)) {
+            0 => item,
+            else => self.relative_base + item,
         };
         self.pc += param + 1;
-        self.registers[@intCast(index)] = put_value;
+        self.registers.items[@intCast(index)] = put_value;
     }
 
-    pub fn run(self: *Self) ?u8 {
+    pub fn run(self: *Self) ?ProgT {
         while (true) {
             switch (self.set_pc_value_get_op()) {
                 1 => self.set_value(3, self.get_value(1, 0) + self.get_value(2, 0)),
                 2 => self.set_value(3, self.get_value(1, 0) * self.get_value(2, 0)),
-                3 => self.set_value(1, self.input_value),
-                4 => return @intCast(@as(i8, @truncate(self.get_value(1, 2)))),
+                3 => self.set_value(1, self.input_value.?.next().?),
+                4 => return self.get_value(1, 2),
                 5 => self.pc = if (self.get_value(1, 0) != 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
                 6 => self.pc = if (self.get_value(1, 0) == 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
                 7 => self.set_value(3, if (self.get_value(1, 0) < self.get_value(2, 0)) 1 else 0),
@@ -108,74 +110,26 @@ const Machine = struct {
     }
 };
 
-pub fn main() !void {
-    const start = std.time.nanoTimestamp();
-    const writer = std.io.getStdOut().writer();
-    defer {
-        const end = std.time.nanoTimestamp();
-        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
-        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
-    }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
-
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
-    // End setup
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
-}
-
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d17.txt");
-
-    var registers = std.ArrayList(ProgT).init(allocator);
-    try registers.ensureTotalCapacityPrecise(5500);
-    defer registers.deinit();
-
-    var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
-    while (in_iter.next()) |raw_value| registers.appendAssumeCapacity(try std.fmt.parseInt(ProgT, raw_value, 10));
-    for (0..5500 - registers.items.len) |_| registers.appendAssumeCapacity(0);
-
-    try part1(allocator, registers.items);
-}
-
-fn part1(allocator: Allocator, registers: []ProgT) !void {
+fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !struct { p1_result: usize, matrix: [][]u8 } {
+    var machine = try Machine.init(try registers.*.clone(), 4000);
     var linear_matrix = std.ArrayList(u8).init(allocator);
-    defer linear_matrix.deinit();
+    defer inline for (.{ machine.registers, linear_matrix }) |x| x.deinit();
 
-    var machine: Machine = .{ .registers = registers, .input_value = 0 };
+    while (machine.run()) |value| try linear_matrix.append(@intCast(@as(i8, @truncate(value))));
 
-    while (machine.run()) |value| try linear_matrix.append(value);
-    const line_len_newline = std.mem.indexOfScalar(u8, linear_matrix.items, '\n').? + 1;
-    const lines = (linear_matrix.items.len - 1) / line_len_newline;
-
-    const matrix = try allocator.alloc([]u8, lines);
-    defer allocator.free(matrix);
-
-    var lm_it = std.mem.tokenizeScalar(u8, linear_matrix.items, '\n');
-    {
-        var i: u8 = 0;
+    const matrix = blk: {
+        const line_len_newline = std.mem.indexOfScalar(u8, linear_matrix.items, '\n').? + 1;
+        const lines = (linear_matrix.items.len - 1) / line_len_newline;
+        const matrix = try myf.initValueMatrix(allocator, lines + 2, line_len_newline + 1, @as(u8, '.'));
+        var lm_it = std.mem.tokenizeScalar(u8, linear_matrix.items, '\n');
+        var i: u8 = 1;
         while (lm_it.next()) |row| {
-            matrix[i] = @constCast(row);
+            for (row, 1..) |e, j| matrix[i][j] = e;
             i += 1;
         }
-    }
+        break :blk matrix;
+    };
 
-    // 6371 too high
     var sum: usize = 0;
     for (1..matrix.len - 1) |i| {
         for (1..matrix[0].len - 1) |j| {
@@ -185,17 +139,129 @@ fn part1(allocator: Allocator, registers: []ProgT) !void {
             var count: u8 = 0;
             for (myf.getNextPositions(ii, jj)) |pos| {
                 const row, const col = pos;
-                if (matrix[@intCast(row)][@intCast(col)] == '#') {
-                    count += 1;
-                }
+                if (matrix[@intCast(row)][@intCast(col)] == '#') count += 1;
             }
             if (count == 4) {
                 matrix[i][j] = 'O';
-                sum += i * j;
+                sum += (i - 1) * (j - 1);
             }
         }
     }
+    return .{ .p1_result = sum, .matrix = matrix };
+}
 
-    for (matrix) |row| prints(row);
-    print(sum);
+fn part2(allocator: Allocator, matrix: []const []const u8, registers: *const std.ArrayList(ProgT)) !ProgT {
+    var input_list = std.ArrayList(u8).init(allocator);
+    var machine = try Machine.init(try registers.clone(), 4000);
+    defer inline for (.{ machine.registers, input_list }) |x| x.deinit();
+
+    var pos: Point, var dir: Point = outer: for (0..matrix.len) |i| {
+        for (0..matrix[0].len) |j|
+            switch (matrix[i][j]) {
+                '^', '<', '>', 'v' => |c| {
+                    const dir = switch (c) {
+                        '^' => Point.init(-1, 0),
+                        '<' => Point.init(0, -1),
+                        '>' => Point.init(0, 1),
+                        else => Point.init(1, 0),
+                    };
+                    break :outer [2]Point{ Point.init(@intCast(i), @intCast(j)), dir };
+                },
+                else => {},
+            };
+    } else unreachable;
+
+    while (true) {
+        if (input_list.items.len != 0) {
+            var count: u8 = 0;
+            for (myf.getNextPositions(pos.row, pos.col)) |np| {
+                const row, const col = Point.initA(np).cast();
+                if (matrix[row][col] == '.') count += 1;
+            }
+            if (count == 3) {
+                _ = input_list.pop();
+                break;
+            }
+        }
+
+        for ([2]Point{ Point.init(0, 1), Point.init(0, -1) }, [2]u8{ 'L', 'R' }) |rot, symbol| {
+            const new_dir = dir.mul(rot);
+            const row, const col = pos.add(new_dir).cast();
+            if (matrix[row][col] == '#') {
+                dir = new_dir;
+                try input_list.append(symbol);
+                try input_list.append(',');
+                break;
+            }
+        } else unreachable;
+
+        var steps: u8 = 0;
+        while (true) {
+            const next_pos = pos.add(dir);
+            const row, const col = next_pos.cast();
+            if (matrix[row][col] == '.') {
+                if (steps >= 10) {
+                    try input_list.append(steps / 10 + '0');
+                    steps %= 10;
+                }
+                try input_list.append(steps + '0');
+                try input_list.append(',');
+                break;
+            }
+            steps += 1;
+            pos = next_pos;
+        }
+    }
+
+    machine.registers.items[0] = 2;
+    machine.input_value =
+        CharIterator{ .str = "A,B,B,C,A,B,C,A,B,C\nL,6,R,12,L,4,L,6\nR,6,L,6,R,12\nL,6,L,10,L,10,R,6\nn\n" };
+
+    // for ("A,B,B,C,A,B,C,A,B,C\nL,6,R,12,L,4,L,6\nR,6,L,6,R,12\nL,6,L,10,L,10,R,6\nn\n") |c| {
+    //     machine.input_value = c;
+    //     print(machine.run());
+    // }
+    return while (machine.run()) |res| {
+        if (res >= 128) break res;
+    } else 0;
+
+    // L,6,R,12,L,4,L,6,R,6,L,6,R,12,R,6,L,6,R,12,L,6,L,10,L,10,R,6,L,6,R,12,L,4,L,6,R,6,L,6,R,12,L,6,L,10,L,10,R,6,L,6,R,12,L,4,L,6,R,6,L,6,R,12,L,6,L,10,L,10,R,6
+    // A,B,B,C,A,B,C,A,B,C
+    // A = L,6,R,12,L,4,L,6
+    // B = R,6,L,6,R,12
+    // C = L,6,L,10,L,10,R,6
+}
+
+pub fn main() !void {
+    const start = std.time.nanoTimestamp();
+    const writer = std.io.getStdOut().writer();
+    defer {
+        const end = std.time.nanoTimestamp();
+        const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
+        writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
+    }
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    // End setup
+
+    var registers = std.ArrayList(ProgT).init(allocator);
+    defer registers.deinit();
+
+    var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
+    while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
+
+    const result = try part1(allocator, &registers);
+    defer myf.freeMatrix(allocator, result.matrix);
+
+    // for (result.matrix) |row| prints(row);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+        result.p1_result,
+        try part2(allocator, result.matrix, &registers),
+    });
 }
