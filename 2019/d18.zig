@@ -71,8 +71,7 @@ const Point = struct {
 
     const HashCtx = struct {
         pub fn hash(_: @This(), key: Self) u64 {
-            const c: [4]u8 = @bitCast([2]CT{ key.row, key.col });
-            return std.hash.CityHash64.hash(&c);
+            return @intCast(std.hash.uint32(@bitCast(key.array())));
         }
         pub fn eql(_: @This(), a: Self, b: Self) bool {
             return a.eq(b);
