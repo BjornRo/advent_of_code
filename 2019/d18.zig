@@ -138,35 +138,30 @@ fn symbolToKey(char: u8) u32 {
 
 fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
-    defer pqueue.deinit();
-
     var min_visited = Visited.init(allocator);
-    defer min_visited.deinit();
+    defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
 
     try pqueue.add(.{ .pos = symbolToKey('@') });
     var min_steps = ~@as(u16, 0);
-    while (pqueue.removeOrNull()) |*const_state| {
-        var state = const_state.*;
-
+    while (pqueue.removeOrNull()) |*state| {
+        if (state.keys == target_keys) {
+            if (state.steps < min_steps) min_steps = state.steps;
+            continue;
+        }
         if (state.steps >= min_steps) continue;
-        state.keys |= state.pos;
+
         const result = try min_visited.getOrPut(.{ .keys = state.keys, .pos = state.pos });
         if (result.found_existing) {
             if (result.value_ptr.* <= state.steps) continue;
             result.value_ptr.* = state.steps;
         } else result.value_ptr.* = state.steps;
 
-        if (state.keys == target_keys) {
-            if (state.steps < min_steps) min_steps = state.steps;
-            continue;
-        }
-
         for (graph.get(state.pos).?.slice()) |next_pos| {
             if (state.contains(next_pos.symbol) or !state.contains(next_pos.doors)) continue;
             try pqueue.add(.{
                 .pos = next_pos.symbol,
                 .steps = state.steps + next_pos.steps,
-                .keys = state.keys,
+                .keys = state.keys | next_pos.symbol,
             });
         }
     }
