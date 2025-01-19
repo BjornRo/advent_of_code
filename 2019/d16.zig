@@ -4,9 +4,7 @@ const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 fn FFT(allocator: Allocator, values: []const i32, phase: u32) ![]i32 {
-    var output = try allocator.alloc(i32, values.len);
-    @memcpy(output, values);
-
+    var output = try allocator.dupe(i32, values);
     var iter_arr = try allocator.alloc(i32, values.len);
     defer allocator.free(iter_arr);
 
