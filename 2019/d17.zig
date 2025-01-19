@@ -157,7 +157,7 @@ fn findStrings(allocator: Allocator, string: []const u8, index: u8, sub_strings:
         return true;
     }
     const end = @min(21, string.len);
-    for (0..@min(21, end)) |i| {
+    for (0..end) |i| {
         const j = end - i - 1;
         if (j <= 2) return false;
         if (string[j] == ',' or !std.ascii.isDigit(string[j])) continue;
