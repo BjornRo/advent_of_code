@@ -79,6 +79,22 @@ const Point = struct {
     };
 };
 
+fn symbolToKey(char: u8) u32 {
+    const offset = switch (char) {
+        'a'...'z' => char - 'a',
+        'A'...'Z' => char - 'A',
+        '@' => return 0,
+        else => unreachable,
+    };
+    return std.math.powi(u32, 2, offset) catch unreachable;
+}
+
+fn part1(allocator: Allocator, matrix: []const []const u8, symbol_pos: []const Point, target_keys: u32) !u16 {
+    var graph = try genGraph(allocator, matrix, symbol_pos);
+    defer graph.deinit();
+    return try bfs(allocator, &graph, target_keys);
+}
+
 pub fn main() !void {
     const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -115,24 +131,10 @@ pub fn main() !void {
         try matrix.append(row);
     }
 
-    var graph = try genGraph(allocator, matrix.items, symbol_pos.slice());
-    defer graph.deinit();
-
-    prints("Graph generated");
-    print(try bfs(allocator, &graph, target_keys));
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-}
-
-fn symbolToKey(char: u8) u32 {
-    const offset = switch (char) {
-        'a'...'z' => char - 'a',
-        'A'...'Z' => char - 'A',
-        '@' => return 0,
-        else => unreachable,
-    };
-    return std.math.powi(u32, 2, offset) catch unreachable;
+    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+    //     try part1(allocator, matrix.items, symbol_pos.slice(), target_keys),
+    //     2,
+    // });
 }
 
 fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
