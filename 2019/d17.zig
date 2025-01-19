@@ -112,10 +112,10 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !struct {
 
     while (machine.run()) |value| try linear_matrix.append(@intCast(@as(i8, @truncate(value))));
 
-    const matrix = blk: {
+    var matrix = blk: {
         const line_len_newline = std.mem.indexOfScalar(u8, linear_matrix.items, '\n').? + 1;
         const lines = (linear_matrix.items.len - 1) / line_len_newline;
-        const matrix = try myf.initValueMatrix(allocator, lines + 2, line_len_newline + 1, @as(u8, '.'));
+        var matrix = try myf.initValueMatrix(allocator, lines + 2, line_len_newline + 1, @as(u8, '.'));
         var lm_it = std.mem.tokenizeScalar(u8, linear_matrix.items, '\n');
         var i: u8 = 1;
         while (lm_it.next()) |row| {
