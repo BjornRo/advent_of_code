@@ -10,7 +10,44 @@ const Allocator = std.mem.Allocator;
 
 const CT = i16;
 
-const Map = std.HashMap(Point, void, Point.HashCtx, 80);
+const Visited = std.HashMap(VisitKey, u16, VisitKey.HashCtx, 80);
+const GraphValue = std.BoundedArray(struct { symbol: u32, steps: u16, doors: u32 }, 26);
+const Graph = std.AutoHashMap(u32, GraphValue);
+const PointMap = std.HashMap(Point, void, Point.HashCtx, 80);
+
+const FrontierState = struct {
+    pos: u32,
+    steps: u16 = 0,
+    keys: u32 = 0,
+
+    const Self = @This();
+    fn cmp(_: void, a: Self, b: Self) std.math.Order {
+        if (a.steps < b.steps) return .lt;
+        if (a.steps > b.steps) return .gt;
+        return .eq;
+    }
+    fn contains(self: Self, target: u32) bool {
+        return (self.keys & target) == target;
+    }
+};
+
+const VisitKey = struct {
+    pos: u32,
+    keys: u32,
+
+    const Self = @This();
+    const HashCtx = struct {
+        pub fn hash(_: @This(), key: Self) u64 {
+            const char_val = std.math.log2_int(u32, (key.pos << 1) + 1); // 1 to 27 [a-z@]
+            const keys = key.keys << 6; // 26 chars + 6 = 32 bits
+            return @intCast(std.hash.uint32(keys | char_val));
+        }
+        pub fn eql(_: @This(), a: Self, b: Self) bool {
+            return a.pos == b.pos and a.keys == b.keys;
+        }
+    };
+};
+
 const Point = struct {
     row: CT,
     col: CT,
@@ -21,12 +58,6 @@ const Point = struct {
     }
     fn initA(arr: [2]CT) Self {
         return .{ .row = arr[0], .col = arr[1] };
-    }
-    fn add(self: Self, o: Self) Self {
-        return Self.init(self.row + o.row, self.col + o.col);
-    }
-    fn sub(self: Self, o: Self) Self {
-        return Self.init(self.row - o.row, self.col - o.col);
     }
     fn eq(self: Self, o: Self) bool {
         return self.row == o.row and self.col == o.col;
@@ -105,48 +136,9 @@ fn symbolToKey(char: u8) u32 {
     return std.math.powi(u32, 2, offset) catch unreachable;
 }
 
-const FrontierState = struct {
-    pos: u32,
-    steps: u16 = 0,
-    keys: u32 = 0,
-
-    const Self = @This();
-    fn cmp(_: void, a: Self, b: Self) std.math.Order {
-        if (a.steps < b.steps) return .lt;
-        if (a.steps > b.steps) return .gt;
-        return .eq;
-    }
-    fn contains(self: Self, target: u32) bool {
-        return (self.keys & target) == target;
-    }
-};
-
-const VisitKey = struct {
-    pos: u32,
-    keys: u32,
-
-    const Self = @This();
-    const HashCtx = struct {
-        pub fn hash(_: @This(), key: Self) u64 {
-            const char_val = std.math.log2_int(u32, (key.pos << 1) + 1); // 0 to 26 (a-z)
-            const keys = key.keys << 6; // 26 chars + 6 = 32 bits
-            return @intCast(std.hash.uint32(keys | char_val));
-        }
-        pub fn eql(_: @This(), a: Self, b: Self) bool {
-            return a.pos == b.pos and a.keys == b.keys;
-        }
-    };
-};
-
-const Visited = std.HashMap(VisitKey, u16, VisitKey.HashCtx, 80);
-
 fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
     defer pqueue.deinit();
-    var stack = std.ArrayList(FrontierState).init(allocator);
-    defer stack.deinit();
-    var queue = try Deque(FrontierState).init(allocator);
-    defer queue.deinit();
 
     var min_visited = Visited.init(allocator);
     defer min_visited.deinit();
@@ -156,8 +148,6 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     while (pqueue.removeOrNull()) |*const_state| {
         var state = const_state.*;
 
-        // print(state.contains(state.pos));
-        // if (true) break;
         if (state.steps >= min_steps) continue;
         state.keys |= state.pos;
         const result = try min_visited.getOrPut(.{ .keys = state.keys, .pos = state.pos });
@@ -167,15 +157,12 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
         } else result.value_ptr.* = state.steps;
 
         if (state.keys == target_keys) {
-            print(state.steps);
-
             if (state.steps < min_steps) min_steps = state.steps;
             continue;
         }
 
         for (graph.get(state.pos).?.slice()) |next_pos| {
-            if (state.contains(next_pos.symbol)) continue;
-            if (!state.contains(next_pos.doors)) continue;
+            if (state.contains(next_pos.symbol) or !state.contains(next_pos.doors)) continue;
             try pqueue.add(.{
                 .pos = next_pos.symbol,
                 .steps = state.steps + next_pos.steps,
@@ -186,15 +173,11 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     return min_steps;
 }
 
-const Neighbor = struct { symbol: u32, steps: u16, doors: u32 };
-const GraphValue = std.BoundedArray(Neighbor, 26);
-const Graph = std.AutoHashMap(u32, GraphValue);
-
 fn genGraph(allocator: Allocator, matrix: []const []const u8, symbol_position: []const Point) !Graph {
     const State = struct { pos: Point, steps: u16 = 0, doors: u32 = 0 };
 
     var graph = Graph.init(allocator);
-    var visited = Map.init(allocator);
+    var visited = PointMap.init(allocator);
     defer visited.deinit();
     var queue = try Deque(State).init(allocator);
     defer queue.deinit();
