@@ -24,6 +24,10 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
             self.buf[self.len] = item;
             self.len += 1;
         }
+        pub fn appendAssumeCapacity(self: *Self, item: T) void {
+            self.buf[self.len] = item;
+            self.len += 1;
+        }
         pub fn getSlice(self: *const Self) []T {
             return self.buf[0..self.len];
         }

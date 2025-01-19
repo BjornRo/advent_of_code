@@ -71,21 +71,10 @@ pub fn main() !void {
     var matrix = std.ArrayList([]const u8).init(allocator);
     defer matrix.deinit();
 
-    var start_pos: Point = undefined;
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| {
-        try matrix.append(row);
-        if (std.mem.indexOfScalar(u8, row, '@')) |col|
-            start_pos = Point.init(@intCast(matrix.items.len), @intCast(col));
-    }
+    while (in_iter.next()) |row| try matrix.append(row);
 
-    const result = try depthBfs(
-        allocator,
-        matrix.items,
-        start_pos,
-        myf.FixedBuffer(u8, 26).init(),
-        0,
-    );
+    const result = try part1(allocator, matrix.items);
     print(result);
 
     // std.debug.print("{s}\n", .{input});
@@ -93,25 +82,34 @@ pub fn main() !void {
 
 }
 
-const State = struct { pos: Point, steps: u32 = 0 };
-
-fn depthBfs(
-    allocator: Allocator,
-    matrix: []const []const u8,
+const State = struct {
     pos: Point,
-    keys: myf.FixedBuffer(u8, 26),
-    steps: u32,
-) !u32 {
-    var visited = Map.init(allocator);
-    defer visited.deinit();
+    visited: Map,
+    steps: u16 = 0,
+    keys: myf.FixedBuffer(u8, 26) = myf.FixedBuffer(u8, 26).init(),
+};
 
-    var queue = try Deque(State).init(allocator);
-    defer queue.deinit();
-    try queue.pushBack(.{ .pos = pos, .steps = steps });
+fn part1(allocator: Allocator, matrix: []const []const u8) !u32 {
+    const start_pos: Point = outer: for (0..matrix.len) |i| {
+        for (0..matrix[0].len) |j|
+            if (matrix[i][j] == '@') break :outer Point.init(@intCast(i), @intCast(j));
+    } else unreachable;
+
+    var stack = std.ArrayList(State).init(allocator);
+    defer stack.deinit();
+
+    try stack.append(State{ .pos = start_pos, .visited = Map.init(allocator) });
 
     var min_steps = ~@as(u32, 0);
-    while (queue.popFront()) |*state| {
-        if (try visited.fetchPut(state.pos, {}) != null or state.steps >= min_steps) continue;
+    while (stack.popOrNull()) |*const_state| {
+        var state = const_state.*;
+        defer state.visited.deinit();
+        if (state.keys.isFull()) {
+            if (state.steps < min_steps) min_steps = state.steps;
+            continue;
+        }
+
+        if (try state.visited.fetchPut(state.pos, {}) != null or state.steps >= min_steps) continue;
 
         const row, const col = state.pos.array();
         for (myf.getNextPositions(row, col)) |next_pos| {
@@ -119,16 +117,18 @@ fn depthBfs(
             const next_row, const next_col = next_point.cast();
             const tile = matrix[next_row][next_col];
             if (tile == '#') continue;
-            if ('A' <= tile and tile <= 'Z' and !keys.contains(tile + 32)) continue;
-            if ('a' <= tile and tile <= 'z' and !keys.contains(tile)) {
-                var new_keys = keys;
-                new_keys.appendAssumeCapacity(tile);
-                if (new_keys.isFull()) {
-                    return state.steps;
-                }
-                const result = try depthBfs(allocator, matrix, next_point, new_keys, state.steps + 1);
-                if (result < min_steps) min_steps = result;
-            } else try queue.pushBack(.{ .pos = next_point, .steps = state.steps + 1 });
+            if ('A' <= tile and tile <= 'Z' and !state.keys.contains(tile + 32)) continue;
+            const item = try stack.addOne(); // to avoid copying too much.
+            item.* = .{
+                .keys = state.keys,
+                .pos = next_point,
+                .steps = state.steps + 1,
+                .visited = try state.visited.clone(),
+            };
+            if ('a' <= tile and tile <= 'z' and !state.keys.contains(tile)) {
+                try item.keys.append(tile);
+                item.visited.clearRetainingCapacity();
+            }
         }
     }
     return min_steps;
