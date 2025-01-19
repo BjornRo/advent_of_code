@@ -150,6 +150,28 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !struct {
     return .{ .p1_result = sum, .matrix = matrix };
 }
 
+fn findStrings(allocator: Allocator, string: []const u8, index: u8, sub_strings: *[3][]const u8) !bool {
+    if (index == sub_strings.len) {
+        for (string) |s| if (s != ',') return false;
+        for (sub_strings) |*s| s.* = try allocator.dupe(u8, s.*);
+        return true;
+    }
+    const end = @min(21, string.len);
+    for (0..@min(21, end)) |i| {
+        const j = end - i - 1;
+        if (j <= 2) return false;
+        if (string[j] == ',' or !std.ascii.isDigit(string[j])) continue;
+
+        const sub_string = try std.mem.replaceOwned(u8, allocator, string, string[0 .. j + 1], "");
+        defer allocator.free(sub_string);
+        if (sub_string.len == string.len - j + 1) continue;
+
+        sub_strings[index] = string[0 .. j + 1];
+        if (try findStrings(allocator, std.mem.trimLeft(u8, sub_string, ","), index + 1, sub_strings)) return true;
+    }
+    return false;
+}
+
 fn part2(allocator: Allocator, matrix: []const []const u8, registers: *const std.ArrayList(ProgT)) !ProgT {
     var input_list = std.ArrayList(u8).init(allocator);
     var machine = try Machine.init(try registers.clone(), 4000);
@@ -213,23 +235,35 @@ fn part2(allocator: Allocator, matrix: []const []const u8, registers: *const std
         }
     }
 
-    machine.registers.items[0] = 2;
-    machine.input_value =
-        CharIterator{ .str = "A,B,B,C,A,B,C,A,B,C\nL,6,R,12,L,4,L,6\nR,6,L,6,R,12\nL,6,L,10,L,10,R,6\nn\n" };
+    var main_routine = try allocator.dupe(u8, input_list.items);
+    defer allocator.free(main_routine);
 
-    // for ("A,B,B,C,A,B,C,A,B,C\nL,6,R,12,L,4,L,6\nR,6,L,6,R,12\nL,6,L,10,L,10,R,6\nn\n") |c| {
-    //     machine.input_value = c;
-    //     print(machine.run());
-    // }
+    var strings: [3][]u8 = undefined;
+    if (!try findStrings(allocator, input_list.items, 0, &strings)) unreachable;
+    defer for (strings) |s| allocator.free(s);
+
+    for (strings, [3][]const u8{ "A", "B", "C" }) |s, c| {
+        const new_routine = try std.mem.replaceOwned(u8, allocator, main_routine, s, c);
+        allocator.free(main_routine);
+        main_routine = new_routine;
+    }
+
+    const final_string = blk: {
+        var list = std.ArrayList([]const u8).init(allocator);
+        defer list.deinit();
+        try list.append(main_routine);
+        for (strings) |s| try list.append(s);
+        inline for (.{ "n", "" }) |s| try list.append(s);
+        break :blk try std.mem.join(allocator, "\n", list.items);
+    };
+    defer allocator.free(final_string);
+
+    machine.registers.items[0] = 2;
+    machine.input_value = CharIterator{ .str = final_string };
+
     return while (machine.run()) |res| {
         if (res >= 128) break res;
     } else 0;
-
-    // L,6,R,12,L,4,L,6,R,6,L,6,R,12,R,6,L,6,R,12,L,6,L,10,L,10,R,6,L,6,R,12,L,4,L,6,R,6,L,6,R,12,L,6,L,10,L,10,R,6,L,6,R,12,L,4,L,6,R,6,L,6,R,12,L,6,L,10,L,10,R,6
-    // A,B,B,C,A,B,C,A,B,C
-    // A = L,6,R,12,L,4,L,6
-    // B = R,6,L,6,R,12
-    // C = L,6,L,10,L,10,R,6
 }
 
 pub fn main() !void {
