@@ -4,7 +4,7 @@ const Type = std.builtin.Type;
 
 const DelimType = enum { CRLF, LF };
 
-pub fn FixedBuffer(comptime T: type, size: u16) type {
+pub fn FixedBuffer(comptime T: type, size: u8) type {
     return struct {
         buf: [size]T,
         len: @TypeOf(size) = 0,
@@ -28,7 +28,7 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
             self.buf[self.len] = item;
             self.len += 1;
         }
-        pub fn getSlice(self: *const Self) []T {
+        pub fn getSlice(self: *const Self) []const T {
             return self.buf[0..self.len];
         }
         pub fn get(self: *const Self, index: u8) !T {

@@ -71,65 +71,173 @@ pub fn main() !void {
     var matrix = std.ArrayList([]const u8).init(allocator);
     defer matrix.deinit();
 
-    var start_pos: Point = undefined;
+    var symbol_list = try std.BoundedArray(Point, 27).init(0);
+
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
+        for (row, 0..) |c, j| {
+            if ('a' <= c and c <= 'z' or c == '@')
+                symbol_list.appendAssumeCapacity(Point.init(@intCast(matrix.items.len), @intCast(j)));
+        }
         try matrix.append(row);
-        if (std.mem.indexOfScalar(u8, row, '@')) |col|
-            start_pos = Point.init(@intCast(matrix.items.len), @intCast(col));
     }
 
-    const result = try depthBfs(
-        allocator,
-        matrix.items,
-        start_pos,
-        myf.FixedBuffer(u8, 26).init(),
-        0,
-    );
-    print(result);
+    var graph = try genGraph(allocator, matrix.items, symbol_list.slice());
+    defer graph.deinit();
+    for (graph.get('@').?.slice()) |r| {
+        // print(r);
+        std.debug.print("{c} {d} {s}\n", .{ r.symbol, r.steps, r.doors.getSlice() });
+    }
+    for (graph.get('s').?.slice()) |r| {
+        // print(r);
+        std.debug.print("{c} {d} {s}\n", .{ r.symbol, r.steps, r.doors.getSlice() });
+    }
+    for (graph.get('m').?.slice()) |r| {
+        // print(r);
+        std.debug.print("{c} {d} {s}\n", .{ r.symbol, r.steps, r.doors.getSlice() });
+    }
+
+    prints("Graph generated");
+    print(try bfs(allocator, &graph, symbol_list.len));
 
     // std.debug.print("{s}\n", .{input});
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
 }
 
-const State = struct { pos: Point, steps: u32 = 0 };
+const FrontierState = struct {
+    pos: u8,
+    steps: u32 = 0,
+    keys: Doors = Doors.init(),
 
-fn depthBfs(
-    allocator: Allocator,
-    matrix: []const []const u8,
-    pos: Point,
-    keys: myf.FixedBuffer(u8, 26),
-    steps: u32,
-) !u32 {
-    var visited = Map.init(allocator);
-    defer visited.deinit();
+    const Self = @This();
+    fn cmp(_: void, a: Self, b: Self) std.math.Order {
+        if (a.steps < b.steps) return .gt;
+        if (a.steps > b.steps) return .lt;
+        return .eq;
+    }
+};
 
-    var queue = try Deque(State).init(allocator);
+const VisitKey = struct {
+    pos: u8,
+    keys: []const u8,
+
+    const Self = @This();
+    const HashCtx = struct {
+        pub fn hash(_: @This(), key: Self) u64 {
+            var hashr = std.hash.Fnv1a_64.init();
+            hashr.update(&[1]u8{key.pos});
+            hashr.update(key.keys);
+            return hashr.final();
+        }
+        pub fn eql(_: @This(), a: Self, b: Self) bool {
+            return a.pos == b.pos and std.mem.eql(u8, a.keys, b.keys);
+        }
+    };
+};
+
+const Visited = std.HashMap(VisitKey, u32, VisitKey.HashCtx, 80);
+
+fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u8) !u32 {
+    var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
+    defer pqueue.deinit();
+    var stack = std.ArrayList(FrontierState).init(allocator);
+    defer stack.deinit();
+    var queue = try Deque(FrontierState).init(allocator);
     defer queue.deinit();
-    try queue.pushBack(.{ .pos = pos, .steps = steps });
 
+    var min_visited = Visited.init(allocator);
+    defer {
+        var mvi_it = min_visited.keyIterator();
+        while (mvi_it.next()) |v| allocator.free(v.*.keys);
+        min_visited.deinit();
+    }
+
+    try pqueue.add(.{ .pos = '@' });
     var min_steps = ~@as(u32, 0);
-    while (queue.popFront()) |*state| {
-        if (try visited.fetchPut(state.pos, {}) != null or state.steps >= min_steps) continue;
+    while (pqueue.removeOrNull()) |*const_state| {
+        var state = const_state.*;
 
-        const row, const col = state.pos.array();
-        for (myf.getNextPositions(row, col)) |next_pos| {
-            const next_point = Point.initA(next_pos);
-            const next_row, const next_col = next_point.cast();
-            const tile = matrix[next_row][next_col];
-            if (tile == '#') continue;
-            if ('A' <= tile and tile <= 'Z' and !keys.contains(tile + 32)) continue;
-            if ('a' <= tile and tile <= 'z' and !keys.contains(tile)) {
-                var new_keys = keys;
-                new_keys.appendAssumeCapacity(tile);
-                if (new_keys.isFull()) {
-                    return state.steps;
-                }
-                const result = try depthBfs(allocator, matrix, next_point, new_keys, state.steps + 1);
-                if (result < min_steps) min_steps = result;
-            } else try queue.pushBack(.{ .pos = next_point, .steps = state.steps + 1 });
+        if (state.steps >= min_steps or state.keys.contains(state.pos)) continue;
+        state.keys.appendAssumeCapacity(state.pos);
+        std.mem.sort(u8, state.keys.buf[0..state.keys.len], {}, std.sort.asc(u8));
+        const result = try min_visited.getOrPut(.{ .keys = state.keys.getSlice(), .pos = state.pos });
+        if (result.found_existing) {
+            if (result.value_ptr.* < state.steps) continue;
+            result.value_ptr.* = state.steps;
+        } else {
+            result.key_ptr.*.keys = try allocator.dupe(u8, state.keys.getSlice());
+            result.value_ptr.* = state.steps;
+        }
+
+        if (state.keys.len == target_keys) {
+            print(state.steps);
+
+            if (state.steps < min_steps) min_steps = state.steps;
+            continue;
+        }
+
+        for (graph.get(state.pos).?.slice()) |next_pos| {
+            if (state.keys.contains(next_pos.symbol)) continue;
+            for (next_pos.doors.getSlice()) |door| {
+                if (!state.keys.contains(door + 32)) break;
+            } else {
+                try pqueue.add(.{
+                    .pos = next_pos.symbol,
+                    .steps = state.steps + next_pos.steps,
+                    .keys = state.keys,
+                });
+            }
         }
     }
     return min_steps;
+}
+
+const Doors = myf.FixedBuffer(u8, 27);
+const Neighbor = struct { symbol: u8, steps: u32, doors: Doors = Doors.init() };
+const GraphValue = std.BoundedArray(Neighbor, 26);
+const Graph = std.AutoHashMap(u8, GraphValue);
+
+const State = struct { pos: Point, steps: u32 = 0, doors: Doors = Doors.init() };
+
+fn genGraph(allocator: Allocator, matrix: []const []const u8, symbol_position: []const Point) !Graph {
+    var graph = Graph.init(allocator);
+    var visited = Map.init(allocator);
+    defer visited.deinit();
+    var queue = try Deque(State).init(allocator);
+    defer queue.deinit();
+
+    for (symbol_position) |*symbol_pos| {
+        const symbol: u8 = blk: {
+            const row, const col = symbol_pos.cast();
+            break :blk matrix[row][col];
+        };
+        var neighbors = try GraphValue.init(0);
+        visited.clearRetainingCapacity();
+
+        try queue.pushBack(.{ .pos = symbol_pos.*, .steps = 0 });
+        while (queue.popFront()) |*const_state| {
+            var state = const_state.*;
+            if (try visited.fetchPut(state.pos, {}) != null) continue;
+
+            const row, const col = state.pos.array();
+            switch (matrix[@intCast(row)][@intCast(col)]) {
+                'A'...'Z' => |tile| state.doors.appendAssumeCapacity(tile),
+                'a'...'z' => |tile| if (tile != symbol) neighbors.appendAssumeCapacity(.{
+                    .doors = state.doors,
+                    .steps = state.steps,
+                    .symbol = tile,
+                }),
+                else => {},
+            }
+
+            for (myf.getNextPositions(row, col)) |next_pos| {
+                const next_point = Point.initA(next_pos);
+                const next_row, const next_col = next_point.cast();
+                if (matrix[next_row][next_col] == '#') continue;
+                try queue.pushBack(.{ .pos = next_point, .steps = state.steps + 1, .doors = state.doors });
+            }
+        }
+        try graph.put(symbol, neighbors);
+    }
+    return graph;
 }
