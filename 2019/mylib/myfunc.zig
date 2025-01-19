@@ -24,10 +24,10 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
             self.buf[self.len] = item;
             self.len += 1;
         }
-        pub fn getSlice(self: *Self) []T {
+        pub fn getSlice(self: *const Self) []T {
             return self.buf[0..self.len];
         }
-        pub fn get(self: *Self, index: u8) !T {
+        pub fn get(self: *const Self, index: u8) !T {
             if (index >= size) return error.OutOfBounds;
             return self.buf[index];
         }
@@ -40,9 +40,12 @@ pub fn FixedBuffer(comptime T: type, size: u16) type {
             if (index >= size) return error.OutOfBounds;
             self.buf[index] = value;
         }
-        pub fn contains(self: *Self, value: T) bool {
+        pub fn contains(self: *const Self, value: T) bool {
             for (0..self.len) |i| if (self.buf[i] == value) return true;
             return false;
+        }
+        pub fn isFull(self: *const Self) bool {
+            return self.len == size;
         }
     };
 }
