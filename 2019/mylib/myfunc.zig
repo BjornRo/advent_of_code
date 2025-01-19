@@ -459,13 +459,10 @@ pub fn padMatScalar(comptime T: type, alloc: Allocator, matrix: []const []const 
 
 pub fn copyMatrix(allocator: Allocator, matrix: anytype) ![][]@TypeOf(matrix[0][0]) {
     const T = @TypeOf(matrix[0][0]);
-    const row_len = matrix[0].len;
     const new_matrix = try allocator.alloc([]T, matrix.len);
     for (matrix, 0..) |row, i| {
-        new_matrix[i] = try allocator.alloc(T, row_len);
-        @memcpy(new_matrix[i], row);
+        new_matrix[i] = try allocator.dupe(T, row);
     }
-
     return new_matrix;
 }
 

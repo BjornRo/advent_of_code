@@ -130,11 +130,51 @@ pub fn main() !void {
         }
         try matrix.append(row);
     }
+    _ = try part2(allocator, matrix.items, target_keys);
 
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
     //     try part1(allocator, matrix.items, symbol_pos.slice(), target_keys),
     //     2,
     // });
+}
+
+fn part2(allocator: Allocator, matrix: []const []const u8, target_keys: u32) !u16 {
+    var new_matrix = try myf.copyMatrix(allocator, matrix);
+    defer myf.freeMatrix(allocator, new_matrix);
+
+    const start_points: [4]Point = blk: {
+        for (0..new_matrix.len) |i| for (0..new_matrix[0].len) |j| {
+            if (new_matrix[i][j] == '@') {
+                new_matrix[i][j] = '#';
+                const ii: u8 = @intCast(i);
+                const jj: u8 = @intCast(j);
+                const row, const col = Point.init(ii, jj).array();
+                for (myf.getNextPositions(row, col)) |next_pos| {
+                    const nr, const nc = Point.initA(next_pos).cast();
+                    new_matrix[nr][nc] = '#';
+                }
+                const points: [4]Point = .{
+                    Point.init(ii + 1, jj + 1),
+                    Point.init(ii - 1, jj + 1),
+                    Point.init(ii + 1, jj - 1),
+                    Point.init(ii - 1, jj - 1),
+                };
+                for (points) |p| {
+                    const krow, const kcol = p.cast();
+                    new_matrix[krow][kcol] = '@';
+                }
+                break :blk points;
+            }
+        };
+        unreachable;
+    };
+    for (new_matrix) |row| {
+        prints(row);
+    }
+    _ = start_points;
+    _ = target_keys;
+
+    return 1;
 }
 
 fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
@@ -170,14 +210,11 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
 }
 
 fn genGraph(allocator: Allocator, matrix: []const []const u8, symbol_position: []const Point) !Graph {
-    const State = struct { pos: Point, steps: u16 = 0, doors: u32 = 0 };
+    var queue = try Deque(struct { pos: Point, steps: u16 = 0, doors: u32 = 0 }).init(allocator);
+    var visited = PointMap.init(allocator);
+    defer inline for (.{ queue, &visited }) |i| i.deinit();
 
     var graph = Graph.init(allocator);
-    var visited = PointMap.init(allocator);
-    defer visited.deinit();
-    var queue = try Deque(State).init(allocator);
-    defer queue.deinit();
-
     for (symbol_position) |*symbol_pos| {
         const symbol: u8 = blk: {
             const row, const col = symbol_pos.cast();
