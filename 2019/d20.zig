@@ -39,6 +39,7 @@ const CT = i16;
 
 const GraphValue = std.BoundedArray(packed struct { symbol: u16, steps: u16 }, 1200);
 const Graph = std.AutoHashMap(u16, GraphValue);
+const Side = enum(u1) { Inside, Outside };
 
 const Convert = struct {
     fn twoChar_u16(chars: []const u8) u16 {
@@ -46,6 +47,19 @@ const Convert = struct {
     }
     fn u16_twoChar(value: u16) [2]u8 {
         return @bitCast(value);
+    }
+    pub fn rawSymbol(offset: Point, slice: []const u8, side: Side) u16 {
+        var buf: [2]u8 = undefined;
+        @memcpy(&buf, slice[0..2]);
+        if (offset.row == -1 or offset.col == -1) {
+            std.mem.reverse(u8, &buf);
+        }
+        const val: u16 = @intCast(@intFromEnum(side));
+        return Convert.twoChar_u16(&buf) | (val << 15);
+    }
+    pub fn symbol(slice: []const u8, side: Side) u16 {
+        const val: u16 = @intCast(@intFromEnum(side));
+        return Convert.twoChar_u16(slice) | (val << 15);
     }
 };
 
@@ -101,15 +115,6 @@ const VisitHashCtx = struct {
     }
 };
 
-fn convertSymbol(offset: Point, slice: []const u8) u16 {
-    var buf: [2]u8 = undefined;
-    @memcpy(&buf, slice[0..2]);
-    if (offset.row == -1 or offset.col == -1) {
-        std.mem.reverse(u8, &buf);
-    }
-    return Convert.twoChar_u16(&buf);
-}
-
 fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
     var queue = try Deque(struct { pos: Point, steps: u16 = 0 }).init(allocator);
     var stack = std.ArrayList(struct { symbol: u16, pos: Point }).init(allocator);
@@ -139,7 +144,11 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
                 buf.appendAssumeCapacity(matrix[row][col]);
                 step = step.add(offset);
             }
-            try stack.append(.{ .pos = curr, .symbol = convertSymbol(offset, buf.getSlice()) });
+            const side: Side = if (i == 2 or j == 2) .Outside else .Inside;
+            try stack.append(.{
+                .pos = curr,
+                .symbol = Convert.rawSymbol(offset, buf.getSlice(), side),
+            });
         }
     };
 
@@ -149,12 +158,12 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
         visited.clearRetainingCapacity();
 
         try queue.pushBack(.{ .pos = symbol_pos.*.pos });
-        while (queue.popFront()) |*const_state| {
-            if (try visited.fetchPut(const_state.pos, {}) != null) continue;
+        while (queue.popFront()) |*state| {
+            if (try visited.fetchPut(state.pos, {}) != null) continue;
 
             for (myf.getNeighborOffset(CT)) |offset| {
                 const offset_point = Point.initA(offset);
-                const next_pos = const_state.pos.add(offset_point);
+                const next_pos = state.pos.add(offset_point);
                 const nr, const nc = next_pos.cast();
                 if (matrix[nr][nc] == '#') continue;
                 if (matrix[nr][nc] != '.') {
@@ -162,13 +171,15 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
                     buf.appendAssumeCapacity(matrix[nr][nc]);
                     const nnr, const nnc = next_pos.add(offset_point).cast();
                     buf.appendAssumeCapacity(matrix[nnr][nnc]);
-                    const neighbor_symbol = convertSymbol(offset_point, buf.getSlice());
+                    const side: Side =
+                        if (state.pos.row == 2 or state.pos.col == 2) .Outside else .Inside;
+                    const neighbor_symbol = Convert.rawSymbol(offset_point, buf.getSlice(), side);
                     if (neighbor_symbol != symbol_pos.symbol)
                         neighbors.appendAssumeCapacity(.{
                             .symbol = neighbor_symbol,
-                            .steps = const_state.steps,
+                            .steps = state.steps,
                         });
-                } else try queue.pushBack(.{ .pos = next_pos, .steps = const_state.steps + 1 });
+                } else try queue.pushBack(.{ .pos = next_pos, .steps = state.steps + 1 });
             }
         }
         const result = try graph.getOrPut(symbol_pos.symbol);
@@ -197,7 +208,7 @@ test "example" {
     defer graph.deinit();
     // print(graph.get(Convert.twoChar_u16("AA")));
 
-    print(try part2(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
+    print(try part1(allocator, &graph, Convert.symbol("AA", .Outside), Convert.symbol("ZZ", .Outside)));
 }
 
 fn part1(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u16 {
@@ -213,24 +224,26 @@ fn part1(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u1
         }
     };
 
+    const mask = 0x7FFF;
     var distances = std.AutoHashMap(u16, u16).init(allocator);
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
     defer inline for (.{ pqueue, &distances }) |i| i.deinit();
 
     try pqueue.add(.{ .pos = start });
     while (pqueue.removeOrNull()) |*const_state| {
-        if (const_state.pos == target) {
-            return const_state.steps - 1;
-        }
+        if (const_state.pos & mask == target & mask) return const_state.steps - 1;
 
-        for (graph.get(const_state.pos).?.slice()) |neighbor| {
-            const new_cost = const_state.steps + neighbor.steps;
-            if (new_cost < distances.get(neighbor.symbol) orelse ~@as(u16, 0)) {
-                prints(Convert.u16_twoChar(const_state.pos));
-                prints(Convert.u16_twoChar(neighbor.symbol));
-                prints("");
-                try distances.put(neighbor.symbol, new_cost);
-                try pqueue.add(.{ .pos = neighbor.symbol, .steps = new_cost + 1 });
+        inline for (.{ graph.get(const_state.pos), graph.get(const_state.pos ^ (1 << 15)) }) |neighbors| {
+            if (neighbors) |neighbors_| {
+                for (neighbors_.slice()) |neighbor| {
+                    const new_cost = const_state.steps + neighbor.steps;
+                    if (new_cost >= distances.get(neighbor.symbol & mask) orelse ~@as(u16, 0)) continue;
+                    prints(Convert.u16_twoChar(const_state.pos));
+                    prints(Convert.u16_twoChar(neighbor.symbol));
+                    prints("");
+                    try distances.put(neighbor.symbol & mask, new_cost);
+                    try pqueue.add(.{ .pos = neighbor.symbol, .steps = new_cost + 1 });
+                }
             }
         }
     }
@@ -259,15 +272,16 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u1
         if (const_state.pos == target) {
             return const_state.steps - 1;
         }
-
-        for (graph.get(const_state.pos).?.slice()) |neighbor| {
-            const new_cost = const_state.steps + neighbor.steps;
-            if (new_cost < distances.get(neighbor.symbol) orelse ~@as(u16, 0)) {
-                prints(Convert.u16_twoChar(const_state.pos));
-                prints(Convert.u16_twoChar(neighbor.symbol));
-                prints("");
-                try distances.put(neighbor.symbol, new_cost);
-                try pqueue.add(.{ .pos = neighbor.symbol, .steps = new_cost + 1 });
+        if (graph.get(const_state.pos)) |neighbors| {
+            for (neighbors.slice()) |neighbor| {
+                const new_cost = const_state.steps + neighbor.steps;
+                if (new_cost < distances.get(neighbor.symbol) orelse ~@as(u16, 0)) {
+                    prints(Convert.u16_twoChar(const_state.pos));
+                    prints(Convert.u16_twoChar(neighbor.symbol));
+                    prints("");
+                    try distances.put(neighbor.symbol, new_cost);
+                    try pqueue.add(.{ .pos = neighbor.symbol, .steps = new_cost + 1 });
+                }
             }
         }
     }
