@@ -1,65 +1,34 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
-const Deque = @import("mylib/deque.zig").Deque;
-const PriorityQueue = std.PriorityQueue;
-const printd = std.debug.print;
-const print = myf.printAny;
 const prints = myf.printStr;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const ProgT = i64;
-const CT = i16;
-
-const Point = struct {
-    row: CT,
-    col: CT,
-
-    const Self = @This();
-    fn init(row: CT, col: CT) Self {
-        return .{ .row = row, .col = col };
-    }
-    fn initA(arr: [2]CT) Self {
-        return .{ .row = arr[0], .col = arr[1] };
-    }
-    fn add(self: Self, o: Point) Point {
-        return Self.init(self.row + o.row, self.col + o.col);
-    }
-    fn mul(self: Point, other: Point) Point {
-        return Point.init(
-            self.row * other.row - self.col * other.col,
-            self.row * other.col + self.col * other.row,
-        );
-    }
-    fn cast(self: Self) [2]u16 {
-        return .{ @intCast(self.row), @intCast(self.col) };
-    }
-};
-
-const CharIterator = struct {
-    str: []const u16,
+const MachineInputIterator = struct {
+    array: []const u16,
     index: usize = 0,
 
-    fn next(self: *CharIterator) ?u16 {
-        if (self.index >= self.str.len) return null;
+    pub fn next(self: *MachineInputIterator) ?u16 {
+        if (self.index >= self.array.len) return null;
         defer self.index += 1;
-        return self.str[self.index];
+        return self.array[self.index];
     }
 };
 
 const Machine = struct {
     registers: std.ArrayList(ProgT),
-    input_value: ?CharIterator = null,
+    input_value: ?MachineInputIterator = null,
     relative_base: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
 
     const Self = @This();
 
-    pub fn init(registers: std.ArrayList(ProgT), register_size: usize) !Machine {
+    pub fn init(registers: std.ArrayList(ProgT), register_size: usize, input: []const u16) !Machine {
         var regs = registers;
         for (0..register_size - registers.items.len) |_| try regs.append(0);
-        return Machine{ .registers = regs };
+        return Machine{ .registers = regs, .input_value = MachineInputIterator{ .array = input } };
     }
 
     fn get_factor(param: u32) ProgT {
@@ -110,6 +79,41 @@ const Machine = struct {
     }
 };
 
+fn runMachine(registers: *const std.ArrayList(ProgT), i: usize, j: usize) !bool {
+    var buffer = myf.FixedBuffer(u16, 2).init();
+    buffer.appendAssumeCapacity(@intCast(i));
+    buffer.appendAssumeCapacity(@intCast(j));
+    var machine = try Machine.init(try registers.*.clone(), 1000, buffer.getSlice());
+    defer machine.registers.deinit();
+    return machine.run().? == 1;
+}
+
+fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !u16 {
+    var matrix = try myf.initValueMatrix(allocator, 50, 50, @as(u8, 0));
+    defer myf.freeMatrix(allocator, matrix);
+
+    var count: u16 = 0;
+    for (0..50) |i| for (0..50) |j| {
+        if (try runMachine(registers, i, j)) {
+            matrix[i][j] = '#';
+            count += 1;
+        } else matrix[i][j] = '.';
+    };
+    for (matrix) |row| prints(row);
+    return count;
+}
+
+fn part2(registers: *const std.ArrayList(ProgT)) !usize {
+    var i: usize = 100;
+    var j: usize = 150;
+    while (true) : (i += 1) while (true) : (j += 1) {
+        if (try runMachine(registers, i + 99, j - 99)) {
+            if (try runMachine(registers, i, j)) return i * 10_000 + j - 99;
+            break;
+        }
+    };
+}
+
 pub fn main() !void {
     const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -118,31 +122,15 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
-}
-
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d19.txt");
 
     var registers = std.ArrayList(ProgT).init(allocator);
     defer registers.deinit();
@@ -150,43 +138,5 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    try part1(allocator, &registers);
-}
-
-fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
-    var buffer = myf.FixedBuffer(u16, 2).init();
-    // var output = std.ArrayList(u8).init(allocator);
-    // defer output.deinit();
-
-    var matrix = try myf.initValueMatrix(allocator, 100, 100, @as(u8, 0));
-    defer myf.freeMatrix(allocator, matrix);
-
-    const start_r = 987;
-    const start_c = 783;
-    // 783*10000+987
-
-    var count: u32 = 0;
-    for (start_r..100 + start_r) |i| {
-        var row_count: u32 = 0;
-        for (start_c..100 + start_c) |j| {
-            buffer.len = 0;
-            var machine = try Machine.init(try registers.*.clone(), 1000);
-            defer machine.registers.deinit();
-            buffer.appendAssumeCapacity(@intCast(j));
-            buffer.appendAssumeCapacity(@intCast(i));
-            machine.input_value = CharIterator{ .str = buffer.getSlice() };
-            if (machine.run()) |result| {
-                if (result == 1) {
-                    matrix[i - start_r][j - start_c] = '#';
-                    row_count += 1;
-                } else matrix[i - start_r][j - start_c] = '.';
-            }
-        }
-        // std.debug.print("i: {d}, count: {d}\n", .{ i, row_count });
-        count += row_count;
-    }
-    for (matrix) |row| {
-        prints(row);
-    }
-    // print(count);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ try part1(allocator, &registers), try part2(&registers) });
 }
