@@ -89,8 +89,8 @@ fn symbolToKey(char: u8) u32 {
     return std.math.powi(u32, 2, offset) catch unreachable;
 }
 
-fn part1(allocator: Allocator, matrix: []const []const u8, symbol_pos: []const Point, target_keys: u32) !u16 {
-    var graph = try genGraph(allocator, matrix, symbol_pos);
+fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
+    var graph = try genGraph(allocator, matrix, start_pos);
     defer graph.deinit();
     return try bfs(allocator, &graph, target_keys);
 }
@@ -117,56 +117,41 @@ pub fn main() !void {
     var matrix = std.ArrayList([]const u8).init(allocator);
     defer matrix.deinit();
 
-    var symbol_pos = try std.BoundedArray(Point, 27).init(0);
+    var start_pos: Point = undefined;
     var target_keys: u32 = 0;
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
         for (row, 0..) |c, j| {
-            if ('a' <= c and c <= 'z' or c == '@') {
-                symbol_pos.appendAssumeCapacity(Point.init(@intCast(matrix.items.len), @intCast(j)));
-                target_keys |= symbolToKey(c);
-            }
+            if ('a' <= c and c <= 'z') target_keys |= symbolToKey(c);
+            if (c == '@') start_pos = Point.init(@intCast(matrix.items.len), @intCast(j));
         }
         try matrix.append(row);
     }
-    _ = try part2(allocator, matrix.items, target_keys);
+    _ = try part2(allocator, matrix.items, start_pos, target_keys);
 
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-    //     try part1(allocator, matrix.items, symbol_pos.slice(), target_keys),
+    //     try part1(allocator, matrix.items, start_pos, target_keys),
     //     2,
     // });
 }
 
-fn part2(allocator: Allocator, matrix: []const []const u8, target_keys: u32) !u16 {
+fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
     var new_matrix = try myf.copyMatrix(allocator, matrix);
     defer myf.freeMatrix(allocator, new_matrix);
 
     const start_points: [4]Point = blk: {
-        for (0..new_matrix.len) |i| for (0..new_matrix[0].len) |j| {
-            if (new_matrix[i][j] == '@') {
-                new_matrix[i][j] = '#';
-                const ii: u8 = @intCast(i);
-                const jj: u8 = @intCast(j);
-                const row, const col = Point.init(ii, jj).array();
-                for (myf.getNextPositions(row, col)) |next_pos| {
-                    const nr, const nc = Point.initA(next_pos).cast();
-                    new_matrix[nr][nc] = '#';
-                }
-                const points: [4]Point = .{
-                    Point.init(ii + 1, jj + 1),
-                    Point.init(ii - 1, jj + 1),
-                    Point.init(ii + 1, jj - 1),
-                    Point.init(ii - 1, jj - 1),
-                };
-                for (points) |p| {
-                    const krow, const kcol = p.cast();
-                    new_matrix[krow][kcol] = '@';
-                }
-                break :blk points;
-            }
+        new_matrix[@intCast(start_pos.row)][@intCast(start_pos.col)] = '#';
+        for (myf.getNextPositions(start_pos.row, start_pos.col)) |np|
+            new_matrix[@intCast(np[0])][@intCast(np[1])] = '#';
+        const points: [4]Point = .{
+            Point.init(start_pos.row - 1, start_pos.col - 1), // upper left
+            Point.init(start_pos.row - 1, start_pos.col + 1), // upper right
+            Point.init(start_pos.row + 1, start_pos.col - 1), // lower left
+            Point.init(start_pos.row + 1, start_pos.col + 1), // lower right
         };
-        unreachable;
+        for (points) |p| new_matrix[@intCast(p.row)][@intCast(p.col)] = '@';
+        break :blk points;
     };
     for (new_matrix) |row| {
         prints(row);
@@ -209,13 +194,18 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     return min_steps;
 }
 
-fn genGraph(allocator: Allocator, matrix: []const []const u8, symbol_position: []const Point) !Graph {
+fn genGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Point) !Graph {
     var queue = try Deque(struct { pos: Point, steps: u16 = 0, doors: u32 = 0 }).init(allocator);
     var visited = PointMap.init(allocator);
+    var stack = std.ArrayList(Point).init(allocator);
     defer inline for (.{ queue, &visited }) |i| i.deinit();
 
+    defer stack.deinit();
+
+    var visited_symbols: u32 = 0;
     var graph = Graph.init(allocator);
-    for (symbol_position) |*symbol_pos| {
+    try stack.append(start_pos);
+    while (stack.popOrNull()) |*symbol_pos| {
         const symbol: u8 = blk: {
             const row, const col = symbol_pos.cast();
             break :blk matrix[row][col];
@@ -231,11 +221,18 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8, symbol_position: [
             const row, const col = state.pos.array();
             switch (matrix[@intCast(row)][@intCast(col)]) {
                 'A'...'Z' => |tile| state.doors |= symbolToKey(tile),
-                'a'...'z' => |tile| if (tile != symbol) neighbors.appendAssumeCapacity(.{
-                    .symbol = symbolToKey(tile),
-                    .steps = state.steps,
-                    .doors = state.doors,
-                }),
+                'a'...'z' => |tile| if (tile != symbol) {
+                    const key = symbolToKey(tile);
+                    neighbors.appendAssumeCapacity(.{
+                        .symbol = key,
+                        .steps = state.steps,
+                        .doors = state.doors,
+                    });
+                    if ((visited_symbols & key) != key) {
+                        visited_symbols |= key;
+                        try stack.append(state.pos);
+                    }
+                },
                 else => {},
             }
 
