@@ -163,6 +163,7 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
 
     const start_r = 987;
     const start_c = 783;
+    // 783*10000+987
 
     var count: u32 = 0;
     for (start_r..100 + start_r) |i| {
