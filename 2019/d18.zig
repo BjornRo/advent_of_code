@@ -60,12 +60,12 @@ fn symbolToKey(char: u8) u32 {
 fn genGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Point) !Graph {
     var queue = try Deque(struct { pos: Point, steps: u16 = 0, doors: u32 = 0 }).init(allocator);
     var visited = std.HashMap(Point, void, Point.HashCtx, 80).init(allocator);
-    var stack = std.ArrayList(Point).init(allocator);
-    defer inline for (.{ queue, &visited, &stack }) |i| i.deinit();
+    defer inline for (.{ queue, &visited }) |i| i.deinit();
 
     var visited_symbols: u32 = 0;
     var graph = Graph.init(allocator);
-    try stack.append(start_pos);
+    var stack = try std.BoundedArray(Point, 26).init(0);
+    stack.appendAssumeCapacity(start_pos);
     while (stack.popOrNull()) |*symbol_pos| {
         const symbol: u8 = blk: {
             const row, const col = symbol_pos.cast();
@@ -91,7 +91,7 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Point) 
                     });
                     if ((visited_symbols & key) != key) {
                         visited_symbols |= key;
-                        try stack.append(state.pos);
+                        stack.appendAssumeCapacity(state.pos);
                     }
                 },
                 else => {},
@@ -114,6 +114,7 @@ fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
         pos: u32 = symbolToKey('@'),
         steps: u16 = 0,
         keys: u32 = 0,
+
         const Self = @This();
         fn cmp(_: void, a: Self, b: Self) std.math.Order {
             if (a.steps < b.steps) return .lt;
