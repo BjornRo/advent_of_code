@@ -197,10 +197,47 @@ test "example" {
     defer graph.deinit();
     // print(graph.get(Convert.twoChar_u16("AA")));
 
-    print(try part1(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
+    print(try part2(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
 }
 
 fn part1(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u16 {
+    const FrontierState = struct {
+        pos: u16,
+        steps: u16 = 0,
+
+        const Self = @This();
+        fn cmp(_: void, a: Self, b: Self) std.math.Order {
+            if (a.steps < b.steps) return .lt;
+            if (a.steps > b.steps) return .gt;
+            return .eq;
+        }
+    };
+
+    var distances = std.AutoHashMap(u16, u16).init(allocator);
+    var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
+    defer inline for (.{ pqueue, &distances }) |i| i.deinit();
+
+    try pqueue.add(.{ .pos = start });
+    while (pqueue.removeOrNull()) |*const_state| {
+        if (const_state.pos == target) {
+            return const_state.steps - 1;
+        }
+
+        for (graph.get(const_state.pos).?.slice()) |neighbor| {
+            const new_cost = const_state.steps + neighbor.steps;
+            if (new_cost < distances.get(neighbor.symbol) orelse ~@as(u16, 0)) {
+                prints(Convert.u16_twoChar(const_state.pos));
+                prints(Convert.u16_twoChar(neighbor.symbol));
+                prints("");
+                try distances.put(neighbor.symbol, new_cost);
+                try pqueue.add(.{ .pos = neighbor.symbol, .steps = new_cost + 1 });
+            }
+        }
+    }
+    return 0;
+}
+
+fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u16 {
     const FrontierState = struct {
         pos: u16,
         steps: u16 = 0,
