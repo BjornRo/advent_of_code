@@ -37,7 +37,7 @@ pub fn main() !void {
 
 const CT = i16;
 
-const GraphValue = std.BoundedArray(packed struct { symbol: u16, steps: u16 }, 1200);
+const GraphValue = std.BoundedArray(packed struct { symbol: u16, steps: u16 }, 650);
 const Graph = std.AutoHashMap(u16, GraphValue);
 const Side = enum(u1) { Inside, Outside };
 
