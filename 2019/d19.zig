@@ -107,8 +107,8 @@ fn part2(registers: *const std.ArrayList(ProgT)) !usize {
     var i: usize = 100;
     var j: usize = 150;
     while (true) : (i += 1) while (true) : (j += 1) {
-        if (try runMachine(registers, i + 99, j - 99)) {
-            if (try runMachine(registers, i, j)) return i * 10_000 + j - 99;
+        if (try runMachine(registers, i + 99, j)) {
+            if (try runMachine(registers, i, j + 99)) return i * 10_000 + j;
             break;
         }
     };
