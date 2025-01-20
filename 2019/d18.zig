@@ -211,60 +211,58 @@ fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, com
         var sum: u16 = 0;
         for (&graphs) |*g| sum += try solver(allocator, g, assume_no_doors);
         return sum;
-    } else return try part2_assume_doors(allocator, &graphs);
-}
+    } else {
+        const FrontierStateQuad = struct {
+            pos: [4]u32 = .{symbolToKey('@')} ** 4,
+            steps: u16 = 0,
+            keys: u32 = 0,
 
-fn part2_assume_doors(allocator: Allocator, graphs: *const [4]Graph) !u16 {
-    const FrontierStateQuad = struct {
-        pos: [4]u32 = .{symbolToKey('@')} ** 4,
-        steps: u16 = 0,
-        keys: u32 = 0,
-
-        const Self = @This();
-        fn cmp(_: void, a: Self, b: Self) std.math.Order {
-            if (a.steps < b.steps) return .lt;
-            if (a.steps > b.steps) return .gt;
-            return .eq;
-        }
-    };
-    const target_keys: u32 = blk: {
-        var keys: u32 = 0;
-        for (graphs) |g| {
-            for (g.get(symbolToKey('@')).?.slice()) |neighbors| keys |= neighbors.symbol;
-        }
-        break :blk keys;
-    };
-
-    var pqueue = PriorityQueue(FrontierStateQuad, void, FrontierStateQuad.cmp).init(allocator, undefined);
-    var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
-    try min_visited.ensureTotalCapacity(70_000);
-    defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
-
-    try pqueue.add(.{});
-    var min_steps = ~@as(u16, 0);
-    while (pqueue.removeOrNull()) |*state| {
-        for (state.pos, graphs, 0..) |pos, graph, i| for (graph.get(pos).?.slice()) |next_pos| {
-            if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
-
-            const new_keys = state.keys | next_pos.symbol;
-            const new_steps = state.steps + next_pos.steps;
-            if (new_steps >= min_steps) continue;
-            if (new_keys == target_keys) {
-                if (new_steps < min_steps) min_steps = new_steps;
-                continue;
+            const Self = @This();
+            fn cmp(_: void, a: Self, b: Self) std.math.Order {
+                if (a.steps < b.steps) return .lt;
+                if (a.steps > b.steps) return .gt;
+                return .eq;
             }
-            const result = try min_visited.getOrPut(VisitHashCtx.init(next_pos.symbol, i, new_keys));
-            if (result.found_existing) {
-                if (result.value_ptr.* <= new_steps) continue;
-                result.value_ptr.* = new_steps;
-            } else result.value_ptr.* = new_steps;
-
-            var new_pos = state.pos;
-            new_pos[i] = next_pos.symbol;
-            try pqueue.add(.{ .pos = new_pos, .steps = new_steps, .keys = new_keys });
         };
+        const target_keys: u32 = blk: {
+            var keys: u32 = 0;
+            for (graphs) |g| {
+                for (g.get(symbolToKey('@')).?.slice()) |neighbors| keys |= neighbors.symbol;
+            }
+            break :blk keys;
+        };
+
+        var pqueue = PriorityQueue(FrontierStateQuad, void, FrontierStateQuad.cmp).init(allocator, undefined);
+        var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
+        try min_visited.ensureTotalCapacity(70_000);
+        defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
+
+        try pqueue.add(.{});
+        var min_steps = ~@as(u16, 0);
+        while (pqueue.removeOrNull()) |*state| {
+            for (state.pos, graphs, 0..) |pos, graph, i| for (graph.get(pos).?.slice()) |next_pos| {
+                if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
+
+                const new_keys = state.keys | next_pos.symbol;
+                const new_steps = state.steps + next_pos.steps;
+                if (new_steps >= min_steps) continue;
+                if (new_keys == target_keys) {
+                    if (new_steps < min_steps) min_steps = new_steps;
+                    continue;
+                }
+                const result = try min_visited.getOrPut(VisitHashCtx.init(next_pos.symbol, i, new_keys));
+                if (result.found_existing) {
+                    if (result.value_ptr.* <= new_steps) continue;
+                    result.value_ptr.* = new_steps;
+                } else result.value_ptr.* = new_steps;
+
+                var new_pos = state.pos;
+                new_pos[i] = next_pos.symbol;
+                try pqueue.add(.{ .pos = new_pos, .steps = new_steps, .keys = new_keys });
+            };
+        }
+        return min_steps;
     }
-    return min_steps;
 }
 
 pub fn main() !void {
@@ -290,7 +288,6 @@ pub fn main() !void {
     defer matrix.deinit();
 
     var start_pos: Point = undefined;
-
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
         for (row, 0..) |c, j| {
