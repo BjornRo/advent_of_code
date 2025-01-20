@@ -10,24 +10,20 @@ const Allocator = std.mem.Allocator;
 
 const CT = i16;
 
-const Visited = std.HashMap(VisitKey, u16, VisitKey.HashCtx, 80);
+const PointMap = std.HashMap(Point, void, Point.HashCtx, 80);
 const GraphValue = std.BoundedArray(struct { symbol: u32, steps: u16, doors: u32 }, 26);
 const Graph = std.AutoHashMap(u32, GraphValue);
-const PointMap = std.HashMap(Point, void, Point.HashCtx, 80);
+const Visited = std.HashMap(VisitKey, u16, VisitKey.HashCtx, 80);
 
 const FrontierState = struct {
-    pos: u32,
+    pos: u32 = symbolToKey('@'),
     steps: u16 = 0,
     keys: u32 = 0,
-
     const Self = @This();
     fn cmp(_: void, a: Self, b: Self) std.math.Order {
         if (a.steps < b.steps) return .lt;
         if (a.steps > b.steps) return .gt;
         return .eq;
-    }
-    fn contains(self: Self, target: u32) bool {
-        return (self.keys & target) == target;
     }
 };
 
@@ -59,6 +55,9 @@ const Point = struct {
     fn initA(arr: [2]CT) Self {
         return .{ .row = arr[0], .col = arr[1] };
     }
+    fn addOffset(self: Self, off: [2]CT) Point {
+        return Self.init(self.row + off[0], self.col + off[1]);
+    }
     fn eq(self: Self, o: Self) bool {
         return self.row == o.row and self.col == o.col;
     }
@@ -78,6 +77,10 @@ const Point = struct {
         }
     };
 };
+
+fn containsSymbol(keys: u32, target: u32) bool {
+    return (keys & target) == target;
+}
 
 fn symbolToKey(char: u8) u32 {
     const offset = switch (char) {
@@ -128,38 +131,102 @@ pub fn main() !void {
         }
         try matrix.append(row);
     }
-    _ = try part2(allocator, matrix.items, start_pos, target_keys);
 
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-    //     try part1(allocator, matrix.items, start_pos, target_keys),
-    //     2,
-    // });
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
+        try part1(allocator, matrix.items, start_pos, target_keys),
+        try part2(allocator, matrix.items, start_pos, target_keys),
+    });
 }
 
-fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
-    var new_matrix = try myf.copyMatrix(allocator, matrix);
-    defer myf.freeMatrix(allocator, new_matrix);
+const VisitedQuad = std.HashMap(VisitKeyQuad, u16, VisitKeyQuad.HashCtx, 80);
+const VisitKeyQuad = struct {
+    pos: [4]u32,
+    keys: u32,
 
-    const start_points: [4]Point = blk: {
+    const Self = @This();
+    const HashCtx = struct {
+        pub fn hash(_: @This(), key: Self) u64 {
+            var bits: u64 = @intCast(key.keys);
+            for (key.pos) |pos| {
+                bits <<= 8;
+                bits |= std.math.log2_int(u64, @intCast((pos << 1) + 1));
+            }
+            const c: [8]u8 = @bitCast(bits);
+            return std.hash.CityHash64.hash(&c);
+        }
+        pub fn eql(_: @This(), a: Self, b: Self) bool {
+            for (a.pos, b.pos) |x, y| if (x != y) return false;
+            return a.keys == b.keys;
+        }
+    };
+};
+fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
+    var graphs: [4]Graph = blk: {
+        var new_matrix = try myf.copyMatrix(allocator, matrix);
+        defer myf.freeMatrix(allocator, new_matrix);
         new_matrix[@intCast(start_pos.row)][@intCast(start_pos.col)] = '#';
+
         for (myf.getNextPositions(start_pos.row, start_pos.col)) |np|
             new_matrix[@intCast(np[0])][@intCast(np[1])] = '#';
-        const points: [4]Point = .{
-            Point.init(start_pos.row - 1, start_pos.col - 1), // upper left
-            Point.init(start_pos.row - 1, start_pos.col + 1), // upper right
-            Point.init(start_pos.row + 1, start_pos.col - 1), // lower left
-            Point.init(start_pos.row + 1, start_pos.col + 1), // lower right
-        };
-        for (points) |p| new_matrix[@intCast(p.row)][@intCast(p.col)] = '@';
-        break :blk points;
+        // for (new_matrix) |row| prints(row);
+        var graphs: [4]Graph = undefined;
+        // upper left, upper right, lower left, lower right
+        for (&graphs, [_][2]CT{ .{ -1, -1 }, .{ -1, 1 }, .{ 1, -1 }, .{ 1, 1 } }) |*g, next_pos| {
+            const next_point = start_pos.addOffset(next_pos);
+            new_matrix[@intCast(next_point.row)][@intCast(next_point.col)] = '@';
+            g.* = try genGraph(allocator, new_matrix, next_point);
+        }
+        break :blk graphs;
     };
-    for (new_matrix) |row| {
-        prints(row);
-    }
-    _ = start_points;
-    _ = target_keys;
+    defer for (&graphs) |*g| g.deinit();
 
-    return 1;
+    const FrontierStateQuad = struct {
+        pos: [4]u32 = .{symbolToKey('@')} ** 4,
+        steps: u16 = 0,
+        keys: u32 = 0,
+
+        const Self = @This();
+        fn cmp(_: void, a: Self, b: Self) std.math.Order {
+            if (a.steps < b.steps) return .lt;
+            if (a.steps > b.steps) return .gt;
+            return .eq;
+        }
+    };
+
+    var pqueue = PriorityQueue(FrontierStateQuad, void, FrontierStateQuad.cmp).init(allocator, undefined);
+    var min_visited = VisitedQuad.init(allocator);
+    defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
+
+    try pqueue.add(.{});
+    var min_steps = ~@as(u16, 0);
+    while (pqueue.removeOrNull()) |*state| {
+        if (state.keys == target_keys) {
+            if (state.steps < min_steps) min_steps = state.steps;
+            continue;
+        }
+        if (state.steps >= min_steps) continue;
+
+        const result = try min_visited.getOrPut(.{ .keys = state.keys, .pos = state.pos });
+        if (result.found_existing) {
+            if (result.value_ptr.* <= state.steps) continue;
+            result.value_ptr.* = state.steps;
+        } else result.value_ptr.* = state.steps;
+
+        for (state.pos, graphs, 0..) |pos, graph, i| {
+            for (graph.get(pos).?.slice()) |next_pos| {
+                if (containsSymbol(state.keys, next_pos.symbol)) continue;
+                if (!containsSymbol(state.keys, next_pos.doors)) continue;
+                var new_pos = state.pos;
+                new_pos[i] = next_pos.symbol;
+                try pqueue.add(.{
+                    .pos = new_pos,
+                    .steps = state.steps + next_pos.steps,
+                    .keys = state.keys | next_pos.symbol,
+                });
+            }
+        }
+    }
+    return min_steps;
 }
 
 fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
@@ -167,7 +234,7 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
     var min_visited = Visited.init(allocator);
     defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
 
-    try pqueue.add(.{ .pos = symbolToKey('@') });
+    try pqueue.add(.{});
     var min_steps = ~@as(u16, 0);
     while (pqueue.removeOrNull()) |*state| {
         if (state.keys == target_keys) {
@@ -183,7 +250,8 @@ fn bfs(allocator: Allocator, graph: *const Graph, target_keys: u32) !u16 {
         } else result.value_ptr.* = state.steps;
 
         for (graph.get(state.pos).?.slice()) |next_pos| {
-            if (state.contains(next_pos.symbol) or !state.contains(next_pos.doors)) continue;
+            if (containsSymbol(state.keys, next_pos.symbol)) continue;
+            if (!containsSymbol(state.keys, next_pos.doors)) continue;
             try pqueue.add(.{
                 .pos = next_pos.symbol,
                 .steps = state.steps + next_pos.steps,
@@ -198,9 +266,7 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Point) 
     var queue = try Deque(struct { pos: Point, steps: u16 = 0, doors: u32 = 0 }).init(allocator);
     var visited = PointMap.init(allocator);
     var stack = std.ArrayList(Point).init(allocator);
-    defer inline for (.{ queue, &visited }) |i| i.deinit();
-
-    defer stack.deinit();
+    defer inline for (.{ queue, &visited, &stack }) |i| i.deinit();
 
     var visited_symbols: u32 = 0;
     var graph = Graph.init(allocator);
