@@ -43,6 +43,27 @@ const Point = struct {
     };
 };
 
+const VisitHashCtx = struct {
+    pub inline fn init(position: u32, index: usize, keys: u32) u64 {
+        const pos: u64 = std.math.log2_int(u64, @intCast((position << 1) + 1));
+        const idx: u64 = @truncate(index);
+        const bits: u64 = @intCast(keys);
+        return bits | (pos << 32) | (idx << 48);
+    }
+    pub fn hash(_: @This(), key: u64) u64 {
+        var x = key;
+        x ^= x >> 32;
+        x *%= 0xd6e8feb86659fd93;
+        x ^= x >> 32;
+        x *%= 0xd6e8feb86659fd93;
+        x ^= x >> 32;
+        return x;
+    }
+    pub fn eql(_: @This(), a: u64, b: u64) bool {
+        return a == b;
+    }
+};
+
 fn containsSymbols(keys: u32, symbol: u32, doors: u32) bool {
     return (keys & symbol) == symbol or (keys & doors) != doors;
 }
@@ -122,79 +143,37 @@ fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
             return .eq;
         }
     };
-
-    const VisitKey = struct {
-        pos: u32,
-        keys: u32,
-
-        const Self = @This();
-        const HashCtx = struct {
-            pub fn hash(_: @This(), key: Self) u64 {
-                const char_val = std.math.log2_int(u32, (key.pos << 1) + 1); // 1 to 27 [a-z@]
-                const keys = key.keys << 6; // 26 chars + 6 = 32 bits
-                return @intCast(std.hash.uint32(keys | char_val));
-            }
-            pub fn eql(_: @This(), a: Self, b: Self) bool {
-                return a.pos == b.pos and a.keys == b.keys;
-            }
-        };
-    };
-
     var graph = try genGraph(allocator, matrix, start_pos);
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
-    var min_visited = std.HashMap(VisitKey, u16, VisitKey.HashCtx, 80).init(allocator);
+    var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
+    try min_visited.ensureTotalCapacity(70_000);
     defer inline for (.{ pqueue, &min_visited, &graph }) |i| i.deinit();
 
     try pqueue.add(.{});
     var min_steps = ~@as(u16, 0);
     while (pqueue.removeOrNull()) |*state| {
-        if (state.keys == target_keys) {
-            if (state.steps < min_steps) min_steps = state.steps;
-            continue;
-        }
-        if (state.steps >= min_steps) continue;
-
-        const result = try min_visited.getOrPut(.{ .keys = state.keys, .pos = state.pos });
-        if (result.found_existing) {
-            if (result.value_ptr.* <= state.steps) continue;
-            result.value_ptr.* = state.steps;
-        } else result.value_ptr.* = state.steps;
-
         for (graph.get(state.pos).?.slice()) |next_pos| {
             if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
-            try pqueue.add(.{
-                .pos = next_pos.symbol,
-                .steps = state.steps + next_pos.steps,
-                .keys = state.keys | next_pos.symbol,
-            });
+            const new_keys = state.keys | next_pos.symbol;
+            const new_steps = state.steps + next_pos.steps;
+            if (new_steps >= min_steps) continue;
+            if (new_keys == target_keys) {
+                if (new_steps < min_steps) min_steps = new_steps;
+                continue;
+            }
+            const result = try min_visited.getOrPut(VisitHashCtx.init(next_pos.symbol, 0, new_keys));
+            if (result.found_existing) {
+                if (result.value_ptr.* <= new_steps) continue;
+                result.value_ptr.* = new_steps;
+            } else result.value_ptr.* = new_steps;
+
+            try pqueue.add(.{ .pos = next_pos.symbol, .steps = new_steps, .keys = new_keys });
         }
     }
     return min_steps;
 }
 
 fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
-    const VisitKeyQuad = struct {
-        pos: [4]u32,
-        keys: u32,
-
-        const Self = @This();
-        const HashCtx = struct {
-            pub fn hash(_: @This(), key: Self) u64 {
-                var bits: u64 = @intCast(key.keys);
-                for (key.pos) |pos| {
-                    bits <<= 8;
-                    bits |= std.math.log2_int(u64, @intCast((pos << 1) + 1));
-                }
-                const c: [8]u8 = @bitCast(bits);
-                return std.hash.CityHash64.hash(&c);
-            }
-            pub fn eql(_: @This(), a: Self, b: Self) bool {
-                for (a.pos, b.pos) |x, y| if (x != y) return false;
-                return a.keys == b.keys;
-            }
-        };
-    };
-
     const FrontierStateQuad = struct {
         pos: [4]u32 = .{symbolToKey('@')} ** 4,
         steps: u16 = 0,
@@ -225,34 +204,33 @@ fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
         break :blk graphs;
     };
     var pqueue = PriorityQueue(FrontierStateQuad, void, FrontierStateQuad.cmp).init(allocator, undefined);
-    var min_visited = std.HashMap(VisitKeyQuad, u16, VisitKeyQuad.HashCtx, 80).init(allocator);
+    var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
+    try min_visited.ensureTotalCapacity(70_000);
     defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
     defer for (&graphs) |*g| g.deinit();
 
     try pqueue.add(.{});
     var min_steps = ~@as(u16, 0);
     while (pqueue.removeOrNull()) |*state| {
-        if (state.keys == target_keys) {
-            if (state.steps < min_steps) min_steps = state.steps;
-            continue;
-        }
-        if (state.steps >= min_steps) continue;
-
-        const result = try min_visited.getOrPut(.{ .keys = state.keys, .pos = state.pos });
-        if (result.found_existing) {
-            if (result.value_ptr.* <= state.steps) continue;
-            result.value_ptr.* = state.steps;
-        } else result.value_ptr.* = state.steps;
-
         for (state.pos, graphs, 0..) |pos, graph, i| for (graph.get(pos).?.slice()) |next_pos| {
             if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
+
+            const new_keys = state.keys | next_pos.symbol;
+            const new_steps = state.steps + next_pos.steps;
+            if (new_steps >= min_steps) continue;
+            if (new_keys == target_keys) {
+                if (new_steps < min_steps) min_steps = new_steps;
+                continue;
+            }
+            const result = try min_visited.getOrPut(VisitHashCtx.init(next_pos.symbol, i, new_keys));
+            if (result.found_existing) {
+                if (result.value_ptr.* <= new_steps) continue;
+                result.value_ptr.* = new_steps;
+            } else result.value_ptr.* = new_steps;
+
             var new_pos = state.pos;
             new_pos[i] = next_pos.symbol;
-            try pqueue.add(.{
-                .pos = new_pos,
-                .steps = state.steps + next_pos.steps,
-                .keys = state.keys | next_pos.symbol,
-            });
+            try pqueue.add(.{ .pos = new_pos, .steps = new_steps, .keys = new_keys });
         };
     }
     return min_steps;
