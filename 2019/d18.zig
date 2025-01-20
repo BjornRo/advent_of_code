@@ -130,7 +130,7 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8, start_pos: Point) 
     return graph;
 }
 
-fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
+fn solver(allocator: Allocator, graph: *const Graph, comptime assume_no_doors: bool) !u16 {
     const FrontierState = struct {
         pos: u32 = symbolToKey('@'),
         steps: u16 = 0,
@@ -143,17 +143,26 @@ fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
             return .eq;
         }
     };
-    var graph = try genGraph(allocator, matrix, start_pos);
+    const target_keys: u32 = blk: {
+        var keys: u32 = 0;
+        for (graph.get(symbolToKey('@')).?.slice()) |neighbors| keys |= neighbors.symbol;
+        break :blk keys;
+    };
+
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
     var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
     try min_visited.ensureTotalCapacity(70_000);
-    defer inline for (.{ pqueue, &min_visited, &graph }) |i| i.deinit();
+    defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
 
     try pqueue.add(.{});
     var min_steps = ~@as(u16, 0);
     while (pqueue.removeOrNull()) |*state| {
         for (graph.get(state.pos).?.slice()) |next_pos| {
-            if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
+            if (assume_no_doors) {
+                if ((state.keys & next_pos.symbol) == next_pos.symbol) continue;
+            } else {
+                if (containsSymbols(state.keys, next_pos.symbol, next_pos.doors)) continue;
+            }
             const new_keys = state.keys | next_pos.symbol;
             const new_steps = state.steps + next_pos.steps;
             if (new_steps >= min_steps) continue;
@@ -173,20 +182,13 @@ fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
     return min_steps;
 }
 
-fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, target_keys: u32) !u16 {
-    const FrontierStateQuad = struct {
-        pos: [4]u32 = .{symbolToKey('@')} ** 4,
-        steps: u16 = 0,
-        keys: u32 = 0,
+fn part1(allocator: Allocator, matrix: []const []const u8, start_pos: Point) !u16 {
+    var graph = try genGraph(allocator, matrix, start_pos);
+    defer graph.deinit();
+    return try solver(allocator, &graph, false);
+}
 
-        const Self = @This();
-        fn cmp(_: void, a: Self, b: Self) std.math.Order {
-            if (a.steps < b.steps) return .lt;
-            if (a.steps > b.steps) return .gt;
-            return .eq;
-        }
-    };
-
+fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, comptime assume_no_doors: bool) !u16 {
     var graphs: [4]Graph = blk: {
         var new_matrix = try myf.copyMatrix(allocator, matrix);
         defer myf.freeMatrix(allocator, new_matrix);
@@ -203,11 +205,40 @@ fn part2(allocator: Allocator, matrix: []const []const u8, start_pos: Point, tar
         }
         break :blk graphs;
     };
+    defer for (&graphs) |*g| g.deinit();
+
+    if (assume_no_doors) {
+        var sum: u16 = 0;
+        for (&graphs) |*g| sum += try solver(allocator, g, assume_no_doors);
+        return sum;
+    } else return try part2_assume_doors(allocator, &graphs);
+}
+
+fn part2_assume_doors(allocator: Allocator, graphs: *const [4]Graph) !u16 {
+    const FrontierStateQuad = struct {
+        pos: [4]u32 = .{symbolToKey('@')} ** 4,
+        steps: u16 = 0,
+        keys: u32 = 0,
+
+        const Self = @This();
+        fn cmp(_: void, a: Self, b: Self) std.math.Order {
+            if (a.steps < b.steps) return .lt;
+            if (a.steps > b.steps) return .gt;
+            return .eq;
+        }
+    };
+    const target_keys: u32 = blk: {
+        var keys: u32 = 0;
+        for (graphs) |g| {
+            for (g.get(symbolToKey('@')).?.slice()) |neighbors| keys |= neighbors.symbol;
+        }
+        break :blk keys;
+    };
+
     var pqueue = PriorityQueue(FrontierStateQuad, void, FrontierStateQuad.cmp).init(allocator, undefined);
     var min_visited = std.HashMap(u64, u16, VisitHashCtx, 80).init(allocator);
     try min_visited.ensureTotalCapacity(70_000);
     defer inline for (.{ pqueue, &min_visited }) |i| i.deinit();
-    defer for (&graphs) |*g| g.deinit();
 
     try pqueue.add(.{});
     var min_steps = ~@as(u16, 0);
@@ -259,19 +290,17 @@ pub fn main() !void {
     defer matrix.deinit();
 
     var start_pos: Point = undefined;
-    var target_keys: u32 = 0;
 
     var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
     while (in_iter.next()) |row| {
         for (row, 0..) |c, j| {
-            if ('a' <= c and c <= 'z') target_keys |= symbolToKey(c);
             if (c == '@') start_pos = Point.init(@intCast(matrix.items.len), @intCast(j));
         }
         try matrix.append(row);
     }
 
     try writer.print("Part 1: {d}\nPart 2: {d}\n", .{
-        try part1(allocator, matrix.items, start_pos, target_keys),
-        try part2(allocator, matrix.items, start_pos, target_keys),
+        try part1(allocator, matrix.items, start_pos),
+        try part2(allocator, matrix.items, start_pos, true),
     });
 }
