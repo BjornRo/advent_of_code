@@ -161,10 +161,13 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
     var matrix = try myf.initValueMatrix(allocator, 100, 100, @as(u8, 0));
     defer myf.freeMatrix(allocator, matrix);
 
+    const start_r = 987;
+    const start_c = 783;
+
     var count: u32 = 0;
-    for (0..100) |i| {
+    for (start_r..100 + start_r) |i| {
         var row_count: u32 = 0;
-        for (0..100) |j| {
+        for (start_c..100 + start_c) |j| {
             buffer.len = 0;
             var machine = try Machine.init(try registers.*.clone(), 1000);
             defer machine.registers.deinit();
@@ -173,12 +176,12 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
             machine.input_value = CharIterator{ .str = buffer.getSlice() };
             if (machine.run()) |result| {
                 if (result == 1) {
-                    matrix[i][j] = '#';
+                    matrix[i - start_r][j - start_c] = '#';
                     row_count += 1;
-                } else matrix[i][j] = '.';
+                } else matrix[i - start_r][j - start_c] = '.';
             }
         }
-        std.debug.print("i: {d}, count: {d}\n", .{ i, row_count });
+        // std.debug.print("i: {d}, count: {d}\n", .{ i, row_count });
         count += row_count;
     }
     for (matrix) |row| {
@@ -186,43 +189,3 @@ fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
     }
     // print(count);
 }
-
-// fn part1(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
-//     var machine = try Machine.init(try registers.*.clone(), 2000);
-//     var linear_matrix = std.ArrayList(u8).init(allocator);
-//     defer inline for (.{ machine.registers, linear_matrix }) |x| x.deinit();
-
-//     while (machine.run()) |value| try linear_matrix.append(@intCast(@as(i8, @truncate(value))));
-
-//     var matrix = blk: {
-//         const line_len_newline = std.mem.indexOfScalar(u8, linear_matrix.items, '\n').? + 1;
-//         const lines = (linear_matrix.items.len - 1) / line_len_newline;
-//         var matrix = try myf.initValueMatrix(allocator, lines + 2, line_len_newline + 1, @as(u8, '.'));
-//         var lm_it = std.mem.tokenizeScalar(u8, linear_matrix.items, '\n');
-//         var i: u8 = 1;
-//         while (lm_it.next()) |row| {
-//             for (row, 1..) |e, j| matrix[i][j] = e;
-//             i += 1;
-//         }
-//         break :blk matrix;
-//     };
-
-//     var sum: usize = 0;
-//     for (1..matrix.len - 1) |i| {
-//         for (1..matrix[0].len - 1) |j| {
-//             if (matrix[i][j] != '#') continue;
-//             const ii: i8 = @intCast(i);
-//             const jj: i8 = @intCast(j);
-//             var count: u8 = 0;
-//             for (myf.getNextPositions(ii, jj)) |pos| {
-//                 const row, const col = pos;
-//                 if (matrix[@intCast(row)][@intCast(col)] == '#') count += 1;
-//             }
-//             if (count == 4) {
-//                 matrix[i][j] = 'O';
-//                 sum += (i - 1) * (j - 1);
-//             }
-//         }
-//     }
-//     return .{ .p1_result = sum, .matrix = matrix };
-// }
