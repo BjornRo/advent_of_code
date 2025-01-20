@@ -534,6 +534,17 @@ pub fn slowDown(ms: usize) void {
     std.time.sleep(ms * 1_000_000);
 }
 
+pub inline fn hash(key: u64) u64 {
+    // https://nullprogram.com/blog/2018/07/31/
+    var x = key;
+    x ^= x >> 32;
+    x *%= 0xd6e8feb86659fd93;
+    x ^= x >> 32;
+    x *%= 0xd6e8feb86659fd93;
+    x ^= x >> 32;
+    return x;
+}
+
 pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8) ![]const u8 {
     var list = std.ArrayList(u8).init(allocator);
 
