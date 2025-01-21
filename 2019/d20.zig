@@ -56,19 +56,31 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
+    const input_attributes = try myf.getInputAttributes(input);
     // End setup
+
+    var matrix = std.ArrayList([]const u8).init(allocator);
+    defer matrix.deinit();
+
+    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
+    while (in_iter.next()) |row| try matrix.append(row);
+
+    var graph = try genGraph(allocator, matrix.items);
+    defer graph.deinit();
+    print(graph.get(Convert.symbol("XF", .Outside)));
+    // print(isOutside(Convert.symbol("ZH", .Outside)));
+    // print(isOutside(Convert.symbol("ZH", .Inside)));
+
+    // print(try part1(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
+    print(try part2(allocator, &graph, Convert.symbol("AA", .Outside), Convert.symbol("ZZ", .Outside)));
 
     // std.debug.print("{s}\n", .{input});
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
@@ -142,7 +154,7 @@ const Point = struct {
 
 fn isOutside(symbol: u16) bool {
     const value: u16 = @intCast(@intFromEnum(Side.Outside));
-    return symbol & (1 << 15) == (value << 15);
+    return (symbol >> 15) == value;
 }
 
 fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
@@ -223,29 +235,22 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
     return graph;
 }
 
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d20.txt");
-    const input_attributes = try myf.getInputAttributes(input);
-
-    var matrix = std.ArrayList([]const u8).init(allocator);
-    defer matrix.deinit();
-
-    var in_iter = std.mem.tokenizeSequence(u8, input, input_attributes.delim);
-    while (in_iter.next()) |row| try matrix.append(row);
-
-    var graph = try genGraph(allocator, matrix.items);
-    defer graph.deinit();
-    // print(graph.get(Convert.symbol("ZH", .Outside)));
-
-    // print(try part1(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
-    print(try part2(allocator, &graph, Convert.symbol("AA", .Outside), Convert.symbol("ZZ", .Outside)));
-}
-
 fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u32 {
+    const VisitedCtx = struct {
+        pub inline fn init(symbol: u16, next_symbol: u16, depth: u16) u64 {
+            const symbol_: u64 = @intCast(symbol);
+            const next_symbol_: u64 = @intCast(next_symbol);
+            const depth_: u64 = @intCast(depth);
+            return (symbol_ << 32) | (next_symbol_ << 16) | depth_;
+        }
+        pub fn hash(_: @This(), key: u64) u64 {
+            return myf.hash(@intCast(key));
+        }
+        pub fn eql(_: @This(), a: u64, b: u64) bool {
+            return a == b;
+        }
+    };
+    const Visited = std.HashMap(u64, u32, VisitedCtx, 90);
     const FrontierState = struct {
         symbol: u16,
         steps: u32 = 0,
@@ -253,70 +258,67 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
 
         const Self = @This();
         fn cmp(_: void, a: Self, b: Self) std.math.Order {
-            if (a.depth < b.depth) return .lt;
             if (a.depth > b.depth) return .gt;
+            if (a.depth < b.depth) return .lt;
             if (a.steps < b.steps) return .lt;
             if (a.steps > b.steps) return .gt;
             return .eq;
         }
     };
-    const DistHashCtx = struct {
-        pub inline fn init(symbol: u16, depth: u16) u64 {
-            const symbol_: u64 = @intCast(symbol);
-            const depth_: u64 = @intCast(depth);
-            return (symbol_ << 32) | depth_;
-        }
-        pub fn hash(_: @This(), key: u64) u64 {
-            return myf.hash(key);
-        }
-        pub fn eql(_: @This(), a: u64, b: u64) bool {
-            return a == b;
-        }
-    };
-
-    var distances = std.HashMap(u64, u32, DistHashCtx, 90).init(allocator);
+    var distances = Visited.init(allocator);
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
     defer inline for (.{ pqueue, &distances }) |i| i.deinit();
 
     try pqueue.add(.{ .symbol = start });
     while (pqueue.removeOrNull()) |*const_state| {
-        if (const_state.symbol == target and const_state.depth == 0) {
+        if (const_state.depth == 0 and (const_state.symbol ^ (1 << 15)) == target) {
+            prints("here");
             return const_state.steps - 1;
         }
-        // prints(Convert.u16_twoChar(const_state.symbol & 0x7fff));
-        print(const_state.depth);
-        // prints("");
         if (graph.get(const_state.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
-                const new_cost = const_state.steps + neighbor.steps;
-                const dist_key = DistHashCtx.init(neighbor.symbol, const_state.depth);
-                if (new_cost < distances.get(dist_key) orelse ~@as(u32, 0)) {
-                    // prints(Convert.u16_twoChar(const_state.symbol & 0x7fff));
-                    // prints(Convert.u16_twoChar(neighbor.symbol & 0x7fff));
+                const new_cost = const_state.steps + neighbor.steps + 1;
+                const came_from_outside = isOutside(const_state.symbol);
+                // if (const_state.depth == 0 and came_from_outside and isOutside(neighbor.symbol)) continue;
+
+                const map_key = VisitedCtx.init(const_state.symbol, neighbor.symbol, const_state.depth);
+                if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) continue;
+                try distances.put(map_key, new_cost);
+
+                if (const_state.depth >= 11) return 0;
+
+                // if (came_from_outside == going_to_outside) continue;
+                for ([2]u16{ neighbor.symbol, neighbor.symbol ^ (1 << 15) }) |next_symbol| {
+                    const going_to_outside = isOutside(next_symbol);
+                    // if (const_state.depth == 0 and going_to_outside) continue;
+                    if (!came_from_outside and !going_to_outside) continue;
+                    const new_depth = if (came_from_outside and !going_to_outside)
+                        const_state.depth + 1
+                    else if (!came_from_outside and going_to_outside and const_state.depth > 0)
+                        const_state.depth - 1
+                    else
+                        const_state.depth;
+                    std.debug.print("{s} {any}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), isOutside(const_state.symbol) });
+                    std.debug.print("{s} {any}\n", .{ Convert.u16_twoChar(neighbor.symbol & 0x7fff), isOutside(neighbor.symbol) });
                     print(const_state.depth);
-                    // prints("");
-                    try distances.put(dist_key, new_cost);
-                    if (isOutside(const_state.symbol) and !isOutside(neighbor.symbol)) {
-                        try pqueue.add(.{
-                            .symbol = neighbor.symbol ^ (1 << 15), // Toggle encoding
-                            .steps = new_cost + 1,
-                            .depth = const_state.depth + 1,
-                        });
-                    } else if (!isOutside(const_state.symbol) and isOutside(neighbor.symbol)) {
-                        try pqueue.add(.{
-                            .symbol = neighbor.symbol ^ (1 << 15),
-                            .steps = new_cost + 1,
-                            .depth = const_state.depth -| 1,
-                        });
-                    } else {
-                        try pqueue.add(.{
-                            .symbol = neighbor.symbol,
-                            .steps = new_cost + 1,
-                            .depth = const_state.depth,
-                        });
-                    }
+                    prints("");
+                    try pqueue.add(.{
+                        .symbol = next_symbol,
+                        .steps = new_cost,
+                        .depth = new_depth,
+                    });
                 }
+                // try pqueue.add(.{
+                //     .symbol = next_symbol,
+                //     .steps = new_cost,
+                //     .depth = if (isOutside(const_state.symbol)) const_state.depth + 1 else const_state.depth -| 1,
+                // });
             }
+
+            // prints(Convert.u16_twoChar(const_state.symbol & 0x7fff));
+            // prints(Convert.u16_twoChar(neighbor.symbol & 0x7fff));
+            // prints("");
+
         }
     }
     return 0;
