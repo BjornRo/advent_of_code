@@ -275,15 +275,16 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
 
         if (graph.get(const_state.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
+                const going_to_outside = isOutside(neighbor.symbol);
                 const new_cost = const_state.steps + neighbor.steps + 1;
-                if (!came_from_outside and !isOutside(neighbor.symbol)) continue;
+                if (!came_from_outside and !going_to_outside) continue;
 
                 if (const_state.depth == 0 and came_from_outside and neighbor.symbol == target) {
                     prints("here");
                     std.debug.print("{s} {d} {any}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), const_state.depth, came_from_outside });
                     return const_state.steps - 1;
                 }
-                if (const_state.depth == 0 and came_from_outside and isOutside(neighbor.symbol)) continue;
+                if (const_state.depth == 0 and came_from_outside and going_to_outside) continue;
 
                 // if ((const_state.symbol & 0x7fff) == Convert.twoChar_u16("IC")) {
                 //     std.debug.print("{s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
@@ -301,7 +302,6 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                 for ([2]u16{ neighbor.symbol, neighbor.symbol ^ (1 << 15) }) |next_symbol| {
                     if (!came_from_outside and !isOutside(next_symbol)) continue;
 
-                    const going_to_outside = isOutside(neighbor.symbol);
                     var new_depth = const_state.depth;
                     if (came_from_outside and !going_to_outside) {
                         new_depth += 1;
