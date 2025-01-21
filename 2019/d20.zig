@@ -237,6 +237,7 @@ fn genGraph(allocator: Allocator, matrix: []const []const u8) !Graph {
     return graph;
 }
 
+//1358 too low
 fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u32 {
     const VisitedCtx = struct {
         pub inline fn init(symbol: u16, next_symbol: u16, depth: u16) u64 {
@@ -271,26 +272,44 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
     var pqueue = PriorityQueue(FrontierState, void, FrontierState.cmp).init(allocator, undefined);
     defer inline for (.{ pqueue, &distances }) |i| i.deinit();
 
+    // const mask = 0x7fff;
+
     try pqueue.add(.{ .symbol = start });
-    while (pqueue.removeOrNull()) |*const_state| {
-        const came_from_outside = isOutside(const_state.symbol);
-        if (const_state.depth == 0 and const_state.symbol == target) {
-            prints("here");
-            std.debug.print("{s}->{s} {d} {any}\n", .{
-                Convert.u16_twoChar(const_state.symbol & 0x7fff), "X",
-                // Convert.u16_twoChar(neighbor.symbol & 0x7fff),
-                const_state.depth,                                came_from_outside,
-            });
-            return const_state.steps - 1;
-        }
+    while (pqueue.removeOrNull()) |*cstate| {
 
-        if (graph.get(const_state.symbol)) |neighbors| {
+        // const came_from_outside = isOutside(cstate.symbol);
+        // if (cstate.depth == 0 and cstate.symbol == target) {
+        //     prints("here");
+        //     std.debug.print("{s}->{s} {d} {any}\n", .{
+        //         Convert.u16_twoChar(cstate.symbol & 0x7fff), "X",
+        //         // Convert.u16_twoChar(neighbor.symbol & 0x7fff),
+        //         cstate.depth,                                came_from_outside,
+        //     });
+        //     return cstate.steps - 1;
+        // }
+
+        if (graph.get(cstate.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
-                const going_to_outside = isOutside(neighbor.symbol);
-                const new_cost = const_state.steps + neighbor.steps + 1;
-                if (!came_from_outside and !going_to_outside) continue;
+                if (cstate.depth == 0) {
+                    prints(Convert.u16_twoChar(neighbor.symbol & 0x7fff));
+                    if (neighbor.symbol & 0x7fff == target & 0x7fff) return cstate.steps + neighbor.steps;
+                    // if (cstate.symbol != start and cstate.symbol != target) continue;
+                }
+                const new_cost = cstate.steps + neighbor.steps + 1;
 
-                if (const_state.depth == 0 and came_from_outside and going_to_outside) continue;
+                if (cstate.depth != 0) {
+                    if (neighbor.symbol == start or neighbor.symbol == target) continue;
+                } else {
+                    // if (neighbor.symbol != start and neighbor.symbol != target) continue;
+                }
+                // std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(cstate.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                // std.debug.print("out: {any}, out: {any}\n", .{ isOutside(cstate.symbol), isOutside(neighbor.symbol) });
+                // std.debug.print("depth: {d}, steps: {d}\n", .{ cstate.depth, cstate.steps });
+                // prints("");
+                // const going_to_outside = isOutside(neighbor.symbol);
+                // if (!came_from_outside and !going_to_outside) continue;
+
+                // if (cstate.depth == 0 and came_from_outside and going_to_outside) continue;
 
                 // if ((const_state.symbol & 0x7fff) == Convert.twoChar_u16("IC")) {
                 //     std.debug.print("{s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
@@ -299,46 +318,62 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                 //     prints("");
                 // }
 
-                const map_key = VisitedCtx.init(const_state.symbol, neighbor.symbol, const_state.depth);
-                if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) {
-                    continue;
+                const came_from_outside = isOutside(cstate.symbol);
+                const going_to_outside = isOutside(neighbor.symbol);
+
+                var new_depth = cstate.depth;
+                if (!came_from_outside and going_to_outside or came_from_outside and going_to_outside) {
+                    if (cstate.depth == 0) continue;
+                    new_depth -|= 1;
+                } else if (came_from_outside and !going_to_outside or !came_from_outside and !going_to_outside) {
+                    new_depth += 1;
                 }
-                if (const_state.depth == 8 and Convert.twoChar_u16("ZH") == const_state.symbol & 0x7fff) {
-                    std.debug.print("m: {s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
-                    // std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
-                    std.debug.print("depth: {d}, steps: {d} -> {d}\n", .{ const_state.depth, const_state.steps, new_cost });
-                    prints("");
-                    //
-                }
-                try distances.put(map_key, new_cost);
 
-                if (const_state.depth >= 12) return 0;
+                // const map_key = VisitedCtx.init(cstate.symbol, neighbor.symbol, cstate.depth);
+                // if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) {
+                //     continue;
+                // }
+                // if (cstate.depth == 1 and Convert.twoChar_u16("XQ") == (cstate.symbol & 0x7fff)) {
+                //     std.debug.print("m: {s} -> {s}\n", .{ Convert.u16_twoChar(cstate.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                //     std.debug.print("out: {any}, out: {any}\n", .{ isOutside(cstate.symbol), isOutside(neighbor.symbol) });
+                //     std.debug.print("depth: {d}, steps: {d} -> {d}\n", .{ new_depth, cstate.steps, new_cost });
+                //     prints("");
+                //     //     //
+                // }
 
-                for ([2]u16{ neighbor.symbol, neighbor.symbol ^ (1 << 15) }) |next_symbol| {
-                    if (!came_from_outside and isOutside(next_symbol)) continue;
+                // try distances.put(map_key, new_cost);
+                try pqueue.add(.{
+                    .symbol = neighbor.symbol ^ (1 << 15),
+                    .steps = new_cost,
+                    .depth = new_depth,
+                });
+                // for ([2]u16{ neighbor.symbol, neighbor.symbol ^ (1 << 15) }) |next_symbol| {
+                //     var new_depth = cstate.depth;
+                //     if (!came_from_outside and going_to_outside)
+                //         new_depth -|= 1
+                //     else if (came_from_outside and !going_to_outside) new_depth += 1;
 
-                    var new_depth = const_state.depth;
-                    if (came_from_outside and isOutside(next_symbol)) {
-                        new_depth += 1;
-                    } else {
-                        if (new_depth == 0) continue;
-                        new_depth -= 1;
-                    }
-                    if (new_depth == 0 and came_from_outside and isOutside(next_symbol)) continue;
-
-                    if (new_depth == 7 and Convert.twoChar_u16("ZH") == const_state.symbol & 0x7fff) {
-                        std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
-                        std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
-                        std.debug.print("depth: {d}, steps: {d}\n", .{ new_depth, new_cost });
-                        prints("");
-                        //
-                    }
-                    try pqueue.add(.{
-                        .symbol = next_symbol,
-                        .steps = new_cost,
-                        .depth = new_depth,
-                    });
-                }
+                //     // if (new_depth == 0 and came_from_outside and isOutside(next_symbol)) continue;
+                //     if (new_depth == 10 and Convert.twoChar_u16("XQ") == (cstate.symbol & mask)) {
+                //         std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(cstate.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                //         std.debug.print("out: {any}, out: {any}\n", .{ isOutside(cstate.symbol), isOutside(next_symbol) });
+                //         std.debug.print("depth: {d}, steps: {d} -> {d}\n", .{ new_depth, cstate.steps, new_cost });
+                //         prints("");
+                //         //     //
+                //     }
+                //     // if (new_depth == 111) { // and Convert.twoChar_u16("ZH") == cstate.symbol & 0x7fff
+                //     //     //     //
+                //     //     std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(cstate.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                //     //     std.debug.print("out: {any}, out: {any}\n", .{ isOutside(cstate.symbol), isOutside(next_symbol) });
+                //     //     std.debug.print("depth: {d}, steps: {d}\n", .{ new_depth, new_cost });
+                //     //     prints("");
+                //     // }
+                //     try pqueue.add(.{
+                //         .symbol = next_symbol,
+                //         .steps = new_cost,
+                //         .depth = new_depth,
+                //     });
+                // }
                 // try pqueue.add(.{
                 //     .symbol = next_symbol,
                 //     .steps = new_cost,
@@ -352,5 +387,5 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
 
         }
     }
-    return 0;
+    return 123;
 }
