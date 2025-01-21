@@ -271,10 +271,11 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
 
     try pqueue.add(.{ .symbol = start });
     while (pqueue.removeOrNull()) |*const_state| {
+        const came_from_outside = isOutside(const_state.symbol);
+
         if (graph.get(const_state.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
                 const new_cost = const_state.steps + neighbor.steps + 1;
-                const came_from_outside = isOutside(const_state.symbol);
                 if (!came_from_outside and !isOutside(neighbor.symbol)) continue;
 
                 if (const_state.depth == 0 and came_from_outside and neighbor.symbol == target) {
