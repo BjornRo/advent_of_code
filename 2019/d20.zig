@@ -271,36 +271,47 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
 
     try pqueue.add(.{ .symbol = start });
     while (pqueue.removeOrNull()) |*const_state| {
-        if (const_state.depth == 0 and (const_state.symbol ^ (1 << 15)) == target) {
-            prints("here");
-            return const_state.steps - 1;
-        }
         if (graph.get(const_state.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
                 const new_cost = const_state.steps + neighbor.steps + 1;
                 const came_from_outside = isOutside(const_state.symbol);
-                // if (const_state.depth == 0 and came_from_outside and isOutside(neighbor.symbol)) continue;
+                if (!came_from_outside and !isOutside(neighbor.symbol)) continue;
+
+                if (const_state.depth == 0 and came_from_outside and neighbor.symbol == target) {
+                    prints("here");
+                    std.debug.print("{s} {d} {any}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), const_state.depth, came_from_outside });
+                    return const_state.steps - 1;
+                }
+                if (const_state.depth == 0 and came_from_outside and isOutside(neighbor.symbol)) continue;
+
+                // if ((const_state.symbol & 0x7fff) == Convert.twoChar_u16("IC")) {
+                //     std.debug.print("{s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                //     // std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
+                //     print(const_state.depth + 1);
+                //     prints("");
+                // }
 
                 const map_key = VisitedCtx.init(const_state.symbol, neighbor.symbol, const_state.depth);
                 if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) continue;
                 try distances.put(map_key, new_cost);
 
-                if (const_state.depth >= 11) return 0;
+                if (const_state.depth >= 12) return 0;
 
-                // if (came_from_outside == going_to_outside) continue;
                 for ([2]u16{ neighbor.symbol, neighbor.symbol ^ (1 << 15) }) |next_symbol| {
-                    const going_to_outside = isOutside(next_symbol);
-                    // if (const_state.depth == 0 and going_to_outside) continue;
-                    if (!came_from_outside and !going_to_outside) continue;
-                    const new_depth = if (came_from_outside and !going_to_outside)
-                        const_state.depth + 1
-                    else if (!came_from_outside and going_to_outside and const_state.depth > 0)
-                        const_state.depth - 1
-                    else
-                        const_state.depth;
-                    std.debug.print("{s} {any}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), isOutside(const_state.symbol) });
-                    std.debug.print("{s} {any}\n", .{ Convert.u16_twoChar(neighbor.symbol & 0x7fff), isOutside(neighbor.symbol) });
-                    print(const_state.depth);
+                    if (!came_from_outside and !isOutside(next_symbol)) continue;
+
+                    const going_to_outside = isOutside(neighbor.symbol);
+                    var new_depth = const_state.depth;
+                    if (came_from_outside and !going_to_outside) {
+                        new_depth += 1;
+                    } else {
+                        if (new_depth == 0) continue;
+                        new_depth -= 1;
+                    }
+
+                    std.debug.print("{s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                    std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
+                    print(new_depth);
                     prints("");
                     try pqueue.add(.{
                         .symbol = next_symbol,
