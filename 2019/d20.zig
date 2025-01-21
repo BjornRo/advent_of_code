@@ -299,16 +299,16 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                 //     prints("");
                 // }
 
+                const map_key = VisitedCtx.init(const_state.symbol, neighbor.symbol, const_state.depth);
+                if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) {
+                    continue;
+                }
                 if (const_state.depth == 8 and Convert.twoChar_u16("ZH") == const_state.symbol & 0x7fff) {
                     std.debug.print("m: {s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
                     // std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
                     std.debug.print("depth: {d}, steps: {d} -> {d}\n", .{ const_state.depth, const_state.steps, new_cost });
                     prints("");
                     //
-                }
-                const map_key = VisitedCtx.init(const_state.symbol, neighbor.symbol, const_state.depth);
-                if (new_cost >= distances.get(map_key) orelse ~@as(u32, 0)) {
-                    continue;
                 }
                 try distances.put(map_key, new_cost);
 
@@ -318,7 +318,7 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                     if (!came_from_outside and isOutside(next_symbol)) continue;
 
                     var new_depth = const_state.depth;
-                    if (came_from_outside and !going_to_outside) {
+                    if (came_from_outside and isOutside(next_symbol)) {
                         new_depth += 1;
                     } else {
                         if (new_depth == 0) continue;
@@ -326,7 +326,7 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                     }
                     if (new_depth == 0 and came_from_outside and isOutside(next_symbol)) continue;
 
-                    if (new_depth == 8 and Convert.twoChar_u16("WB") == const_state.symbol & 0x7fff) {
+                    if (new_depth == 7 and Convert.twoChar_u16("ZH") == const_state.symbol & 0x7fff) {
                         std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
                         std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
                         std.debug.print("depth: {d}, steps: {d}\n", .{ new_depth, new_cost });
