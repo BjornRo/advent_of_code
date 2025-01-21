@@ -75,9 +75,11 @@ pub fn main() !void {
 
     var graph = try genGraph(allocator, matrix.items);
     defer graph.deinit();
-    print(graph.get(Convert.symbol("XF", .Outside)));
+    // print(graph.get(Convert.symbol("XF", .Outside)));
     // print(isOutside(Convert.symbol("ZH", .Outside)));
     // print(isOutside(Convert.symbol("ZH", .Inside)));
+
+    // for (graph.get(Convert.symbol("ZH", .Inside)).?.slice()) |neighbors| print(neighbors);
 
     // print(try part1(allocator, &graph, Convert.twoChar_u16("AA"), Convert.twoChar_u16("ZZ")));
     print(try part2(allocator, &graph, Convert.symbol("AA", .Outside), Convert.symbol("ZZ", .Outside)));
@@ -272,6 +274,15 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
     try pqueue.add(.{ .symbol = start });
     while (pqueue.removeOrNull()) |*const_state| {
         const came_from_outside = isOutside(const_state.symbol);
+        if (const_state.depth == 0 and const_state.symbol == target) {
+            prints("here");
+            std.debug.print("{s}->{s} {d} {any}\n", .{
+                Convert.u16_twoChar(const_state.symbol & 0x7fff), "X",
+                // Convert.u16_twoChar(neighbor.symbol & 0x7fff),
+                const_state.depth,                                came_from_outside,
+            });
+            return const_state.steps - 1;
+        }
 
         if (graph.get(const_state.symbol)) |neighbors| {
             for (neighbors.slice()) |neighbor| {
@@ -279,11 +290,6 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                 const new_cost = const_state.steps + neighbor.steps + 1;
                 if (!came_from_outside and !going_to_outside) continue;
 
-                if (const_state.depth == 0 and came_from_outside and neighbor.symbol == target) {
-                    prints("here");
-                    std.debug.print("{s} {d} {any}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), const_state.depth, came_from_outside });
-                    return const_state.steps - 1;
-                }
                 if (const_state.depth == 0 and came_from_outside and going_to_outside) continue;
 
                 // if ((const_state.symbol & 0x7fff) == Convert.twoChar_u16("IC")) {
@@ -309,11 +315,15 @@ fn part2(allocator: Allocator, graph: *const Graph, start: u16, target: u16) !u3
                         if (new_depth == 0) continue;
                         new_depth -= 1;
                     }
+                    if (new_depth == 0 and came_from_outside and isOutside(next_symbol)) continue;
 
-                    std.debug.print("{s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
-                    std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
-                    print(new_depth);
-                    prints("");
+                    if (new_depth == 7 and Convert.twoChar_u16("ZH") == const_state.symbol & 0x7fff) {
+                        std.debug.print("b: {s} -> {s}\n", .{ Convert.u16_twoChar(const_state.symbol & 0x7fff), Convert.u16_twoChar(neighbor.symbol & 0x7fff) });
+                        std.debug.print("out: {any}, out: {any}\n", .{ isOutside(const_state.symbol), isOutside(next_symbol) });
+                        std.debug.print("depth: {d}, steps: {d}\n", .{ new_depth, new_cost });
+                        prints("");
+                        //
+                    }
                     try pqueue.add(.{
                         .symbol = next_symbol,
                         .steps = new_cost,
