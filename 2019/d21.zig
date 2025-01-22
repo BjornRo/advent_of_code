@@ -9,19 +9,6 @@ const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const ProgT = i64;
-const MachineInputIterator = struct {
-    array: []const u8,
-    index: usize = 0,
-
-    pub fn next(self: *MachineInputIterator) ?u16 {
-        if (self.index >= self.array.len) {
-            self.array = "\nWALK\n";
-            self.index = 0;
-        }
-        defer self.index += 1;
-        return self.array[self.index];
-    }
-};
 
 const Machine = struct {
     registers: std.ArrayList(ProgT),
@@ -126,6 +113,20 @@ pub fn main() !void {
 
 }
 
+const MachineInputIterator = struct {
+    array: []const u8,
+    index: usize = 0,
+
+    pub fn next(self: *MachineInputIterator) ?u16 {
+        if (self.index >= self.array.len) {
+            self.array = "WALK\n";
+            self.index = 0;
+        }
+        defer self.index += 1;
+        return self.array[self.index];
+    }
+};
+
 fn joinStrings(comptime strs: []const []const u8) []const u8 {
     comptime {
         const delim = "\n";
@@ -147,14 +148,23 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    // const routine = comptime joinStrings(&.{
-    //     "NOT A J",
-    //     "NOT B T",
-    //     "AND T J",
-    //     "NOT C T",
-    //     "AND T J",
-    //     "AND D J",
-    // });
+    const routine = comptime joinStrings(&.{
+        "NOT A J",
+        "NOT B T",
+        "AND T J",
+        "NOT C T",
+        "AND T J",
+        "NOT A J",
+        "NOT B T",
+        "AND T J",
+        "NOT C T",
+        "AND T J",
+        "NOT A J",
+        "NOT B T",
+        "AND T J",
+        "NOT C T", // 14, walk is 15 at the iterator
+        // "AND T J", // too many instructions
+    });
     // const routine = comptime joinStrings(&.{
     //     "NOT D J",
     // });
@@ -163,7 +173,7 @@ test "example" {
     //     "NOT C J",
     // });
 
-    var machine = try Machine.init(try registers.clone(), 4500, "AND C J");
+    var machine = try Machine.init(try registers.clone(), 4500, routine);
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
@@ -172,17 +182,22 @@ test "example" {
         try result.append(res);
     }
 
-    prints(result.items);
+    // prints(result.items);
+    // print(parseFinalLine(result.items));
 
     result.clearRetainingCapacity();
-    machine.resetAndSet("NOT A J");
+    machine.resetAndSet("NOT A J\n");
     while (machine.run()) |res| {
         try result.append(res);
     }
 
     prints(result.items);
+    std.debug.print("{b}\n", .{parseFinalLine(result.items).mask});
 }
 
-// fn bruteforce(allocator: Allocator, machine: *Machine, string: []const u8) !void {
-//     //
-// }
+fn parseFinalLine(data: []const u8) std.bit_set.IntegerBitSet(17) {
+    var result = std.bit_set.IntegerBitSet(17).initEmpty();
+    for (data[data.len - 19 .. data.len - 2], 0..) |c, i|
+        if (c == '#') result.set(16 - i);
+    return result;
+}
