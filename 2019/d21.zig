@@ -161,32 +161,33 @@ test "example" {
         "NOT A T",
         "OR T J",
         "AND D J",
-        "AND I J",
-        "OR E J",
-        "AND G J",
+        // "AND I J",
+
+        // "OR E J",
+        // "AND G J",
         // "OR E J",
         // "OR H J",
         // "AND H J",
     });
 
-    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "\nRUN\n");
+    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "\nWALK\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     while (machine.run()) |res| {
-        // print(res);
+        print(res);
         if (res <= 255) try result.append(@intCast(res));
     }
-    var strings = std.ArrayList([]const u8).init(allocator);
-    defer strings.deinit();
+    prints(result.items);
+    // var strings = std.ArrayList([]const u8).init(allocator);
+    // defer strings.deinit();
 
-    var visited = std.AutoHashMap(u16, void).init(allocator);
-    defer visited.deinit();
-    try visited.put(BitSet16.init(result.items).value, {});
+    // var visited = std.AutoHashMap(u16, void).init(allocator);
+    // defer visited.deinit();
+    // try visited.put(BitSet16.init(result.items).value, {});
 
-    _ = try bruteforce(allocator, &registers, &visited, &strings);
-    // prints(result.items);
+    // _ = try bruteforce(allocator, &registers, &visited, &strings);
     // BitSet16.init(result.items).print();
 }
 
