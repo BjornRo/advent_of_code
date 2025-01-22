@@ -192,12 +192,32 @@ test "example" {
     }
 
     prints(result.items);
-    std.debug.print("{b}\n", .{parseFinalLine(result.items).mask});
+    std.debug.print("{b}\n", .{BitSet16.init(result.items).value});
+    BitSet16.init(result.items).print();
 }
 
-fn parseFinalLine(data: []const u8) std.bit_set.IntegerBitSet(17) {
-    var result = std.bit_set.IntegerBitSet(17).initEmpty();
-    for (data[data.len - 19 .. data.len - 2], 0..) |c, i|
-        if (c == '#') result.set(16 - i);
-    return result;
-}
+const BitSet16 = struct {
+    value: u16,
+
+    const Self = @This();
+    pub fn print(self: Self) void {
+        var buf: [16]u8 = undefined;
+        for (0..16) |i| buf[i] = if (self.isSet(i)) '#' else '.';
+        prints(buf);
+    }
+
+    pub fn init(data: []const u8) Self {
+        var result: u16 = 0;
+        for (data[data.len - 18 .. data.len - 2]) |c| {
+            result <<= 1;
+            if (c == '#') result |= 1;
+        }
+        return .{ .value = result };
+    }
+
+    pub fn isSet(self: Self, index: anytype) bool {
+        const new_idx: u4 = @intCast(index);
+        const i: u4 = 15 - new_idx;
+        return (self.value >> i) & 1 == 1;
+    }
+};
