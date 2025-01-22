@@ -14,7 +14,10 @@ const MachineInputIterator = struct {
     index: usize = 0,
 
     pub fn next(self: *MachineInputIterator) ?u16 {
-        if (self.index >= self.array.len) return null;
+        if (self.index >= self.array.len) {
+            self.array = "\nWALK\n";
+            self.index = 0;
+        }
         defer self.index += 1;
         return self.array[self.index];
     }
@@ -28,25 +31,30 @@ const Machine = struct {
     pc: u32 = 0,
 
     const Self = @This();
-
     pub fn init(registers: std.ArrayList(ProgT), register_size: usize, input: []const u8) !Machine {
         var regs = registers;
         for (0..register_size - registers.items.len) |_| try regs.append(0);
         return Machine{ .registers = regs, .input_value = MachineInputIterator{ .array = input } };
     }
 
-    fn get_factor(param: u32) ProgT {
+    pub fn resetAndSet(self: *Self, input: []const u8) void {
+        self.pc = 0;
+        self.relative_base = 0;
+        self.input_value = .{ .array = input };
+    }
+
+    fn getFactor(param: u32) ProgT {
         return @intCast((std.math.powi(ProgT, 10, param) catch unreachable) * 10);
     }
 
-    fn set_pc_value_get_op(self: *Self) ProgT {
+    fn set_PcValue_get_op(self: *Self) ProgT {
         self.pc_value = self.registers.items[@intCast(self.pc)];
         return @mod(self.pc_value, 100);
     }
 
-    fn get_value(self: *Self, param: u32, add_pc: u32) ProgT {
+    fn getValue(self: *Self, param: u32, add_pc: u32) ProgT {
         const offset = self.pc + param;
-        const item = switch (@mod(@divFloor(self.registers.items[self.pc], get_factor(param)), 10)) {
+        const item = switch (@mod(@divFloor(self.registers.items[self.pc], getFactor(param)), 10)) {
             0 => self.registers.items[offset],
             1 => offset,
             else => self.relative_base + self.registers.items[offset],
@@ -55,9 +63,9 @@ const Machine = struct {
         return self.registers.items[@intCast(item)];
     }
 
-    fn set_value(self: *Self, param: u32, put_value: ProgT) void {
+    fn setValue(self: *Self, param: u32, put_value: ProgT) void {
         const item = self.registers.items[self.pc + param];
-        const index = switch (@mod(@divFloor(self.registers.items[self.pc], get_factor(param)), 10)) {
+        const index = switch (@mod(@divFloor(self.registers.items[self.pc], getFactor(param)), 10)) {
             0 => item,
             else => self.relative_base + item,
         };
@@ -67,16 +75,16 @@ const Machine = struct {
 
     pub fn run(self: *Self) ?u8 {
         while (true) {
-            switch (self.set_pc_value_get_op()) {
-                1 => self.set_value(3, self.get_value(1, 0) + self.get_value(2, 0)),
-                2 => self.set_value(3, self.get_value(1, 0) * self.get_value(2, 0)),
-                3 => self.set_value(1, self.input_value.?.next().?),
-                4 => return @intCast(self.get_value(1, 2)),
-                5 => self.pc = if (self.get_value(1, 0) != 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
-                6 => self.pc = if (self.get_value(1, 0) == 0) @intCast(self.get_value(2, 0)) else self.pc + 3,
-                7 => self.set_value(3, if (self.get_value(1, 0) < self.get_value(2, 0)) 1 else 0),
-                8 => self.set_value(3, if (self.get_value(1, 0) == self.get_value(2, 0)) 1 else 0),
-                9 => self.relative_base += self.get_value(1, 2),
+            switch (self.set_PcValue_get_op()) {
+                1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
+                2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
+                3 => self.setValue(1, self.input_value.?.next().?),
+                4 => return @intCast(self.getValue(1, 2)),
+                5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
+                6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
+                7 => self.setValue(3, if (self.getValue(1, 0) < self.getValue(2, 0)) 1 else 0),
+                8 => self.setValue(3, if (self.getValue(1, 0) == self.getValue(2, 0)) 1 else 0),
+                9 => self.relative_base += self.getValue(1, 2),
                 else => return null, // 99
             }
         }
@@ -123,7 +131,7 @@ fn joinStrings(comptime strs: []const []const u8) []const u8 {
         const delim = "\n";
         var strings: []const u8 = "";
         for (strs) |s| strings = strings ++ s ++ delim;
-        return strings ++ "WALK" ++ delim;
+        return strings;
     }
 }
 test "example" {
@@ -150,12 +158,12 @@ test "example" {
     // const routine = comptime joinStrings(&.{
     //     "NOT D J",
     // });
-    const routine = comptime joinStrings(&.{
-        "NOT A J",
-        "NOT C J",
-    });
+    // const routine = comptime joinStrings(&.{
+    //     "NOT A J",
+    //     "NOT C J",
+    // });
 
-    var machine = try Machine.init(try registers.clone(), 4500, routine);
+    var machine = try Machine.init(try registers.clone(), 4500, "AND C J");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
@@ -165,4 +173,16 @@ test "example" {
     }
 
     prints(result.items);
+
+    result.clearRetainingCapacity();
+    machine.resetAndSet("NOT A J");
+    while (machine.run()) |res| {
+        try result.append(res);
+    }
+
+    prints(result.items);
 }
+
+// fn bruteforce(allocator: Allocator, machine: *Machine, string: []const u8) !void {
+//     //
+// }
