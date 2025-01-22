@@ -118,6 +118,14 @@ pub fn main() !void {
 
 }
 
+fn joinStrings(comptime strs: []const []const u8) []const u8 {
+    comptime {
+        const delim = "\n";
+        var strings: []const u8 = "";
+        for (strs) |s| strings = strings ++ s ++ delim;
+        return strings ++ "WALK" ++ delim;
+    }
+}
 test "example" {
     const allocator = std.testing.allocator;
     var list = std.ArrayList(i8).init(allocator);
@@ -131,7 +139,23 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    var machine = try Machine.init(try registers.clone(), 4500, "NOT A J\nNOT B T\nAND T J\nNOT C T\nAND T J\nAND D J\nWALK\n");
+    // const routine = comptime joinStrings(&.{
+    //     "NOT A J",
+    //     "NOT B T",
+    //     "AND T J",
+    //     "NOT C T",
+    //     "AND T J",
+    //     "AND D J",
+    // });
+    // const routine = comptime joinStrings(&.{
+    //     "NOT D J",
+    // });
+    const routine = comptime joinStrings(&.{
+        "NOT A J",
+        "NOT C J",
+    });
+
+    var machine = try Machine.init(try registers.clone(), 4500, routine);
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
