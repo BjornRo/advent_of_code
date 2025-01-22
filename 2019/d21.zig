@@ -170,7 +170,7 @@ test "example" {
         // "AND H J",
     });
 
-    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "\nWALK\n");
+    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "\nRUN\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
@@ -192,7 +192,7 @@ test "example" {
 }
 
 fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT), string: []const u8) !u16 {
-    var machine = try Machine.init(try registers.clone(), 4500, string, "\nWALK\n");
+    var machine = try Machine.init(try registers.clone(), 4500, string, "\nRUN\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
@@ -206,7 +206,7 @@ fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT), stri
             return 0;
         }
     }
-    return BitSet16.init(result.items).value;
+    return BitSet16.init(result.items).print();
 }
 
 fn bruteforce(
