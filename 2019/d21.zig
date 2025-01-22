@@ -152,34 +152,21 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    // const routine = comptime joinStrings(&.{
-    //     "NOT A J",
-    //     "NOT B T",
-    //     "AND T J",
-    //     "NOT C T",
-    //     "AND T J",
-    //     "NOT A J",
-    //     "NOT B T",
-    //     "AND T J",
-    //     "NOT C T",
-    //     "AND T J",
-    //     "NOT A J",
-    //     "NOT B T",
-    //     "AND T J",
-    //     "NOT C T", // 14, walk is 15 at the iterator
-    //     // "AND T J", // too many instructions
+    // const part1_routine = comptime joinStrings(&.{
+    //     "NOT C J",
+    //     "NOT A T",
+    //     "OR T J",
+    //     "AND D J",
     // });
-    // const routine = comptime joinStrings(&.{
-    //     "NOT D J",
-    // });
-    const routine = comptime joinStrings(&.{
+    const part2_routine = comptime joinStrings(&.{
         "NOT C J",
         "NOT A T",
         "OR T J",
         "AND D J",
+        "AND H J",
     });
 
-    var machine = try Machine.init(try registers.clone(), 4500, routine, "WALK\n");
+    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "RUN\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
