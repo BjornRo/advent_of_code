@@ -131,7 +131,7 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    var machine = try Machine.init(try registers.clone(), 4500, "NOT C J\nNOT A J\nWALK\n");
+    var machine = try Machine.init(try registers.clone(), 4500, "NOT A J\nNOT B T\nAND T J\nNOT C T\nAND T J\nAND D J\nWALK\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
