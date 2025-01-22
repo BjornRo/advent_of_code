@@ -192,7 +192,6 @@ test "example" {
     }
 
     prints(result.items);
-    std.debug.print("{b}\n", .{BitSet16.init(result.items).value});
     BitSet16.init(result.items).print();
 }
 
@@ -202,7 +201,7 @@ const BitSet16 = struct {
     const Self = @This();
     pub fn print(self: Self) void {
         var buf: [16]u8 = undefined;
-        for (0..16) |i| buf[i] = if (self.isSet(i)) '#' else '.';
+        for (0..16) |i| buf[i] = if (self.isSet(i)) '1' else '0';
         prints(buf);
     }
 
