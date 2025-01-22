@@ -163,7 +163,11 @@ test "example" {
         "NOT A T",
         "OR T J",
         "AND D J",
-        "AND H J",
+        "AND I J",
+        "AND G J",
+        // "OR E J",
+        // "OR H J",
+        // "AND H J",
     });
 
     var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "RUN\n");
@@ -172,7 +176,7 @@ test "example" {
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     while (machine.run()) |res| {
-        print(res);
+        // print(res);
         if (res <= 255) try result.append(@intCast(res));
     }
 
