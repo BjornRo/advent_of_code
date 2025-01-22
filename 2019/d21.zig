@@ -18,10 +18,13 @@ const Machine = struct {
     pc: u32 = 0,
 
     const Self = @This();
-    pub fn init(registers: std.ArrayList(ProgT), register_size: usize, input: []const u8) !Machine {
+    pub fn init(registers: std.ArrayList(ProgT), register_size: usize, input: []const u8, end: []const u8) !Machine {
         var regs = registers;
         for (0..register_size - registers.items.len) |_| try regs.append(0);
-        return Machine{ .registers = regs, .input_value = MachineInputIterator{ .array = input } };
+        return Machine{
+            .registers = regs,
+            .input_value = MachineInputIterator{ .array = input, .end = end },
+        };
     }
 
     pub fn resetAndSet(self: *Self, input: []const u8) void {
@@ -116,10 +119,11 @@ pub fn main() !void {
 const MachineInputIterator = struct {
     array: []const u8,
     index: usize = 0,
+    end: []const u8,
 
-    pub fn next(self: *MachineInputIterator) ?u16 {
+    pub fn next(self: *MachineInputIterator) ?u8 {
         if (self.index >= self.array.len) {
-            self.array = "WALK\n";
+            self.array = self.end;
             self.index = 0;
         }
         defer self.index += 1;
@@ -175,7 +179,7 @@ test "example" {
         "AND D J",
     });
 
-    var machine = try Machine.init(try registers.clone(), 4500, routine);
+    var machine = try Machine.init(try registers.clone(), 4500, routine, "WALK\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
