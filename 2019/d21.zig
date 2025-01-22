@@ -60,13 +60,13 @@ const Machine = struct {
         self.registers.items[@intCast(index)] = put_value;
     }
 
-    pub fn run(self: *Self) ?u8 {
+    pub fn run(self: *Self) ?ProgT {
         while (true) {
             switch (self.set_PcValue_get_op()) {
                 1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
                 2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
                 3 => self.setValue(1, self.input_value.?.next().?),
-                4 => return @intCast(self.getValue(1, 2)),
+                4 => return self.getValue(1, 2),
                 5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
                 6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
                 7 => self.setValue(3, if (self.getValue(1, 0) < self.getValue(2, 0)) 1 else 0),
@@ -148,30 +148,32 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    const routine = comptime joinStrings(&.{
-        "NOT A J",
-        "NOT B T",
-        "AND T J",
-        "NOT C T",
-        "AND T J",
-        "NOT A J",
-        "NOT B T",
-        "AND T J",
-        "NOT C T",
-        "AND T J",
-        "NOT A J",
-        "NOT B T",
-        "AND T J",
-        "NOT C T", // 14, walk is 15 at the iterator
-        // "AND T J", // too many instructions
-    });
+    // const routine = comptime joinStrings(&.{
+    //     "NOT A J",
+    //     "NOT B T",
+    //     "AND T J",
+    //     "NOT C T",
+    //     "AND T J",
+    //     "NOT A J",
+    //     "NOT B T",
+    //     "AND T J",
+    //     "NOT C T",
+    //     "AND T J",
+    //     "NOT A J",
+    //     "NOT B T",
+    //     "AND T J",
+    //     "NOT C T", // 14, walk is 15 at the iterator
+    //     // "AND T J", // too many instructions
+    // });
     // const routine = comptime joinStrings(&.{
     //     "NOT D J",
     // });
-    // const routine = comptime joinStrings(&.{
-    //     "NOT A J",
-    //     "NOT C J",
-    // });
+    const routine = comptime joinStrings(&.{
+        "NOT C J",
+        "NOT A T",
+        "OR T J",
+        "AND D J",
+    });
 
     var machine = try Machine.init(try registers.clone(), 4500, routine);
     defer machine.registers.deinit();
@@ -179,20 +181,12 @@ test "example" {
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     while (machine.run()) |res| {
-        try result.append(res);
-    }
-
-    // prints(result.items);
-    // print(parseFinalLine(result.items));
-
-    result.clearRetainingCapacity();
-    machine.resetAndSet("NOT A J\n");
-    while (machine.run()) |res| {
-        try result.append(res);
+        print(res);
+        if (res <= 255) try result.append(@intCast(res));
     }
 
     prints(result.items);
-    BitSet16.init(result.items).print();
+    // BitSet16.init(result.items).print();
 }
 
 const BitSet16 = struct {
