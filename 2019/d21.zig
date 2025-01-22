@@ -82,14 +82,6 @@ const Machine = struct {
     }
 };
 
-fn runMachine(registers: *const std.ArrayList(ProgT), i: usize, j: usize) !bool {
-    var buffer = myf.FixedBuffer(u16, 2).init();
-    buffer.appendAssumeCapacity(@intCast(i));
-    buffer.appendAssumeCapacity(@intCast(j));
-    var machine = try Machine.init(try registers.*.clone(), 1000, buffer.getSlice());
-    defer machine.registers.deinit();
-    return machine.run().? == 1;
-}
 pub fn main() !void {
     const start = std.time.nanoTimestamp();
     const writer = std.io.getStdOut().writer();
@@ -183,7 +175,7 @@ test "example" {
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     while (machine.run()) |res| {
-        print(res);
+        // print(res);
         if (res <= 255) try result.append(@intCast(res));
     }
     var strings = std.ArrayList([]const u8).init(allocator);
@@ -193,29 +185,53 @@ test "example" {
     defer visited.deinit();
     try visited.put(BitSet16.init(result.items).value, {});
 
-    try bruteforce(allocator, &machine, &visited, &strings);
+    _ = try bruteforce(allocator, &registers, &visited, &strings);
     // prints(result.items);
     // BitSet16.init(result.items).print();
 }
 
-fn bruteforce(
-    allocator: Allocator,
-    machine: *Machine,
-    visited: *std.AutoHashMap(u16, void),
-    strings: *std.ArrayList([]const u8),
-) !void {
-    if (strings.items.len >= 14) return;
+fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT), string: []const u8) !u16 {
+    var machine = try Machine.init(try registers.clone(), 4500, string, "\nWALK\n");
+    defer machine.registers.deinit();
+
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
+
+    while (machine.run()) |res| {
+        if (res <= 255) {
+            try result.append(@intCast(res));
+        } else {
+            print(res);
+            return 0;
+        }
+    }
+    return BitSet16.init(result.items).value;
+}
+
+fn bruteforce(
+    allocator: Allocator,
+    registers: *std.ArrayList(ProgT),
+    visited: *std.AutoHashMap(u16, void),
+    strings: *std.ArrayList([]const u8),
+) !bool {
+    if (strings.items.len >= 14) return false;
+
+    // "E", "F", "G", "H", "I",
+    const chars = [_][]const u8{ "A", "B", "C", "D" };
+    const write = [_][]const u8{ "J", "T" };
+
+    //     "NOT C J",
+    //     "NOT A T",
+    //     "OR T J",
+    //     "AND D J",
 
     var buf: [3][]const u8 = undefined;
     for ([_][]const u8{ "AND", "NOT", "OR" }) |a| {
         buf[0] = a;
-        for (1..3) |i| {
-            // "E", "F", "G", "H", "I",
-            for ([_][]const u8{ "A", "B", "C", "D", "J", "T" }) |b| {
-                result.clearRetainingCapacity();
-                buf[i] = b;
+        for (chars) |b| {
+            buf[1] = b;
+            for (write) |c| {
+                buf[2] = c;
 
                 const buf_res = try std.mem.join(allocator, " ", &buf);
                 defer allocator.free(buf_res);
@@ -223,25 +239,27 @@ fn bruteforce(
                 try strings.append(buf_res);
                 defer _ = strings.pop();
 
-                const string = try std.mem.join(allocator, "\n", strings.items);
-                defer allocator.free(string);
-                machine.resetAndSet(string);
+                const str = try std.mem.join(allocator, "\n", strings.items);
+                defer allocator.free(str);
 
-                while (machine.run()) |res| {
-                    if (res <= 255) {
-                        try result.append(@intCast(res));
-                    } else {
-                        print(res);
-                        return;
-                    }
+                const result = try runMachine(allocator, registers, str);
+                std.debug.print("{b}\n", .{result});
+                prints(str);
+                print(strings.items.len);
+                if (visited.contains(result)) continue;
+                try visited.put(result, {});
+                myf.waitForInput();
+                if (try bruteforce(allocator, registers, visited, strings)) {
+                    prints("abba");
+                    return true;
                 }
-                const bits = BitSet16.init(result.items).value;
-                if (visited.contains(bits)) continue;
-                try visited.put(bits, {});
-                try bruteforce(allocator, machine, visited, strings);
             }
         }
+
+        // if (visited.contains(bits)) continue;
+        // try visited.put(bits, {});
     }
+    return false;
 }
 
 const BitSet16 = struct {
