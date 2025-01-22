@@ -32,20 +32,14 @@ const Machine = struct {
     pc: u32 = 0,
 
     const Self = @This();
-    pub fn init(registers: std.ArrayList(ProgT), register_size: usize, input: []const u8, end: []const u8) !Machine {
-        var regs = registers;
-        for (0..register_size - registers.items.len) |_| try regs.append(0);
+    pub fn init(registers: *const std.ArrayList(ProgT), input: []const u8, end: []const u8) !Machine {
         return Machine{
-            .registers = regs,
+            .registers = try registers.clone(),
             .input_value = MachineInputIterator{ .array = input, .end = end },
         };
     }
-
-    pub fn resetAndSet(self: *Self, input: []const u8) void {
-        self.pc = 0;
-        self.relative_base = 0;
-        self.input_value.array = input;
-        self.input_value.index = 0;
+    pub fn deinit(self: *Self) void {
+        self.registers.deinit();
     }
 
     fn getFactor(param: u32) ProgT {
@@ -53,29 +47,43 @@ const Machine = struct {
     }
 
     fn set_PcValue_get_op(self: *Self) ProgT {
-        self.pc_value = self.registers.items[@intCast(self.pc)];
+        self.pc_value = self.getReg(self.pc);
         return @mod(self.pc_value, 100);
+    }
+
+    fn setReg(self: *Self, index: anytype, value: ProgT) void {
+        const i: u16 = @intCast(index);
+        if (i >= self.registers.items.len)
+            self.registers.appendNTimes(0, i - self.registers.items.len + 1) catch unreachable;
+        self.registers.items[i] = value;
+    }
+
+    fn getReg(self: *Self, index: anytype) ProgT {
+        const i: u16 = @intCast(index);
+        if (i >= self.registers.items.len)
+            self.registers.appendNTimes(0, i - self.registers.items.len + 1) catch unreachable;
+        return self.registers.items[i];
     }
 
     fn getValue(self: *Self, param: u32, add_pc: u32) ProgT {
         const offset = self.pc + param;
-        const item = switch (@mod(@divFloor(self.registers.items[self.pc], getFactor(param)), 10)) {
-            0 => self.registers.items[offset],
+        const item = switch (@mod(@divFloor(self.getReg(self.pc), getFactor(param)), 10)) {
+            0 => self.getReg(offset),
             1 => offset,
-            else => self.relative_base + self.registers.items[offset],
+            else => self.relative_base + self.getReg(offset),
         };
         self.pc += add_pc;
-        return self.registers.items[@intCast(item)];
+        return self.getReg(item);
     }
 
     fn setValue(self: *Self, param: u32, put_value: ProgT) void {
-        const item = self.registers.items[self.pc + param];
-        const index = switch (@mod(@divFloor(self.registers.items[self.pc], getFactor(param)), 10)) {
+        const item = self.getReg(self.pc + param);
+        const index = switch (@mod(@divFloor(self.getReg(self.pc), getFactor(param)), 10)) {
             0 => item,
             else => self.relative_base + item,
         };
         self.pc += param + 1;
-        self.registers.items[@intCast(index)] = put_value;
+        self.setReg(index, put_value);
     }
 
     pub fn run(self: *Self) ?ProgT {
@@ -96,16 +104,19 @@ const Machine = struct {
     }
 };
 
+fn runMachine(registers: *const std.ArrayList(ProgT), string: []const u8, comptime directive: []const u8) !i64 {
+    var machine = try Machine.init(registers, string, directive ++ "\n");
+    defer machine.deinit();
+
+    while (machine.run()) |res| if (res > 255) return res;
+    return 0;
+}
+
 fn joinStrings(comptime strs: []const []const u8) []const u8 {
     comptime {
         const delim = "\n";
         var strings: []const u8 = "";
-        for (strs, 0..) |s, i| {
-            strings = strings ++ s;
-            if (i != strs.len - 1) {
-                strings = strings ++ delim;
-            }
-        }
+        for (strs) |s| strings = strings ++ s ++ delim;
         return strings;
     }
 }
@@ -155,18 +166,4 @@ pub fn main() !void {
         try runMachine(&registers, p1, "WALK"),
         try runMachine(&registers, p2, "RUN"),
     });
-}
-
-fn runMachine(registers: *const std.ArrayList(ProgT), string: []const u8, comptime directive: []const u8) !i64 {
-    var machine = try Machine.init(try registers.clone(), 2280, string, "\n" ++ directive ++ "\n");
-    defer machine.registers.deinit();
-
-    var result: i64 = 0;
-    while (machine.run()) |res| {
-        if (res > 255) {
-            result = res;
-            break;
-        }
-    }
-    return result;
 }
