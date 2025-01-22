@@ -12,7 +12,7 @@ const ProgT = i64;
 
 const Machine = struct {
     registers: std.ArrayList(ProgT),
-    input_value: ?MachineInputIterator = null,
+    input_value: MachineInputIterator,
     relative_base: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
@@ -30,7 +30,8 @@ const Machine = struct {
     pub fn resetAndSet(self: *Self, input: []const u8) void {
         self.pc = 0;
         self.relative_base = 0;
-        self.input_value = .{ .array = input };
+        self.input_value.array = input;
+        self.input_value.index = 0;
     }
 
     fn getFactor(param: u32) ProgT {
@@ -68,7 +69,7 @@ const Machine = struct {
             switch (self.set_PcValue_get_op()) {
                 1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
                 2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
-                3 => self.setValue(1, self.input_value.?.next().?),
+                3 => self.setValue(1, self.input_value.next().?),
                 4 => return self.getValue(1, 2),
                 5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
                 6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
@@ -135,7 +136,12 @@ fn joinStrings(comptime strs: []const []const u8) []const u8 {
     comptime {
         const delim = "\n";
         var strings: []const u8 = "";
-        for (strs) |s| strings = strings ++ s ++ delim;
+        for (strs, 0..) |s, i| {
+            strings = strings ++ s;
+            if (i != strs.len - 1) {
+                strings = strings ++ delim;
+            }
+        }
         return strings;
     }
 }
@@ -164,24 +170,78 @@ test "example" {
         "OR T J",
         "AND D J",
         "AND I J",
+        "OR E J",
         "AND G J",
         // "OR E J",
         // "OR H J",
         // "AND H J",
     });
 
-    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "RUN\n");
+    var machine = try Machine.init(try registers.clone(), 4500, part2_routine, "\nRUN\n");
     defer machine.registers.deinit();
 
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     while (machine.run()) |res| {
-        // print(res);
+        print(res);
         if (res <= 255) try result.append(@intCast(res));
     }
+    var strings = std.ArrayList([]const u8).init(allocator);
+    defer strings.deinit();
 
-    prints(result.items);
+    var visited = std.AutoHashMap(u16, void).init(allocator);
+    defer visited.deinit();
+    try visited.put(BitSet16.init(result.items).value, {});
+
+    try bruteforce(allocator, &machine, &visited, &strings);
+    // prints(result.items);
     // BitSet16.init(result.items).print();
+}
+
+fn bruteforce(
+    allocator: Allocator,
+    machine: *Machine,
+    visited: *std.AutoHashMap(u16, void),
+    strings: *std.ArrayList([]const u8),
+) !void {
+    if (strings.items.len >= 14) return;
+    var result = std.ArrayList(u8).init(allocator);
+    defer result.deinit();
+
+    var buf: [3][]const u8 = undefined;
+    for ([_][]const u8{ "AND", "NOT", "OR" }) |a| {
+        buf[0] = a;
+        for (1..3) |i| {
+            // "E", "F", "G", "H", "I",
+            for ([_][]const u8{ "A", "B", "C", "D", "J", "T" }) |b| {
+                result.clearRetainingCapacity();
+                buf[i] = b;
+
+                const buf_res = try std.mem.join(allocator, " ", &buf);
+                defer allocator.free(buf_res);
+
+                try strings.append(buf_res);
+                defer _ = strings.pop();
+
+                const string = try std.mem.join(allocator, "\n", strings.items);
+                defer allocator.free(string);
+                machine.resetAndSet(string);
+
+                while (machine.run()) |res| {
+                    if (res <= 255) {
+                        try result.append(@intCast(res));
+                    } else {
+                        print(res);
+                        return;
+                    }
+                }
+                const bits = BitSet16.init(result.items).value;
+                if (visited.contains(bits)) continue;
+                try visited.put(bits, {});
+                try bruteforce(allocator, machine, visited, strings);
+            }
+        }
+    }
 }
 
 const BitSet16 = struct {
