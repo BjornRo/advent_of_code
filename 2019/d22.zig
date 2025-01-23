@@ -46,7 +46,7 @@ test "example" {
     var list = std.ArrayList(i8).init(allocator);
     defer list.deinit();
 
-    const input = @embedFile("in/d22t.txt");
+    const input = @embedFile("in/d22.txt");
     const input_attributes = try myf.getInputAttributes(input);
 
     var procedure_list = std.ArrayList(MoveType).init(allocator);
@@ -63,25 +63,53 @@ test "example" {
         const move: MoveType = if (row[0] == 'd') .{ .deal_with_inc = value } else .{ .cut = value };
         try procedure_list.append(move);
     }
-    print(procedure_list.items);
-    try part1(allocator, &procedure_list.items, 10);
+    try part1(allocator, &procedure_list.items, 10007, 2019);
 }
 
-fn part1(allocator: Allocator, procedures: *const []const MoveType, len: usize) !void {
-    var deck = try allocator.alloc(u32, len);
-    defer allocator.free(deck);
-    for (deck, 0..) |*d, i| d.* = @intCast(i);
-    deck[0] = deck[0];
+// 645 too low 1219
+// 7197 too high
 
+fn part1(_: Allocator, procedures: *const []const MoveType, len: i128, card_index: usize) !void {
+    // var deck = try allocator.alloc(u16, @intCast(len));
+    // defer allocator.free(deck);
+    // for (deck, 0..) |*d, i| d.* = @intCast(i);
+
+    // var reverse = false;
+    var index: i128 = @intCast(card_index);
     for (procedures.*) |proc| {
         switch (proc) {
-            .deal_into => std.mem.reverse(u32, deck),
+            .deal_into => {
+                // reverse = !reverse;
+                index = len - 1 - index;
+            },
             .cut => |value| {
-                _ = value;
+                index = @mod(index - value, len);
             },
             .deal_with_inc => |value| {
-                _ = value;
+                // var new_deck = try allocator.dupe(u16, deck);
+                // defer {
+                //     allocator.free(deck);
+                //     deck = new_deck;
+                //     // print(deck);
+                // }
+                // for (0..deck.len) |i| {
+                //     const ii: i64 = @intCast(i);
+                //     new_deck[@intCast(@mod(ii * value_, len))] = deck[i];
+                // }
+                // const value_ = try myf.modInverse(i64, value, len);
+                index = @mod(index * value, len);
             },
         }
     }
+    // for (0..deck.len) |i| {
+    //     const ii: i64 = @intCast(i);
+    //     const j = if (reverse) @mod(index + ii, len) else @mod(index - ii, len);
+    //     const jj: usize = @intCast(j);
+    //     std.debug.print("{d} ", .{deck[jj]});
+    // }
+    // std.debug.print("\n", .{});
+
+    // const j = if (reverse) @mod(index + 2019, len) else @mod(index - 2019, len);
+    // const jj: usize = @intCast(j);
+    std.debug.print("{d}\n\n", .{index});
 }
