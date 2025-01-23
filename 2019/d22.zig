@@ -63,53 +63,44 @@ test "example" {
         const move: MoveType = if (row[0] == 'd') .{ .deal_with_inc = value } else .{ .cut = value };
         try procedure_list.append(move);
     }
-    try part1(allocator, &procedure_list.items, 10007, 2019);
+    try part2(&procedure_list.items, 10007, 4684);
+    // try part2(&procedure_list.items, 119315717514047, 2020);
 }
 
-// 645 too low 1219
-// 7197 too high
+// too high 75756230842694, 38515460445925
+fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !void {
+    _ = card_index;
 
-fn part1(_: Allocator, procedures: *const []const MoveType, len: i128, card_index: usize) !void {
-    // var deck = try allocator.alloc(u16, @intCast(len));
-    // defer allocator.free(deck);
-    // for (deck, 0..) |*d, i| d.* = @intCast(i);
+    var inc: i128 = 1;
+    var offset: i128 = 0;
 
-    // var reverse = false;
-    var index: i128 = @intCast(card_index);
     for (procedures.*) |proc| {
         switch (proc) {
             .deal_into => {
-                // reverse = !reverse;
-                index = len - 1 - index;
+                offset = len - 1 - offset;
             },
             .cut => |value| {
-                index = @mod(index - value, len);
+                offset = @mod(offset - value, len);
             },
             .deal_with_inc => |value| {
-                // var new_deck = try allocator.dupe(u16, deck);
-                // defer {
-                //     allocator.free(deck);
-                //     deck = new_deck;
-                //     // print(deck);
-                // }
-                // for (0..deck.len) |i| {
-                //     const ii: i64 = @intCast(i);
-                //     new_deck[@intCast(@mod(ii * value_, len))] = deck[i];
-                // }
-                // const value_ = try myf.modInverse(i64, value, len);
-                index = @mod(index * value, len);
+                // std.debug.print("{d} {d}\n\n", .{ value, value_ });
+                inc = try myf.modInverse(i128, inc * value, len);
+                offset = @mod(offset * value, len);
             },
         }
     }
-    // for (0..deck.len) |i| {
-    //     const ii: i64 = @intCast(i);
-    //     const j = if (reverse) @mod(index + ii, len) else @mod(index - ii, len);
-    //     const jj: usize = @intCast(j);
-    //     std.debug.print("{d} ", .{deck[jj]});
-    // }
-    // std.debug.print("\n", .{});
 
-    // const j = if (reverse) @mod(index + 2019, len) else @mod(index - 2019, len);
-    // const jj: usize = @intCast(j);
+    // print()
+}
+
+fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !void {
+    var index: i128 = @intCast(card_index);
+    for (procedures.*) |proc| {
+        switch (proc) {
+            .deal_into => index = len - 1 - index,
+            .cut => |value| index = @mod(index - value, len),
+            .deal_with_inc => |value| index = @mod(index * value, len),
+        }
+    }
     std.debug.print("{d}\n\n", .{index});
 }

@@ -285,6 +285,21 @@ pub fn modInverse(comptime T: type, a: T, m: T) !T {
     return error.NoInverseExist;
 }
 
+pub fn modExp(base: i128, exp: i128, mod: i128) i128 {
+    var result: @TypeOf(base) = 1;
+    var b = @mod(base, mod);
+    var e = exp;
+
+    while (e > 0) {
+        if ((e & 1) == 1) {
+            result = @mod(result * b, mod);
+        }
+        b = @mod(b * b, mod);
+        e >>= 1;
+    }
+    return result;
+}
+
 pub fn crt(comptime T: type, remainders: []const T, moduli: []const T) !i128 {
     comptime switch (@typeInfo(T)) {
         .Int => |int| std.debug.assert(int.signedness == .signed),
