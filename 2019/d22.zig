@@ -63,16 +63,24 @@ test "example" {
         const move: MoveType = if (row[0] == 'd') .{ .deal_with_inc = value } else .{ .cut = value };
         try procedure_list.append(move);
     }
-    try part2(&procedure_list.items, 10007, 4684);
+
+    // var buf: [10007]i128 = undefined;
+    // for (0..10007) |i| {
+    //     buf[@intCast(try part1(&procedure_list.items, 10007, i))] = i;
+    // }
+    // print(buf[2019..2022]);
+    // prints("");
+    // { 8603, 3858, 9120 }
+    print(try part1(&procedure_list.items, 10007, 0));
+    try part2(&procedure_list.items, 10007, 2020);
     // try part2(&procedure_list.items, 119315717514047, 2020);
 }
 
 // too high 75756230842694, 38515460445925
 fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !void {
-    _ = card_index;
-
-    var inc: i128 = 1;
+    // var inc: i128 = 1;
     var offset: i128 = 0;
+    _ = card_index;
 
     for (procedures.*) |proc| {
         switch (proc) {
@@ -84,16 +92,17 @@ fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !voi
             },
             .deal_with_inc => |value| {
                 // std.debug.print("{d} {d}\n\n", .{ value, value_ });
-                inc = try myf.modInverse(i128, inc * value, len);
+                // inc = try myf.modInverse(i128, inc * value, len);
                 offset = @mod(offset * value, len);
             },
         }
     }
+    // inc = myf.modExp(card_index, inc, len);
 
-    // print()
+    print(offset);
 }
 
-fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !void {
+fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !i128 {
     var index: i128 = @intCast(card_index);
     for (procedures.*) |proc| {
         switch (proc) {
@@ -102,5 +111,5 @@ fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !voi
             .deal_with_inc => |value| index = @mod(index * value, len),
         }
     }
-    std.debug.print("{d}\n\n", .{index});
+    return index;
 }
