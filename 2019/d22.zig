@@ -78,9 +78,9 @@ test "example" {
 
 // too high 75756230842694, 38515460445925
 fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !void {
-    // var inc: i128 = 1;
+    var inc: i128 = 1;
     var offset: i128 = 0;
-    _ = card_index;
+    // _ = card_index;
 
     for (procedures.*) |proc| {
         switch (proc) {
@@ -92,12 +92,15 @@ fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !voi
             },
             .deal_with_inc => |value| {
                 // std.debug.print("{d} {d}\n\n", .{ value, value_ });
-                // inc = try myf.modInverse(i128, inc * value, len);
+                inc = try myf.modInverse(i128, inc * value, len);
                 offset = @mod(offset * value, len);
             },
         }
     }
-    // inc = myf.modExp(card_index, inc, len);
+    inc = myf.modExp(card_index, inc, len);
+    const xx = @mod(card_index * inc, len) - 1;
+    print(xx);
+    print(inc);
 
     print(offset);
 }
@@ -105,11 +108,11 @@ fn part2(procedures: *const []const MoveType, len: i128, card_index: usize) !voi
 fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !i128 {
     var index: i128 = @intCast(card_index);
     for (procedures.*) |proc| {
-        switch (proc) {
-            .deal_into => index = len - 1 - index,
-            .cut => |value| index = @mod(index - value, len),
-            .deal_with_inc => |value| index = @mod(index * value, len),
-        }
+        index = switch (proc) {
+            .deal_into => len - 1 - index,
+            .cut => |value| @mod(index - value, len),
+            .deal_with_inc => |value| @mod(index * value, len),
+        };
     }
     return index;
 }
