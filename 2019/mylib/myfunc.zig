@@ -241,70 +241,53 @@ pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     return @abs(a * b) / std.math.gcd(a, b);
 }
 
-pub fn egcd(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
-    comptime switch (@typeInfo(T)) {
-        .Int => |int| std.debug.assert(int.signedness == .signed),
-        else => unreachable,
-    };
-    const F = struct {
-        fn f(x: *T, y: *T, xu: *T, xv: *T, yu: *T, yv: *T) void {
-            const Vec3 = @Vector(3, T);
-            const new_vec_x = Vec3{ y.*, yu.*, yv.* } - Vec3{ x.*, xu.*, xv.* };
-            y.* = x.*;
-            yu.* = xu.*;
-            yv.* = xv.*;
-            x.* = new_vec_x[0];
-            xu.* = new_vec_x[1];
-            xv.* = new_vec_x[2];
-        }
-    };
+pub fn egcd(a: i128, b: i128) struct { gcd: i128, u: i128, v: i128 } {
+    var _a: @TypeOf(a, b) = a;
+    var _b: @TypeOf(a, b) = b;
+    var au: @TypeOf(a, b) = 1;
+    var av: @TypeOf(a, b) = 0;
+    var bu: @TypeOf(a, b) = 0;
+    var bv: @TypeOf(a, b) = 1;
 
-    var _a: T = a;
-    var _b: T = b;
-    var au: T = 1;
-    var av: T = 0;
-    var bu: T = 0;
-    var bv: T = 1;
+    while (_b != 0) {
+        const quote = @divTrunc(_a, _b);
+        const rem = _a - quote * _b;
 
-    while (@mod(_a, _b) != 0 and @mod(_b, _a) != 0) {
-        if (_a <= _b) {
-            F.f(&_a, &_b, &au, &av, &bu, &bv);
-        } else {
-            F.f(&_b, &_a, &bu, &bv, &au, &av);
-        }
+        _a = _b;
+        _b = rem;
+
+        const temp_u = au - quote * bu;
+        const temp_v = av - quote * bv;
+
+        au = bu;
+        av = bv;
+        bu = temp_u;
+        bv = temp_v;
     }
-
-    return if (_a <= _b) .{ .gcd = _a, .u = au, .v = av } else .{ .gcd = _b, .u = bu, .v = bv };
+    return .{ .gcd = _a, .u = au, .v = av };
 }
 
-pub fn modInverse(comptime T: type, a: T, m: T) !T {
-    const res = egcd(T, a, m);
-    if (res.gcd == 1) {
-        return @mod(res.u, m);
-    }
+pub fn modInv(a: i128, mod: i128) !i128 {
+    if (mod <= 0) return error.InvalidModulus;
+    const res = egcd(a, mod);
+    if (res.gcd == 1) return @mod(res.u, mod);
     return error.NoInverseExist;
 }
 
-pub fn modExp(base: i128, exp: i128, mod: i128) i128 {
-    var result: @TypeOf(base) = 1;
-    var b = @mod(base, mod);
-    var e = exp;
+pub fn modExp(base: i128, exponent: i128, mod: i128) i128 {
+    var product_: @TypeOf(base) = 1;
+    var base_ = @mod(base, mod);
+    var exponent_ = exponent;
 
-    while (e > 0) {
-        if ((e & 1) == 1) {
-            result = @mod(result * b, mod);
-        }
-        b = @mod(b * b, mod);
-        e >>= 1;
+    while (exponent_ > 0) {
+        if ((exponent_ & 1) == 1) product_ = @mod(product_ * base_, mod);
+        base_ = @mod(base_ * base_, mod);
+        exponent_ >>= 1;
     }
-    return result;
+    return product_;
 }
 
-pub fn crt(comptime T: type, remainders: []const T, moduli: []const T) !i128 {
-    comptime switch (@typeInfo(T)) {
-        .Int => |int| std.debug.assert(int.signedness == .signed),
-        else => unreachable,
-    };
+pub fn crt(remainders: []const i128, moduli: []const i128) !i128 {
     if (moduli.len != remainders.len) {
         return error.LengthMisMatch;
     }
@@ -315,7 +298,7 @@ pub fn crt(comptime T: type, remainders: []const T, moduli: []const T) !i128 {
     var result: i128 = 0;
     for (moduli, 0..) |mi, i| {
         const bi = @divExact(prod, mi);
-        result += remainders[i] * (try modInverse(i128, bi, mi)) * bi;
+        result += remainders[i] * (try modInv(i128, bi, mi)) * bi;
     }
     return @mod(result, prod);
 }
@@ -645,4 +628,40 @@ pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8
 //         .index = 0,
 //         .positions = &slice,
 //     };
+// }
+
+// pub fn egcd(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
+//     comptime switch (@typeInfo(T)) {
+//         .Int => |int| std.debug.assert(int.signedness == .signed),
+//         else => unreachable,
+//     };
+//     const F = struct {
+//         fn f(x: *T, y: *T, xu: *T, xv: *T, yu: *T, yv: *T) void {
+//             const Vec3 = @Vector(3, T);
+//             const new_vec_x = Vec3{ y.*, yu.*, yv.* } - Vec3{ x.*, xu.*, xv.* };
+//             y.* = x.*;
+//             yu.* = xu.*;
+//             yv.* = xv.*;
+//             x.* = new_vec_x[0];
+//             xu.* = new_vec_x[1];
+//             xv.* = new_vec_x[2];
+//         }
+//     };
+
+//     var _a: T = a;
+//     var _b: T = b;
+//     var au: T = 1;
+//     var av: T = 0;
+//     var bu: T = 0;
+//     var bv: T = 1;
+
+//     while (@mod(_a, _b) != 0 and @mod(_b, _a) != 0) {
+//         if (_a <= _b) {
+//             F.f(&_a, &_b, &au, &av, &bu, &bv);
+//         } else {
+//             F.f(&_b, &_a, &bu, &bv, &au, &av);
+//         }
+//     }
+
+//     return if (_a <= _b) .{ .gcd = _a, .u = au, .v = av } else .{ .gcd = _b, .u = bu, .v = bv };
 // }
