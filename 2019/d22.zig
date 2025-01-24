@@ -72,6 +72,7 @@ test "example" {
 
     // print(try part1(&procedure_list.items, 10007, 0));
     try part2(&procedure_list.items, 10007, 3, 2020);
+    print(myf.egcd(21, 5));
     // try part2(&procedure_list.items, 119315717514047, 101741582076661, 2020);
 }
 

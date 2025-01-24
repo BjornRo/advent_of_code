@@ -242,29 +242,18 @@ pub fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
 }
 
 pub fn egcd(a: i128, b: i128) struct { gcd: i128, u: i128, v: i128 } {
-    var _a: @TypeOf(a, b) = a;
-    var _b: @TypeOf(a, b) = b;
-    var au: @TypeOf(a, b) = 1;
-    var av: @TypeOf(a, b) = 0;
-    var bu: @TypeOf(a, b) = 0;
-    var bv: @TypeOf(a, b) = 1;
-
-    while (_b != 0) {
-        const quote = @divTrunc(_a, _b);
-        const rem = _a - quote * _b;
-
-        _a = _b;
-        _b = rem;
-
-        const temp_u = au - quote * bu;
-        const temp_v = av - quote * bv;
-
-        au = bu;
-        av = bv;
-        bu = temp_u;
-        bv = temp_v;
-    }
-    return .{ .gcd = _a, .u = au, .v = av };
+    const F = struct {
+        fn egcd_(a_: i128, b_: i128) [3]i128 {
+            if (a_ == 0) return [3]i128{ @intCast(@abs(b_)), 0, 1 };
+            var res = egcd_(@mod(b_, a_), a_);
+            const u = res[1];
+            res[1] = res[2] - @divFloor(b_, a_) * u;
+            res[2] = u;
+            return res;
+        }
+    };
+    const gcd, const u, const v = F.egcd_(a, b);
+    return .{ .gcd = gcd, .u = u, .v = v };
 }
 
 pub fn modInv(a: i128, mod: i128) !i128 {
@@ -630,7 +619,7 @@ pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8
 //     };
 // }
 
-// pub fn egcd(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
+// pub fn egcda(comptime T: type, a: T, b: T) struct { gcd: T, u: T, v: T } {
 //     comptime switch (@typeInfo(T)) {
 //         .Int => |int| std.debug.assert(int.signedness == .signed),
 //         else => unreachable,
@@ -664,4 +653,30 @@ pub fn joinStrings(allocator: Allocator, strings: anytype, separator: []const u8
 //     }
 
 //     return if (_a <= _b) .{ .gcd = _a, .u = au, .v = av } else .{ .gcd = _b, .u = bu, .v = bv };
+// }
+
+// pub fn egcd(a: i128, b: i128) struct { gcd: i128, u: i128, v: i128 } {
+//     var _a: @TypeOf(a, b) = a;
+//     var _b: @TypeOf(a, b) = b;
+//     var au: @TypeOf(a, b) = 1;
+//     var av: @TypeOf(a, b) = 0;
+//     var bu: @TypeOf(a, b) = 0;
+//     var bv: @TypeOf(a, b) = 1;
+
+//     while (_b != 0) {
+//         const quote = @divTrunc(_a, _b);
+//         const rem = _a - quote * _b;
+
+//         _a = _b;
+//         _b = rem;
+
+//         const temp_u = au - quote * bu;
+//         const temp_v = av - quote * bv;
+
+//         au = bu;
+//         av = bv;
+//         bu = temp_u;
+//         bv = temp_v;
+//     }
+//     return .{ .gcd = @intCast(@abs(_a)), .u = au, .v = av };
 // }
