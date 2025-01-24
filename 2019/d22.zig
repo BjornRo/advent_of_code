@@ -41,6 +41,7 @@ const MoveType = union(enum) {
     deal_into,
 };
 
+// too high 75756230842694, 38515460445925
 test "example" {
     const allocator = std.testing.allocator;
     var list = std.ArrayList(i8).init(allocator);
@@ -65,18 +66,15 @@ test "example" {
     }
 
     var buf: [10007]i128 = undefined;
-    for (0..10007) |i| {
-        buf[@intCast(try part1(&procedure_list.items, 10007, i))] = i;
-    }
-    print(buf[2019..2022]);
-    prints("");
-    // { 8603, 3858, 9120 }
+    for (0..10007) |i| buf[@intCast(try part1(&procedure_list.items, 10007, 3, i))] = i;
+    std.debug.print("{any}, exp: {d}\n\n", .{ buf[2019..2022], buf[2020] });
+    // 2020(3 shuffles): 7033
+
     // print(try part1(&procedure_list.items, 10007, 0));
-    try part2(&procedure_list.items, 10007, 11, 2020);
+    try part2(&procedure_list.items, 10007, 3, 2020);
     // try part2(&procedure_list.items, 119315717514047, 101741582076661, 2020);
 }
 
-// too high 75756230842694, 38515460445925
 fn part2(procedures: *const []const MoveType, len: i128, shuffles: i128, card_index: usize) !void {
     var index: i128 = 0;
 
@@ -107,9 +105,9 @@ fn part2(procedures: *const []const MoveType, len: i128, shuffles: i128, card_in
     // print(offset);
 }
 
-fn part1(procedures: *const []const MoveType, len: i128, card_index: usize) !i128 {
+fn part1(procedures: *const []const MoveType, len: i128, n_shuffles: usize, card_index: usize) !i128 {
     var index: i128 = @intCast(card_index);
-    for (0..11) |_| {
+    for (0..n_shuffles) |_| {
         for (procedures.*) |proc| {
             index = switch (proc) {
                 .deal_into => len - 1 - index,
