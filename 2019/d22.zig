@@ -110,7 +110,7 @@ fn part1(procedures: *const []const MoveType, len: i128, n_shuffles: usize, card
     for (0..n_shuffles) |_| {
         for (procedures.*) |proc| {
             index = switch (proc) {
-                .deal_into => len - 1 - index,
+                .deal_into => @mod(len - 1 - index, len),
                 .cut => |value| @mod(index - value, len),
                 .deal_with_inc => |value| @mod(index * value, len),
             };
