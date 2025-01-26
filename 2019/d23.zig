@@ -1,20 +1,17 @@
 const std = @import("std");
 const myf = @import("mylib/myfunc.zig");
 const Deque = @import("mylib/deque.zig").Deque;
-const PriorityQueue = std.PriorityQueue;
-const printd = std.debug.print;
-const print = myf.printAny;
-const prints = myf.printStr;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
 const ProgT = i64;
-
 const Machine = struct {
     registers: std.ArrayList(ProgT),
     input_value: Deque(ProgT),
     relative_base: ProgT = 0,
     out_queue: myf.FixedBuffer(ProgT, 3) = myf.FixedBuffer(ProgT, 3).init(),
+    state: enum { Active, Idle } = .Active,
+    last_in: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
 
@@ -77,7 +74,11 @@ const Machine = struct {
         switch (self.set_PcValue_get_op()) {
             1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
             2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
-            3 => self.setValue(1, self.input_value.popFront() orelse -1),
+            3 => {
+                const result = self.input_value.popFront() orelse -1;
+                if (result == -1) self.state = .Idle;
+                self.setValue(1, result);
+            },
             4 => return self.getValue(1, 2),
             5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
             6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
@@ -90,6 +91,7 @@ const Machine = struct {
     }
     pub fn output(self: *Self) ?struct { id: u8, x: ProgT, y: ProgT } {
         if (self.run()) |item| {
+            self.state = .Active;
             self.out_queue.appendAssumeCapacity(item);
             if (self.out_queue.len == 3) {
                 defer self.out_queue.len = 0;
@@ -101,39 +103,39 @@ const Machine = struct {
     }
 };
 
-fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !i64 {
-    var network = std.ArrayList(Machine).init(allocator);
-    defer {
-        for (network.items) |*m| m.deinit();
-        network.deinit();
-    }
-    for (0..50) |i| try network.append(try Machine.init(allocator, registers, i));
+fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !struct { p1: ProgT, p2: ProgT } {
+    const MACHINES = 50;
+    var network: [MACHINES]Machine = undefined;
+    for (0..MACHINES) |i| network[i] = try Machine.init(allocator, registers, i);
+    defer for (&network) |*m| m.deinit();
 
     var p1: ?ProgT = null;
+    var p2: ProgT = 0;
     var nat_value: struct { x: ProgT, y: ProgT } = undefined;
 
     while (true) {
-        var idle: u8 = 0;
-        for (network.items) |*m| {
+        var idle: bool = true;
+        for (&network) |*m| {
             if (m.output()) |out| {
                 if (out.id == 255) {
                     if (p1 == null) p1 = out.y;
                     nat_value = .{ .x = out.x, .y = out.y };
                 } else {
-                    try network.items[out.id].input_value.pushBack(out.x);
-                    try network.items[out.id].input_value.pushBack(out.y);
+                    network[out.id].state = .Active;
+                    try network[out.id].input_value.pushBack(out.x);
+                    try network[out.id].input_value.pushBack(out.y);
                 }
             }
-            if (m.out_queue.len == 0 and m.input_value.len() == 0) idle += 1;
+            if (m.state != .Idle) idle = false;
         }
-        if (idle == 50) {
-            print(nat_value);
-            // try network.items[0].input_value.pushFront(nat_value.x);
-            // try network.items[0].input_value.pushFront(nat_value.y);
-        }
+        if (idle) if (p1) |p1_val| {
+            if (p2 == nat_value.y) return .{ .p1 = p1_val, .p2 = p2 };
+            network[0].state = .Active;
+            p2 = nat_value.y;
+            try network[0].input_value.pushBack(nat_value.x);
+            try network[0].input_value.pushBack(nat_value.y);
+        };
     }
-
-    return 0;
 }
 
 pub fn main() !void {
@@ -144,31 +146,15 @@ pub fn main() !void {
         const elapsed = @as(f128, @floatFromInt(end - start)) / @as(f128, 1_000_000);
         writer.print("\nTime taken: {d:.7}ms\n", .{elapsed}) catch {};
     }
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
-    // const allocator = gpa.allocator();
-    // var buffer: [70_000]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const allocator = fba.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
 
-    // const filename = try myf.getAppArg(allocator, 1);
-    // const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
-    // const input = try myf.readFile(allocator, target_file);
-    // defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
-    // const input_attributes = try myf.getInputAttributes(input);
+    const filename = try myf.getAppArg(allocator, 1);
+    const target_file = try std.mem.concat(allocator, u8, &.{ "in/", filename });
+    const input = try myf.readFile(allocator, target_file);
+    defer inline for (.{ filename, target_file, input }) |res| allocator.free(res);
     // End setup
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
-}
-
-test "example" {
-    const allocator = std.testing.allocator;
-    var list = std.ArrayList(i8).init(allocator);
-    defer list.deinit();
-
-    const input = @embedFile("in/d23.txt");
 
     var registers = std.ArrayList(ProgT).init(allocator);
     defer registers.deinit();
@@ -176,5 +162,6 @@ test "example" {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    _ = try runMachine(allocator, &registers);
+    const result = try runMachine(allocator, &registers);
+    try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ result.p1, result.p2 });
 }
