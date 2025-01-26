@@ -521,7 +521,7 @@ pub fn slowDown(ms: usize) void {
     std.time.sleep(ms * 1_000_000);
 }
 
-pub inline fn hash(key: u64) u64 {
+pub inline fn hashU64(key: u64) u64 {
     // https://nullprogram.com/blog/2018/07/31/
     var x = key;
     x ^= x >> 32;
