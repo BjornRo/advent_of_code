@@ -100,13 +100,17 @@ pub fn main() !void {
     var depth = Depth.init(allocator);
     defer {
         var v_it = depth.valueIterator();
-        while (v_it.next()) |m| myf.freeMatrix(allocator, m.*);
+        while (v_it.next()) |m| {
+            for (m.*) |row| prints(row);
+            prints("");
+            myf.freeMatrix(allocator, m.*);
+        }
         depth.deinit();
     }
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
 
     // const neighbors = DepthNeighbors.init(0, 0, 0, 0);
-    try part2(allocator, @intCast(matrix.len), &depth, 0, 2);
+    try part2(allocator, @intCast(matrix.len), &depth, 0, null, 2);
 
     // std.debug.print("{s}\n", .{input});
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
@@ -131,8 +135,12 @@ fn part2(
     dim: u8,
     depth_map: *Depth,
     depth: i16,
+    prev_depth: ?i16,
     minutes: u16,
 ) !void {
+    if (prev_depth == depth - 1 or prev_depth == depth + 1) {
+        return;
+    }
     const map_result = try depth_map.getOrPut(depth);
     if (!map_result.found_existing) {
         // map_result.value_ptr.* = myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
@@ -221,6 +229,6 @@ fn part2(
         }
     }
 
-    try part2(allocator, dim, depth_map, depth + 1, minutes);
-    try part2(allocator, dim, depth_map, depth - 1, minutes);
+    try part2(allocator, dim, depth_map, depth + 1, depth, minutes);
+    try part2(allocator, dim, depth_map, depth - 1, depth, minutes);
 }
