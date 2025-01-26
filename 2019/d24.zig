@@ -105,8 +105,8 @@ pub fn main() !void {
     }
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
 
-    const neighbors = DepthNeighbors.init(0, 0, 0, 0);
-    try part2(allocator, @intCast(matrix.len), &depth, 0, neighbors, neighbors);
+    // const neighbors = DepthNeighbors.init(0, 0, 0, 0);
+    try part2(allocator, @intCast(matrix.len), &depth, 0, 2);
 
     // std.debug.print("{s}\n", .{input});
     // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
@@ -114,25 +114,24 @@ pub fn main() !void {
 }
 
 const Depth = std.AutoHashMap(i16, [][]u8, HashCtx, 90);
-const DepthNeighbors = struct {
-    up: u8,
-    down: u8,
-    left: u8,
-    right: u8,
+// const DepthNeighbors = struct {
+//     up: u8,
+//     down: u8,
+//     left: u8,
+//     right: u8,
 
-    const Self = @This();
-    fn init(up: u8, down: u8, left: u8, right: u8) Self {
-        return DepthNeighbors{ .up = up, .down = down, .left = left, .right = right };
-    }
-};
+//     const Self = @This();
+//     fn init(up: u8, down: u8, left: u8, right: u8) Self {
+//         return DepthNeighbors{ .up = up, .down = down, .left = left, .right = right };
+//     }
+// };
 
 fn part2(
     allocator: Allocator,
     dim: u8,
     depth_map: *Depth,
     depth: i16,
-    depth_in: DepthNeighbors,
-    depth_out: DepthNeighbors,
+    minutes: u16,
 ) !void {
     const map_result = try depth_map.getOrPut(depth);
     if (!map_result.found_existing) {
@@ -144,6 +143,11 @@ fn part2(
         myf.freeMatrix(allocator, map_result.value_ptr.*);
         map_result.value_ptr.* = tmp;
     }
+
+    const depth_plus: ?[]const []const u8 = null;
+    const depth_minus: ?[]const []const u8 = null;
+
+    if (@abs(depth) <= (minutes / 2)) {}
 
     const half_dim = dim / 2;
     for (0..matrix.len) |i| {
