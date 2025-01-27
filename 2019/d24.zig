@@ -25,6 +25,16 @@ const HashCtx = struct {
     }
 };
 const Visited = std.HashMap(u32, void, HashCtx, 90);
+
+fn countGrid(matrix: []const []const u8) u64 {
+    var sum: u64 = 0;
+    for (matrix, 0..) |row, i| for (row, 0..) |elem, j| {
+        const index = i * matrix[0].len + j;
+        if (elem == '#') sum += try std.math.powi(u64, 2, index);
+    };
+    return sum;
+}
+
 fn part1(allocator: Allocator, const_matrix: []const []const u8) !void {
     var matrix = try myf.copyMatrix(allocator, const_matrix);
     var tmp = try myf.copyMatrix(allocator, const_matrix);
@@ -40,13 +50,7 @@ fn part1(allocator: Allocator, const_matrix: []const []const u8) !void {
         }
         const key = matrixToKey(matrix);
         if ((try visited.getOrPut(key)).found_existing) {
-            var sum: u64 = 0;
-            for (matrix, 0..) |row, i| {
-                for (row, 0..) |elem, j| {
-                    const index = i * matrix[0].len + j;
-                    if (elem == '#') sum += try std.math.powi(u64, 2, index);
-                }
-            }
+            const sum = countGrid(matrix);
             print(sum);
             return;
         }
@@ -121,28 +125,10 @@ const Depth = std.AutoHashMap(i16, [][]u8);
 fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     var depth = Depth.init(allocator);
     defer {
-        const DMap = struct {
-            index: i16,
-            matrix: [][]u8,
-
-            const Self = @This();
-            fn cmp(_: void, a: Self, b: Self) bool {
-                return a.index < b.index;
-            }
-        };
-        var v_it = depth.iterator();
-        var list = std.ArrayList(DMap).init(allocator);
-        while (v_it.next()) |kv| {
-            list.append(.{ .index = kv.key_ptr.*, .matrix = kv.value_ptr.* }) catch unreachable;
+        var v_it = depth.valueIterator();
+        while (v_it.next()) |v| {
+            myf.freeMatrix(allocator, v.*);
         }
-        std.mem.sort(DMap, list.items, {}, DMap.cmp);
-        for (list.items) |item| {
-            for (item.matrix) |row| prints(row);
-            print(item.index);
-            prints("");
-            myf.freeMatrix(allocator, item.matrix);
-        }
-        list.deinit();
         depth.deinit();
     }
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
@@ -150,7 +136,34 @@ fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     for (0..10) |i| {
         std.debug.print("@@ START MINUTE: {d} @@\n", .{i + 1});
         try gridception(allocator, @intCast(matrix.len), &depth, 0, .None, @intCast(i + 2));
+        printDepth(allocator, &depth);
+        myf.waitForInput();
         prints("## END MINUTE ##\n");
+    }
+}
+
+fn printDepth(allocator: Allocator, depth: *const Depth) void {
+    const DMap = struct {
+        index: i16,
+        matrix: [][]u8,
+
+        const Self = @This();
+        fn cmp(_: void, a: Self, b: Self) bool {
+            return a.index < b.index;
+        }
+    };
+    var v_it = depth.iterator();
+    var list = std.ArrayList(DMap).init(allocator);
+    defer list.deinit();
+
+    while (v_it.next()) |kv| {
+        list.append(.{ .index = kv.key_ptr.*, .matrix = kv.value_ptr.* }) catch unreachable;
+    }
+    std.mem.sort(DMap, list.items, {}, DMap.cmp);
+    for (list.items) |item| {
+        for (item.matrix) |row| prints(row);
+        print(item.index);
+        prints("");
     }
 }
 
@@ -164,22 +177,22 @@ fn gridception(
 ) !void {
     if (@abs(depth) > (minutes / 2)) return;
 
-    var depth_plus: ?[]const []const u8 = null;
-    var depth_minus: ?[]const []const u8 = null;
-    if (@abs(depth + 1) <= (minutes / 2)) {
-        // const depth_res = try depth_map.get(depth + 1);
-        if (depth_map.get(depth + 1)) |map| {
-            // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
-            depth_plus = map;
-        }
-    }
-    if (@abs(depth - 1) <= (minutes / 2)) {
-        // const depth_res = try depth_map.getOrPut(depth - 1);
-        if (depth_map.get(depth - 1)) |map| {
-            // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
-            depth_minus = map;
-        }
-    }
+    const depth_plus: ?[]const []const u8 = depth_map.get(depth + 1);
+    const depth_minus: ?[]const []const u8 = depth_map.get(depth - 1);
+    // if (@abs(depth + 1) <= (minutes / 2)) {
+    //     // const depth_res = try depth_map.get(depth + 1);
+    //     if (depth_map.get(depth + 1)) |map| {
+    //         // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
+    //         depth_plus = map;
+    //     }
+    // }
+    // if (@abs(depth - 1) <= (minutes / 2)) {
+    //     // const depth_res = try depth_map.getOrPut(depth - 1);
+    //     if (depth_map.get(depth - 1)) |map| {
+    //         // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
+    //         depth_minus = map;
+    //     }
+    // }
 
     const map_result = try depth_map.getOrPut(depth);
     if (!map_result.found_existing) {
@@ -204,14 +217,12 @@ fn gridception(
         for (matrix[i], 0..) |elem, j| {
             if (i == half_dim and j == half_dim) continue;
             var bugs: u8 = 0;
-            defer {
-                tmp[i][j] = if (elem == '#' and bugs != 1)
-                    '.'
-                else if (elem == '.' and (bugs == 1 or bugs == 2))
-                    '#'
-                else
-                    elem;
-            }
+            // ....#
+            // #..#.
+            // #.?##
+            // ..#..
+            // #....
+
             const ii = @as(i8, @intCast(i));
             const jj = @as(i8, @intCast(j));
             for (myf.getNeighborOffset(i8)) |offset| {
@@ -220,7 +231,7 @@ fn gridception(
                 const nc = jj + dc;
                 if (0 <= nr and nr < dim and 0 <= nc and nc < dim) {
                     if (nc == half_dim and nr == half_dim) {
-                        if (depth_minus) |next_grid| {
+                        if (depth_plus) |next_grid| {
                             if (dc == -1) {
                                 for (0..5) |k| {
                                     if (next_grid[k][dim - 1] == '#') bugs += 1;
@@ -241,19 +252,25 @@ fn gridception(
                         }
                     } else if (matrix[@intCast(nr)][@intCast(nc)] == '#') bugs += 1;
                 } else {
-                    if (depth_plus) |next_grid| {
+                    if (depth_minus) |next_grid| {
                         if (nr < 0) { // up
                             if (next_grid[half_dim - 1][half_dim] == '#') bugs += 1;
-                        } else if (dim < nr) { // down
+                        } else if (dim <= nr) { // down
                             if (next_grid[half_dim + 1][half_dim] == '#') bugs += 1;
                         } else if (nc < 0) { // left
                             if (next_grid[half_dim][half_dim - 1] == '#') bugs += 1;
-                        } else if (dim < nc) { // right
+                        } else if (dim <= nc) { // right
                             if (next_grid[half_dim][half_dim + 1] == '#') bugs += 1;
                         }
                     }
                 }
             }
+            tmp[i][j] = if (elem == '#' and bugs != 1)
+                '.'
+            else if (elem == '.' and (bugs == 1 or bugs == 2))
+                '#'
+            else
+                elem;
         }
     }
 
