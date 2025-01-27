@@ -133,7 +133,7 @@ fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
 
     for (0..10) |i| {
-        prints("@@ START MINUTE @@");
+        std.debug.print("@@ START MINUTE: {d} @@\n", .{i + 1});
         try gridception(allocator, @intCast(matrix.len), &depth, 0, .None, @intCast(i + 2));
         prints("## END MINUTE ##\n");
     }
@@ -171,16 +171,17 @@ fn gridception(
         map_result.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
         // return;
     }
-    std.debug.print("{d} {any}\n  {any}\n", .{ depth, depth_plus, depth_minus });
-    std.debug.print("exist: {any}, m: {d}\n", .{ map_result.found_existing, minutes / 2 });
+    // std.debug.print("{d} {any}\n  {any}\n", .{ depth, depth_plus, depth_minus });
+    // std.debug.print("exist: {any}, m: {d}\n", .{ map_result.found_existing, minutes / 2 });
 
-    myf.waitForInput();
+    // myf.waitForInput();
     const matrix = map_result.value_ptr.*;
     var tmp = try myf.copyMatrix(allocator, map_result.value_ptr.*);
     defer {
+        // std.debug.print("##HERE## depth: {d}\n", .{depth});
         myf.freeMatrix(allocator, matrix);
-        map_result.value_ptr.* = tmp;
-        std.debug.print("##HERE## depth: {d}\n", .{depth});
+        depth_map.putAssumeCapacity(depth, tmp);
+        // print(tmp);
     }
 
     const half_dim = dim / 2;
