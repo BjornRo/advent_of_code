@@ -110,17 +110,6 @@ pub fn main() !void {
 }
 
 const Depth = std.AutoHashMap(i16, [][]u8);
-// const DepthNeighbors = struct {
-//     up: u8,
-//     down: u8,
-//     left: u8,
-//     right: u8,
-
-//     const Self = @This();
-//     fn init(up: u8, down: u8, left: u8, right: u8) Self {
-//         return DepthNeighbors{ .up = up, .down = down, .left = left, .right = right };
-//     }
-// };
 
 fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     var depth = Depth.init(allocator);
@@ -186,37 +175,18 @@ fn gridception(
 
     const depth_plus: ?[]const []const u8 = depth_map.get(depth + 1);
     const depth_minus: ?[]const []const u8 = depth_map.get(depth - 1);
-    // if (@abs(depth + 1) <= (minutes / 2)) {
-    //     // const depth_res = try depth_map.get(depth + 1);
-    //     if (depth_map.get(depth + 1)) |map| {
-    //         // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
-    //         depth_plus = map;
-    //     }
-    // }
-    // if (@abs(depth - 1) <= (minutes / 2)) {
-    //     // const depth_res = try depth_map.getOrPut(depth - 1);
-    //     if (depth_map.get(depth - 1)) |map| {
-    //         // depth_res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
-    //         depth_minus = map;
-    //     }
-    // }
 
-    const map_result = try depth_map.getOrPut(depth);
-    if (!map_result.found_existing) {
-        map_result.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
-        // return;
-    }
-    // std.debug.print("{d} {any}\n  {any}\n", .{ depth, depth_plus, depth_minus });
-    // std.debug.print("exist: {any}, m: {d}\n", .{ map_result.found_existing, minutes / 2 });
+    const matrix = blk: {
+        const res = try depth_map.getOrPut(depth);
+        if (!res.found_existing)
+            res.value_ptr.* = try myf.initValueMatrix(allocator, dim, dim, @as(u8, '.'));
+        break :blk res.value_ptr.*;
+    };
 
-    // myf.waitForInput();
-    const matrix = map_result.value_ptr.*;
-    var tmp = try myf.copyMatrix(allocator, map_result.value_ptr.*);
+    var tmp = try myf.copyMatrix(allocator, matrix);
     defer {
-        // std.debug.print("##HERE## depth: {d}\n", .{depth});
         myf.freeMatrix(allocator, matrix);
         depth_map.putAssumeCapacity(depth, tmp);
-        // print(tmp);
     }
 
     const half_dim = dim / 2;
@@ -224,11 +194,6 @@ fn gridception(
         for (matrix[i], 0..) |elem, j| {
             if (i == half_dim and j == half_dim) continue;
             var bugs: u8 = 0;
-            // ....#
-            // #..#.
-            // #.?##
-            // ..#..
-            // #....
 
             const ii = @as(i8, @intCast(i));
             const jj = @as(i8, @intCast(j));
@@ -288,6 +253,5 @@ fn gridception(
         },
         .Up => try gridception(allocator, dim, depth_map, depth + 1, .Up, minutes),
         .Down => try gridception(allocator, dim, depth_map, depth - 1, .Down, minutes),
-        // else => {},
     }
 }
