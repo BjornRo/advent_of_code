@@ -121,13 +121,28 @@ const Depth = std.AutoHashMap(i16, [][]u8);
 fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     var depth = Depth.init(allocator);
     defer {
+        const DMap = struct {
+            index: i16,
+            matrix: [][]u8,
+
+            const Self = @This();
+            fn cmp(_: void, a: Self, b: Self) bool {
+                return a.index < b.index;
+            }
+        };
         var v_it = depth.iterator();
+        var list = std.ArrayList(DMap).init(allocator);
         while (v_it.next()) |kv| {
-            for (kv.value_ptr.*) |row| prints(row);
-            print(kv.key_ptr.*);
-            prints("");
-            myf.freeMatrix(allocator, kv.value_ptr.*);
+            list.append(.{ .index = kv.key_ptr.*, .matrix = kv.value_ptr.* }) catch unreachable;
         }
+        std.mem.sort(DMap, list.items, {}, DMap.cmp);
+        for (list.items) |item| {
+            for (item.matrix) |row| prints(row);
+            print(item.index);
+            prints("");
+            myf.freeMatrix(allocator, item.matrix);
+        }
+        list.deinit();
         depth.deinit();
     }
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
