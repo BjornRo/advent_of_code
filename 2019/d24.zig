@@ -125,20 +125,27 @@ const Depth = std.AutoHashMap(i16, [][]u8);
 fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     var depth = Depth.init(allocator);
     defer {
+        var sum: u64 = 0;
         var v_it = depth.valueIterator();
         while (v_it.next()) |v| {
+            for (v.*) |row| {
+                for (row) |e| {
+                    if (e == '#') sum += 1;
+                }
+            }
             myf.freeMatrix(allocator, v.*);
         }
+        print(sum);
         depth.deinit();
     }
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
 
-    for (0..10) |i| {
-        std.debug.print("@@ START MINUTE: {d} @@\n", .{i + 1});
+    for (0..200) |i| {
+        // std.debug.print("@@ START MINUTE: {d} @@\n", .{i + 1});
         try gridception(allocator, @intCast(matrix.len), &depth, 0, .None, @intCast(i + 2));
-        printDepth(allocator, &depth);
-        myf.waitForInput();
-        prints("## END MINUTE ##\n");
+        // printDepth(allocator, &depth);
+        // myf.waitForInput();
+        // prints("## END MINUTE ##\n");
     }
 }
 
