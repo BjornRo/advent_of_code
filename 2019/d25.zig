@@ -8,6 +8,21 @@ const prints = myf.printStr;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
+const MachineInputIterator = struct {
+    array: []const u8,
+    index: usize = 0,
+    end: []const u8,
+
+    pub fn next(self: *MachineInputIterator) ?u8 {
+        if (self.index >= self.array.len) {
+            self.array = self.end;
+            self.index = 0;
+        }
+        defer self.index += 1;
+        return self.array[self.index];
+    }
+};
+
 const ProgT = i64;
 const Machine = struct {
     registers: std.ArrayList(ProgT),
