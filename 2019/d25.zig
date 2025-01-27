@@ -8,38 +8,19 @@ const prints = myf.printStr;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
 
-const MachineInputIterator = struct {
-    array: []const u8,
-    index: usize = 0,
-    end: []const u8,
-
-    pub fn next(self: *MachineInputIterator) ?u8 {
-        if (self.index >= self.array.len) {
-            self.array = self.end;
-            self.index = 0;
-        }
-        defer self.index += 1;
-        return self.array[self.index];
-    }
-};
-
 const ProgT = i64;
 const Machine = struct {
     registers: std.ArrayList(ProgT),
     input_value: Deque(ProgT),
     relative_base: ProgT = 0,
-    out_queue: myf.FixedBuffer(ProgT, 3) = myf.FixedBuffer(ProgT, 3).init(),
-    state: enum { Active, Idle } = .Active,
-    last_in: ProgT = 0,
     pc_value: ProgT = 0,
     pc: u32 = 0,
 
     const Self = @This();
-    pub fn init(allocator: Allocator, registers: *const std.ArrayList(ProgT), id: usize) !Machine {
-        var queue = try Deque(ProgT).init(allocator);
-        try queue.pushBack(@intCast(id));
-        return Machine{ .registers = try registers.clone(), .input_value = queue };
+    pub fn init(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !Machine {
+        return Machine{ .registers = try registers.clone(), .input_value = try Deque(ProgT).init(allocator) };
     }
+
     pub fn deinit(self: *Self) void {
         self.registers.deinit();
         self.input_value.deinit();
@@ -49,7 +30,7 @@ const Machine = struct {
         return @intCast((std.math.powi(ProgT, 10, param) catch unreachable) * 10);
     }
 
-    fn set_PcValue_get_op(self: *Self) ProgT {
+    fn setPcValueGetOp(self: *Self) ProgT {
         self.pc_value = self.getReg(self.pc);
         return @mod(self.pc_value, 100);
     }
@@ -90,70 +71,47 @@ const Machine = struct {
     }
 
     pub fn run(self: *Self) ?ProgT {
-        switch (self.set_PcValue_get_op()) {
-            1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
-            2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
-            3 => {
-                const result = self.input_value.popFront() orelse -1;
-                if (result == -1) self.state = .Idle;
-                self.setValue(1, result);
-            },
-            4 => return self.getValue(1, 2),
-            5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
-            6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
-            7 => self.setValue(3, if (self.getValue(1, 0) < self.getValue(2, 0)) 1 else 0),
-            8 => self.setValue(3, if (self.getValue(1, 0) == self.getValue(2, 0)) 1 else 0),
-            9 => self.relative_base += self.getValue(1, 2),
-            else => {}, // 99
-        }
-        return null;
-    }
-    pub fn output(self: *Self) ?struct { id: u8, x: ProgT, y: ProgT } {
-        if (self.run()) |item| {
-            self.state = .Active;
-            self.out_queue.appendAssumeCapacity(item);
-            if (self.out_queue.len == 3) {
-                defer self.out_queue.len = 0;
-                const id, const x, const y = self.out_queue.getSlice()[0..3].*;
-                return .{ .id = @intCast(id), .x = x, .y = y };
+        while (true) {
+            switch (self.setPcValueGetOp()) {
+                1 => self.setValue(3, self.getValue(1, 0) + self.getValue(2, 0)),
+                2 => self.setValue(3, self.getValue(1, 0) * self.getValue(2, 0)),
+                3 => self.setValue(1, self.input_value.popFront() orelse 0),
+                4 => return self.getValue(1, 2),
+                5 => self.pc = if (self.getValue(1, 0) != 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
+                6 => self.pc = if (self.getValue(1, 0) == 0) @intCast(self.getValue(2, 0)) else self.pc + 3,
+                7 => self.setValue(3, if (self.getValue(1, 0) < self.getValue(2, 0)) 1 else 0),
+                8 => self.setValue(3, if (self.getValue(1, 0) == self.getValue(2, 0)) 1 else 0),
+                9 => self.relative_base += self.getValue(1, 2),
+                else => {}, // 99
             }
         }
         return null;
+    }
+    pub fn output(self: *Self, list: *std.ArrayList(u8)) !void {
+        while (self.run()) |item| {
+            try list.append(@intCast(item));
+            if (std.mem.endsWith(u8, list.items, "Command?")) break;
+        }
     }
 };
 
-fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !struct { p1: ProgT, p2: ProgT } {
-    const MACHINES = 50;
-    var network: [MACHINES]Machine = undefined;
-    for (0..MACHINES) |i| network[i] = try Machine.init(allocator, registers, i);
-    defer for (&network) |*m| m.deinit();
+fn runMachine(allocator: Allocator, registers: *const std.ArrayList(ProgT)) !void {
+    var machine = try Machine.init(allocator, registers);
+    var list = std.ArrayList(u8).init(allocator);
+    defer inline for (.{ &list, &machine }) |x| x.deinit();
 
-    var p1: ?ProgT = null;
-    var p2: ProgT = 0;
-    var nat_value: struct { x: ProgT, y: ProgT } = undefined;
+    var stdin = std.io.getStdIn().reader();
 
     while (true) {
-        var idle: bool = true;
-        for (&network) |*m| {
-            if (m.output()) |out| {
-                if (out.id == 255) {
-                    if (p1 == null) p1 = out.y;
-                    nat_value = .{ .x = out.x, .y = out.y };
-                } else {
-                    network[out.id].state = .Active;
-                    try network[out.id].input_value.pushBack(out.x);
-                    try network[out.id].input_value.pushBack(out.y);
-                }
-            }
-            if (m.state != .Idle) idle = false;
-        }
-        if (idle) if (p1) |p1_val| {
-            if (p2 == nat_value.y) return .{ .p1 = p1_val, .p2 = p2 };
-            network[0].state = .Active;
-            p2 = nat_value.y;
-            try network[0].input_value.pushBack(nat_value.x);
-            try network[0].input_value.pushBack(nat_value.y);
-        };
+        list.clearRetainingCapacity();
+        try machine.output(&list);
+        prints(list.items);
+
+        list.clearRetainingCapacity();
+        try stdin.readUntilDelimiterArrayList(&list, '\n', 64);
+
+        for (std.mem.trimRight(u8, list.items, "\r\n")) |c| try machine.input_value.pushBack(c);
+        try machine.input_value.pushBack('\n');
     }
 }
 
@@ -181,9 +139,5 @@ pub fn main() !void {
     var in_iter = std.mem.tokenizeScalar(u8, std.mem.trimRight(u8, input, "\r\n"), ',');
     while (in_iter.next()) |raw_value| try registers.append(try std.fmt.parseInt(ProgT, raw_value, 10));
 
-    _ = try runMachine(allocator, &registers);
-
-    // std.debug.print("{s}\n", .{input});
-    // try writer.print("Part 1: {d}\nPart 2: {d}\n", .{ 1, 2 });
-
+    try runMachine(allocator, &registers);
 }
