@@ -133,7 +133,9 @@ fn part2(allocator: Allocator, matrix: []const []const u8) !void {
     try depth.put(0, try myf.copyMatrix(allocator, matrix));
 
     for (0..10) |i| {
+        prints("@@ START MINUTE @@");
         try gridception(allocator, @intCast(matrix.len), &depth, 0, .None, @intCast(i + 2));
+        prints("## END MINUTE ##\n");
     }
 }
 
@@ -174,11 +176,11 @@ fn gridception(
 
     myf.waitForInput();
     const matrix = map_result.value_ptr.*;
-    var tmp = try myf.copyMatrix(allocator, matrix);
+    var tmp = try myf.copyMatrix(allocator, map_result.value_ptr.*);
     defer {
-        std.debug.print("##HERE## depth: {d}\n", .{depth});
-        myf.freeMatrix(allocator, map_result.value_ptr.*);
+        myf.freeMatrix(allocator, matrix);
         map_result.value_ptr.* = tmp;
+        std.debug.print("##HERE## depth: {d}\n", .{depth});
     }
 
     const half_dim = dim / 2;
