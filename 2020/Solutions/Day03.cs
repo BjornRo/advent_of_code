@@ -6,7 +6,6 @@ namespace aoc.Solutions
         {
             string[] matrix = File.ReadAllLines("in/d03.txt");
 
-
             Console.WriteLine($"Part 1: {Slope(matrix, 3, 1)}");
             Console.WriteLine($"Part 2: {Part2(matrix)}");
         }
@@ -19,7 +18,6 @@ namespace aoc.Solutions
                 int j = i * col_offset / row_offset % matrix[0].Length;
                 if (matrix[i][j] == '#') total += 1;
             }
-
             return total;
         }
 
