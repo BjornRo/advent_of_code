@@ -3,6 +3,9 @@ in/
 zig-out/
 __pycache__/
 target/
+bin/
+obj/
+*.sln
 Cargo.lock
 *.exe
 *.o
