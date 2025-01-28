@@ -17,7 +17,7 @@ namespace aoc.Solutions
             Console.WriteLine($"Part 2: {Part2(list)}");
         }
 
-        static int Part1(List<int> list)
+        static int Part1(in List<int> list)
         {
             for (int i = 0; i < list.Count - 1; i++)
                 for (int j = i + 1; j < list.Count; j++)
@@ -26,7 +26,7 @@ namespace aoc.Solutions
             return 0;
         }
 
-        static int Part2(List<int> list)
+        static int Part2(in List<int> list)
         {
             for (int i = 0; i < list.Count - 2; i++)
                 for (int j = i + 1; j < list.Count - 1; j++)
