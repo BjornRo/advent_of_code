@@ -1,14 +1,10 @@
-using System;
-using System.IO;
-
-
 namespace aoc.Solutions
 {
-    public class Day01
+    public class Day02
     {
         public static void Solve()
         {
-            string[] lines = File.ReadAllLines("in/d01.txt");
+            string[] lines = File.ReadAllLines("in/d02.txt");
 
             List<int> list = [];
             foreach (var line in lines)
@@ -29,6 +25,7 @@ namespace aoc.Solutions
                         return list[i] * list[j];
             return 0;
         }
+
         static int Part2(List<int> list)
         {
             for (int i = 0; i < list.Count - 2; i++)
