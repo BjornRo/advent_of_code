@@ -1,6 +1,9 @@
+
+using System.Numerics;
+
 namespace aoc.Solutions
 {
-    public class Day03
+    public class Day04
     {
         public static void Solve()
         {
