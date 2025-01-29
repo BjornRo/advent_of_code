@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Numerics;
 
 namespace aoc.Solutions;
@@ -6,64 +7,82 @@ public class Day14
 {
     public static void Solve()
     {
-        string[] steps = File.ReadAllLines("in/d13.txt");
+        string[] dataMasking = File.ReadAllLines("in/d14.txt");
 
-        var timestamp = long.Parse(steps[0]);
-        var busIDs = steps[1].Split(",");
 
-        Console.WriteLine($"Part 1: {Part1(timestamp, busIDs)}");
-        Console.WriteLine($"Part 2: {Part2(busIDs)}");
+
+        Console.WriteLine($"Part 1: {Part1(dataMasking)}");
+        Console.WriteLine($"Part 2: {Part2(dataMasking)}");
     }
 
-    static long Part1(long ts, in string[] busIDs)
+    static ulong Part1(in string[] dataMasking)
     {
-        var (waitTime, busID) = busIDs
-            .Where(e => e != "x")
-            .Select(long.Parse)
-            .Select(e => ((ts + e - 1) / e * e - ts, e))
-            .Min();
-        return waitTime * busID;
-    }
+        Dictionary<ulong, ulong> memory = [];
 
-    static BigInteger CRT(long[] num, long[] rem)
-    {
-        BigInteger prod = num.Aggregate(BigInteger.One, (a, b) => a * b);
-        BigInteger sum = 0;
-
-        for (int i = 0; i < num.Length; i++)
+        ulong maskSet = 0;
+        ulong maskUnset = long.MaxValue;
+        foreach (var line in dataMasking)
         {
-            BigInteger pp = prod / num[i];
-            sum += rem[i] * ModularInverse(pp, num[i]) * pp;
+            var maskMem = line.Split(" = ");
+            if (maskMem[0].StartsWith("mask"))
+            {
+                maskSet = 0;
+                maskUnset = ulong.MaxValue;
+                var revMask = maskMem[1].Reverse().ToArray();
+                for (int i = 0; i < 36; i++)
+                {
+                    if (revMask[i] == '1') maskSet |= 1UL << i;
+                    else if (revMask[i] == '0') maskUnset ^= 1UL << i;
+                }
+            }
+            else
+            {
+                var value = ulong.Parse(maskMem[1]);
+                value |= maskSet;
+                value &= maskUnset;
+                var addr = ulong.Parse(new string([.. maskMem[0].Where(char.IsDigit)]));
+                memory[addr] = value;
+            }
         }
-        return sum % prod;
+        return memory.Values.Aggregate((acc, value) => acc + value);
     }
 
-    static BigInteger ModularInverse(BigInteger a, BigInteger m)
+    static void ApplyMask(in char[] mask, in int idx, in ulong addr, in ulong val, Dictionary<ulong, ulong> mem)
     {
-        BigInteger m0 = m, t, q;
-        BigInteger x0 = 0, x1 = 1;
-        if (m == 1) return 0;
-        while (a > 1)
+        if (mask.Length == idx)
         {
-            q = a / m;
-            t = m;
-            m = a % m;
-            a = t;
-            t = x0;
-            x0 = x1 - q * x0;
-            x1 = t;
+            mem[addr] = val;
+            return;
         }
 
-        return (x1 + m0) % m0;
+        var c = mask[idx];
+        var shift = 1UL << idx;
+        if (c == 'X')
+        {
+            ApplyMask(mask, idx + 1, addr | shift, val, mem);
+            ApplyMask(mask, idx + 1, addr & ~shift, val, mem);
+        }
+        else
+        {
+            var new_addr = c == '1' ? addr | shift : addr;
+            ApplyMask(mask, idx + 1, new_addr, val, mem);
+        }
     }
 
-    static BigInteger Part2(in string[] busIDs)
+    static ulong Part2(in string[] dataMasking)
     {
-        var remainders = busIDs
-            .Select((e, i) => (e, i))
-            .Where(e => e.e != "x")
-            .Select(e => (long.Parse(e.e), long.Parse(e.e) - e.i))
-            .ToArray();
-        return CRT([.. remainders.Select(p => p.Item1)], [.. remainders.Select(p => p.Item2)]);
+        Dictionary<ulong, ulong> memory = [];
+        char[] mask = [];
+        foreach (var line in dataMasking)
+        {
+            var maskMem = line.Split(" = ");
+            if (maskMem[0].StartsWith("mask")) mask = [.. maskMem[1].Reverse()];
+            else
+            {
+                var address = ulong.Parse(new string([.. maskMem[0].Where(char.IsDigit)]));
+                ApplyMask(mask, 0, address, ulong.Parse(maskMem[1]), memory);
+            }
+        }
+        return memory.Values.Aggregate((acc, value) => acc + value);
     }
 }
