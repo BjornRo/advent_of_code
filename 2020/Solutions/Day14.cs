@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace aoc.Solutions;
 
-public class Day13
+public class Day14
 {
     public static void Solve()
     {

@@ -31,8 +31,8 @@ public class Day12
 
     static long Part1(in Steps[] steps)
     {
-        var direction = new Complex(0, 1);
         var position = new Complex(0, 0);
+        var direction = new Complex(0, 1);
 
         foreach (var step in steps)
             switch (step.Action)
