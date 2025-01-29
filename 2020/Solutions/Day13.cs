@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace aoc.Solutions;
 
-public class Day12
+public class Day13
 {
     enum Action
     {
