@@ -1,10 +1,10 @@
 namespace aoc.Solutions;
 
-public class Day07
+public class Day08
 {
     public static void Solve()
     {
-        string[] bagData = File.ReadAllLines("in/d07.txt");
+        string[] bagData = File.ReadAllLines("in/d08.txt");
 
         Dictionary<string, Dictionary<string, int>> bagRules = [];
         foreach (var rawRules in Array.ConvertAll(bagData, s => s.Split(" bags contain ")))
