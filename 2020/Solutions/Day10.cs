@@ -10,7 +10,7 @@ public class Day10
         Console.WriteLine($"Part 2: {WeaknessFinder(list, 25)}");
     }
 
-    static long PatternFinder(long[] list, int preamble)
+    static long PatternFinder(in long[] list, in int preamble)
     {
         for (int i = 0; i < list.Length - preamble - 1; i++)
         {
@@ -32,7 +32,7 @@ public class Day10
         return 0;
     }
 
-    static long WeaknessFinder(long[] list, int preamble)
+    static long WeaknessFinder(in long[] list, in int preamble)
     {
         long target = PatternFinder(list, preamble);
         for (int i = 0; i < list.Length - 1; i++)
