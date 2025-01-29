@@ -1,10 +1,10 @@
 namespace aoc.Solutions;
 
-public class Day10
+public class Day11
 {
     public static void Solve()
     {
-        List<int> list = [.. File.ReadAllLines("in/d10.txt").Select(int.Parse)];
+        List<int> list = [.. File.ReadAllLines("in/d11.txt").Select(int.Parse)];
         list.Sort();
 
         Console.WriteLine($"Part 1: {Part1(list)}");
