@@ -60,13 +60,11 @@ public class Day09
             var ins = instructions[pc];
             switch (ins.Op)
             {
-                case OpCode.Acc:
-                    accumulator += ins.Value;
-                    break;
                 case OpCode.Jmp:
                     pc += ins.Value;
                     continue;
-                case OpCode.Nop:
+                case OpCode.Acc:
+                    accumulator += ins.Value;
                     break;
             }
             pc += 1;
