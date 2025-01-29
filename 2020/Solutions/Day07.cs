@@ -1,10 +1,10 @@
 namespace aoc.Solutions
 {
-    public class Day06
+    public class Day07
     {
         public static void Solve()
         {
-            string inData = File.ReadAllText("in/d06.txt");
+            string inData = File.ReadAllText("in/d07.txt");
 
             List<List<string>> groups = [];
             foreach (var batch in inData.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.RemoveEmptyEntries))
