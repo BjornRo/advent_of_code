@@ -8,7 +8,6 @@ namespace aoc.Solutions
         public int Max { get; } = max;
         public char Symbol { get; } = symbol;
         public string Password { get; } = pwd;
-        // public override readonly string ToString() => $"({X}, {Y})";
     }
 
     public class Day02

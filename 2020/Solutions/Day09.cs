@@ -1,6 +1,6 @@
 namespace aoc.Solutions;
 
-public class Day08
+public class Day09
 {
     enum OpCode
     {
