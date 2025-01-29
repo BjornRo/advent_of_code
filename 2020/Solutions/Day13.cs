@@ -59,11 +59,14 @@ public class Day13
 
     static BigInteger Part2(in string[] busIDs)
     {
-        var remainders = busIDs
-            .Select((e, i) => (e, i))
-            .Where(e => e.e != "x")
-            .Select(e => (long.Parse(e.e), long.Parse(e.e) - e.i))
-            .ToArray();
-        return CRT([.. remainders.Select(p => p.Item1)], [.. remainders.Select(p => p.Item2)]);
+        List<long> modulis = [];
+        List<long> remainders = [];
+        for (int i = 0; i < busIDs.Length; i++)
+            if (long.TryParse(busIDs[i], out long result))
+            {
+                modulis.Add(result);
+                remainders.Add(result - i);
+            }
+        return CRT([.. modulis], [.. remainders]);
     }
 }
