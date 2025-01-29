@@ -1,106 +1,68 @@
+using System.Numerics;
+
 namespace aoc.Solutions;
 
 public class Day12
 {
+    enum Action
+    {
+        North = 'N',
+        South = 'S',
+        East = 'E',
+        West = 'W',
+        Left = 'L',
+        Right = 'R',
+        Forward = 'F',
+    }
+
+    readonly struct Steps(in string value)
+    {
+        public readonly Action Action = (Action)value[0];
+        public readonly int Value = int.Parse(value[1..]);
+    }
+
     public static void Solve()
     {
-        string[] matrix = File.ReadAllLines("in/d11.txt");
+        Steps[] steps = [.. File.ReadAllLines("in/d12.txt").Select(line => new Steps(line))];
 
-        Console.WriteLine($"Part 1: {Part1([.. matrix.Select(row => row.ToCharArray())])}");
-        Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
+        Console.WriteLine($"Part 1: {Part1(steps)}");
+        // Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
     }
 
-    static List<(int, int)>[,] GetVisibleSeats(char[][] grid)
+    static long Part1(in Steps[] steps)
     {
-        int rows = grid.Length;
-        int cols = grid[0].Length;
-        var directions = new (int, int)[]
-            { (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1) };
+        var direction = new Complex(0, 1);
+        var position = new Complex(0, 0);
 
-        var visibleSeats = new List<(int, int)>[rows, cols];
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
+        foreach (var step in steps)
+        {
+            switch (step.Action)
             {
-                if (grid[r][c] == '.') continue;
-                visibleSeats[r, c] = [];
-
-                foreach (var (dr, dc) in directions)
-                {
-                    int nr = r + dr, nc = c + dc;
-                    while (0 <= nr && nr < rows && 0 <= nc && nc < cols)
-                    {
-                        if (grid[nr][nc] == 'L' || grid[nr][nc] == '#')
-                        {
-                            visibleSeats[r, c].Add((nr, nc));
-                            break;
-                        }
-                        nr += dr;
-                        nc += dc;
-                    }
-                }
+                case Action.South:
+                    position += new Complex(step.Value, 0);
+                    break;
+                case Action.North:
+                    position += new Complex(-step.Value, 0);
+                    break;
+                case Action.West:
+                    position += new Complex(0, -step.Value);
+                    break;
+                case Action.East:
+                    position += new Complex(0, step.Value);
+                    break;
+                case Action.Left:
+                    for (int i = 0; i < step.Value; i += 90) direction *= new Complex(0, 1);
+                    break;
+                case Action.Right:
+                    for (int i = 0; i < step.Value; i += 90) direction *= new Complex(0, -1);
+                    break;
+                case Action.Forward:
+                    position += direction * step.Value;
+                    break;
             }
-        return visibleSeats;
-    }
-
-    static int Part1(char[][] mat)
-    {
-        char[][] tmp_mat = new char[mat.Length][];
-        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
-
-        HashSet<string> visited = [];
-        while (true)
-        {
-            var key = string.Concat(mat.SelectMany(row => row));
-            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
-            visited.Add(key);
-
-            for (int row = 0; row < mat.Length; row++)
-                for (int col = 0; col < mat[0].Length; col++)
-                {
-                    var elem = mat[row][col];
-                    if (elem == '.') continue;
-                    var adjacent = 0;
-                    for (int krow = row - 1; krow < row + 2; krow++)
-                        for (int kcol = col - 1; kcol < col + 2; kcol++)
-                        {
-                            if (row == krow && col == kcol) continue;
-                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
-                                if (mat[krow][kcol] == '#') adjacent += 1;
-                        }
-                    tmp_mat[row][col] = elem;
-                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
-                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
-                }
-            (tmp_mat, mat) = (mat, tmp_mat);
         }
+        long row = (long)position.Real, col = (long)position.Imaginary;
+        return long.Abs(row) + long.Abs(col);
     }
 
-    static int Part2(char[][] mat)
-    {
-        char[][] tmp_mat = new char[mat.Length][];
-        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
-
-        var visibleSeats = GetVisibleSeats(mat);
-
-        HashSet<string> visited = [];
-        while (true)
-        {
-            var key = string.Concat(mat.SelectMany(row => row));
-            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
-            visited.Add(key);
-
-            for (int row = 0; row < mat.Length; row++)
-                for (int col = 0; col < mat[0].Length; col++)
-                {
-                    var elem = mat[row][col];
-                    if (elem == '.') continue;
-                    var adjacent = visibleSeats[row, col].Count(p => mat[p.Item1][p.Item2] == '#');
-
-                    tmp_mat[row][col] = elem;
-                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
-                    else if (elem == '#') { if (adjacent >= 5) tmp_mat[row][col] = 'L'; }
-                }
-            (tmp_mat, mat) = (mat, tmp_mat);
-        }
-    }
 }
