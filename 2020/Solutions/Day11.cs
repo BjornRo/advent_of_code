@@ -4,42 +4,76 @@ public class Day11
 {
     public static void Solve()
     {
-        List<int> list = [.. File.ReadAllLines("in/d11.txt").Select(int.Parse)];
-        list.Sort();
+        string[] matrix = File.ReadAllLines("in/d11.txt");
 
-        Console.WriteLine($"Part 1: {Part1(list)}");
-        Console.WriteLine($"Part 2: {Part2(list, 0, 0, [])}");
+        Console.WriteLine($"Part 1: {Part1([.. matrix.Select(row => row.ToCharArray())])}");
+        Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
+        // Console.WriteLine($"Part 2: {Part2(list, 0, 0, [])}");
     }
 
-    static int Part1(in List<int> list)
+    static int Part2(char[][] mat)
     {
-        int jolt = 0;
-        int diff1 = 0;
-        int diff3 = 1;
-        foreach (var nextAdapter in list)
+        char[][] tmp_mat = new char[mat.Length][];
+        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
+
+        HashSet<string> visited = [];
+        while (true)
         {
-            var diff = nextAdapter - jolt;
-            if (diff == 1) diff1 += 1;
-            else if (diff == 3) diff3 += 1;
-            jolt = nextAdapter;
+            var key = string.Concat(mat.SelectMany(row => row));
+            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
+            visited.Add(key);
+
+            for (int row = 0; row < mat.Length; row++)
+                for (int col = 0; col < mat[0].Length; col++)
+                {
+                    var elem = mat[row][col];
+                    if (elem == '.') continue;
+                    var adjacent = 0;
+                    for (int krow = row - 1; krow < row + 2; krow++)
+                        for (int kcol = col - 1; kcol < col + 2; kcol++)
+                        {
+                            if (row == krow && col == kcol) continue;
+                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
+                                if (mat[krow][kcol] == '#') adjacent += 1;
+                        }
+                    tmp_mat[row][col] = elem;
+                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
+                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
+                }
+            (tmp_mat, mat) = (mat, tmp_mat);
         }
-        return diff1 * diff3;
     }
 
-    static long Part2(in List<int> list, int jolt, int index, Dictionary<(int, int), long> memo)
+    static int Part1(char[][] mat)
     {
-        if (memo.TryGetValue((jolt, index), out long value)) return value;
-        if (index == list.Count) return 1;
+        char[][] tmp_mat = new char[mat.Length][];
+        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
 
-        long total = 0;
-        for (int i = index; i < list.Count; i++)
+        HashSet<string> visited = [];
+        while (true)
         {
-            var nextAdapter = list[i];
-            if (nextAdapter - jolt > 3) break;
-            total += Part2(list, nextAdapter, i + 1, memo);
-        }
-        memo[(jolt, index)] = total;
+            var key = string.Concat(mat.SelectMany(row => row));
+            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
+            visited.Add(key);
 
-        return total;
+            for (int row = 0; row < mat.Length; row++)
+                for (int col = 0; col < mat[0].Length; col++)
+                {
+                    var elem = mat[row][col];
+                    if (elem == '.') continue;
+                    var adjacent = 0;
+                    for (int krow = row - 1; krow < row + 2; krow++)
+                        for (int kcol = col - 1; kcol < col + 2; kcol++)
+                        {
+                            if (row == krow && col == kcol) continue;
+                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
+                                if (mat[krow][kcol] == '#') adjacent += 1;
+                        }
+                    tmp_mat[row][col] = elem;
+                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
+                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
+                }
+            (tmp_mat, mat) = (mat, tmp_mat);
+        }
     }
 }
