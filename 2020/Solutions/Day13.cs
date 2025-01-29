@@ -59,8 +59,7 @@ public class Day13
 
     static BigInteger Part2(in string[] busIDs)
     {
-        List<long> modulis = [];
-        List<long> remainders = [];
+        List<long> modulis = [], remainders = [];
         for (int i = 0; i < busIDs.Length; i++)
             if (long.TryParse(busIDs[i], out long result))
             {
