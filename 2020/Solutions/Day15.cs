@@ -27,7 +27,6 @@ public class Day15
                 spoken[lastSpoken] = i;
                 lastSpoken = 0;
             }
-
         return lastSpoken;
     }
 }
