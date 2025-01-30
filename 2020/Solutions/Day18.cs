@@ -57,6 +57,6 @@ public partial class Day18
         return evalStack.Pop();
     }
 
-    [GeneratedRegex(@"\d+(\.\d*)?|\+|\-|\*|\/|\(|\)")]
+    [GeneratedRegex(@"\d+|\+|\*|\(|\)")]
     private static partial Regex MyRegex();
 }
