@@ -1,6 +1,3 @@
-using System.Linq;
-using System.Numerics;
-
 namespace aoc.Solutions;
 
 public class Day14
@@ -8,8 +5,6 @@ public class Day14
     public static void Solve()
     {
         string[] dataMasking = File.ReadAllLines("in/d14.txt");
-
-
 
         Console.WriteLine($"Part 1: {Part1(dataMasking)}");
         Console.WriteLine($"Part 2: {Part2(dataMasking)}");
