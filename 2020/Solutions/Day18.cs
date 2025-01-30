@@ -29,7 +29,7 @@ public partial class Day18
         foreach (var token in tokens)
         {
             if (char.IsDigit(token[0])) output.Add(token);
-            else if (token.Equals("(")) stack.Push(token);
+            else if (token == "(") stack.Push(token);
             else if (token == ")")
             {
                 while (stack.Count > 0 && stack.Peek() != "(") output.Add(stack.Pop());
@@ -52,15 +52,7 @@ public partial class Day18
             {
                 var b = evalStack.Pop();
                 var a = evalStack.Pop();
-                switch (token)
-                {
-                    case "+":
-                        evalStack.Push(a + b);
-                        break;
-                    case "*":
-                        evalStack.Push(a * b);
-                        break;
-                }
+                evalStack.Push(token == "+" ? a + b : a * b);
             }
         return evalStack.Pop();
     }
