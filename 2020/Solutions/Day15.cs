@@ -4,7 +4,7 @@ public class Day15
 {
     public static void Solve()
     {
-        int[] data = File.ReadAllText("in/d15.txt").TrimEnd().Split(',').Select(int.Parse).ToArray();
+        int[] data = [.. File.ReadAllText("in/d15.txt").TrimEnd().Split(',').Select(int.Parse)];
 
         Console.WriteLine($"Part 1: {Solver(data, 2020)}");
         Console.WriteLine($"Part 2: {Solver(data, 30_000_000)}");
