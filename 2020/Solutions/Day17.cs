@@ -4,132 +4,75 @@ public class Day17
 {
     public static void Solve()
     {
-        string data = File.ReadAllText("in/d16.txt");
+        string[] matrix = File.ReadAllLines("in/d17t.txt");
 
-        var (clsRanges, ticket, nearTickets) = Parse(data);
-        var (p1_result, validTickets) = Part1(clsRanges, nearTickets);
-
-        Console.WriteLine($"Part 1: {p1_result}");
-        Console.WriteLine($"Part 2: {Part2(clsRanges, ticket, validTickets)}");
+        Console.WriteLine($"Part 1: {Part1([.. matrix.Select(row => row.ToCharArray())])}");
+        // Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
     }
 
-    static (Dictionary<string, (int, int)[]>, ulong[], int[][]) Parse(string data)
+    static int Part1(char[][] mat)
     {
-        Dictionary<string, (int, int)[]> clsRanges = [];
-        ulong[] ticket;
-        int[][] nearTickets;
+        char[][] tmp_mat = new char[mat.Length][];
+        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
 
-        var SPLITOPT = StringSplitOptions.RemoveEmptyEntries;
-        string[] splitData = data.Split(["\r\n\r\n", "\n\n"], SPLITOPT);
-
-        foreach (var rawClassRange in splitData[0].Split(["\r\n", "\n"], SPLITOPT))
-        {
-            var keyVals = rawClassRange.Split(": ");
-            (int, int)[] ranges = new (int, int)[2];
-            foreach (var (rawRange, i) in keyVals[1].Split(" or ").Select((e, i) => (e, i)))
-            {
-                var splitRange = rawRange.Split("-").Select(int.Parse).ToArray();
-                ranges[i] = (splitRange[0], splitRange[1]);
-            }
-            clsRanges[keyVals[0]] = ranges;
-        }
-
-        ticket = [.. splitData[1].Split(["\r\n", "\n"], SPLITOPT)[1].Split(',').Select(ulong.Parse)];
-        nearTickets = [.. splitData[2]
-            .Split(["\r\n", "\n"], SPLITOPT)
-            .Skip(1)
-            .Select(row => row.Split(',').Select(int.Parse).ToArray())];
-        return (clsRanges, ticket, nearTickets);
-    }
-
-    static (int, int[][]) Part1(in Dictionary<string, (int, int)[]> clsRanges, in int[][] nearTickets)
-    {
-        List<int> invalidTicketValues = [];
-        List<int[]> validTickets = [];
-
-        foreach (var ticket in nearTickets)
-        {
-            var validTicket = true;
-            foreach (var ticketValue in ticket)
-            {
-                var valid = false;
-                foreach (var clsValue in clsRanges.Values)
-                {
-                    foreach (var range in clsValue)
-                    {
-                        var (min, max) = range;
-                        if (min <= ticketValue && ticketValue <= max)
-                        {
-                            valid = true;
-                            break;
-                        }
-                    }
-                    if (valid) break;
-                }
-                if (!valid)
-                {
-                    invalidTicketValues.Add(ticketValue);
-                    validTicket = false;
-                }
-            }
-            if (validTicket) validTickets.Add(ticket);
-        }
-        return (invalidTicketValues.Sum(), [.. validTickets]);
-    }
-
-    static ulong Part2(
-        Dictionary<string, (int, int)[]> clsRanges, in ulong[] ticket, in int[][] validNearTickets
-        )
-    {
-        List<string> FitRanges(int[] nearTicket)
-        {
-            List<string> clss = [];
-            foreach (var kv in clsRanges)
-            {
-                var valid = true;
-                foreach (var ticketValue in nearTicket)
-                {
-                    var validRange = false;
-                    foreach (var clsValue in kv.Value)
-                    {
-                        var (min, max) = clsValue;
-                        if (min <= ticketValue && ticketValue <= max)
-                        {
-                            validRange = true;
-                            break;
-                        }
-                    }
-                    if (!validRange) valid = false;
-                }
-                if (valid) clss.Add(kv.Key);
-
-            }
-            return [.. clss];
-        }
-
-        List<List<string>> cls = [];
-        for (int col = 0; col < ticket.Length; col++)
-        {
-            List<int> colField = [];
-            for (int row = 0; row < validNearTickets.Length; row++) colField.Add(validNearTickets[row][col]);
-            cls.Add(FitRanges([.. colField]));
-        }
-
+        HashSet<string> visited = [];
         while (true)
         {
-            if (cls.All(e => e.Count == 1)) break;
-            for (int i = 0; i < cls.Count; i++)
-                if (cls[i].Count == 1)
-                    for (int j = 0; j < cls.Count; j++)
-                    {
-                        if (i == j) continue;
-                        cls[j].Remove(cls[i][0]);
-                    }
+            var key = string.Concat(mat.SelectMany(row => row));
+            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
+            visited.Add(key);
+
+            for (int row = 0; row < mat.Length; row++)
+                for (int col = 0; col < mat[0].Length; col++)
+                {
+                    var elem = mat[row][col];
+                    if (elem == '.') continue;
+                    var adjacent = 0;
+                    for (int krow = row - 1; krow < row + 2; krow++)
+                        for (int kcol = col - 1; kcol < col + 2; kcol++)
+                        {
+                            if (row == krow && col == kcol) continue;
+                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
+                                if (mat[krow][kcol] == '#') adjacent += 1;
+                        }
+                    tmp_mat[row][col] = elem;
+                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
+                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
+                }
+            (tmp_mat, mat) = (mat, tmp_mat);
         }
-        return cls
-            .SelectMany(elem => elem)
-            .Zip(ticket)
-            .Where(elem => elem.First.StartsWith("departure"))
-            .Aggregate(1UL, (acc, elem) => acc * elem.Second);
     }
 }
+
+
+// static List<(int, int)>[,] GetVisibleSeats(char[][] grid)
+// {
+//     int rows = grid.Length;
+//     int cols = grid[0].Length;
+//     var directions = new (int, int)[]
+//         { (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1) };
+
+//     var visibleSeats = new List<(int, int)>[rows, cols];
+//     for (int r = 0; r < rows; r++)
+//         for (int c = 0; c < cols; c++)
+//         {
+//             if (grid[r][c] == '.') continue;
+//             visibleSeats[r, c] = [];
+
+//             foreach (var (dr, dc) in directions)
+//             {
+//                 int nr = r + dr, nc = c + dc;
+//                 while (0 <= nr && nr < rows && 0 <= nc && nc < cols)
+//                 {
+//                     if (grid[nr][nc] == 'L' || grid[nr][nc] == '#')
+//                     {
+//                         visibleSeats[r, c].Add((nr, nc));
+//                         break;
+//                     }
+//                     nr += dr;
+//                     nc += dc;
+//                 }
+//             }
+//         }
+//     return visibleSeats;
+// }
