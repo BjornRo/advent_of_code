@@ -4,43 +4,72 @@ public class Day17
 {
     public static void Solve()
     {
-        string[] matrix = File.ReadAllLines("in/d17t.txt");
+        HashSet<(int, int, int)> cube = InitCube(File.ReadAllLines("in/d17.txt"));
 
-        Console.WriteLine($"Part 1: {Part1([.. matrix.Select(row => row.ToCharArray())])}");
+        Console.WriteLine($"Part 1: {Part1([.. cube], 6)}");
         // Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
     }
 
-    static int Part1(char[][] mat)
+    static HashSet<(int, int, int)> InitCube(string[] matrix)
     {
-        char[][] tmp_mat = new char[mat.Length][];
-        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
+        HashSet<(int, int, int)> cube = [];
+        for (int i = 0; i < matrix.Length; i++)
+            for (int j = 0; j < matrix[0].Length; j++)
+                if (matrix[i][j] == '#') cube.Add((i, j, 0));
+        return cube;
+    }
 
-        HashSet<string> visited = [];
-        while (true)
+
+    static IEnumerable<(int, int, int)> GetNeighbors((int, int, int) t)
+    {
+        var (i, j, k) = t;
+        for (int di = -1; di <= 1; di++)
+            for (int dj = -1; dj <= 1; dj++)
+                for (int dk = -1; dk <= 1; dk++)
+                    if (di != 0 || dj != 0 || dk != 0)
+                        yield return (i + di, j + dj, k + dk);
+    }
+
+    static int Part1(HashSet<(int, int, int)> cube, int cycles)
+    {
+        HashSet<(int, int, int)> tmp_cube = [];
+
+        for (int cycle = 0; cycle < cycles; cycle++)
         {
-            var key = string.Concat(mat.SelectMany(row => row));
-            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
-            visited.Add(key);
+            tmp_cube.Clear();
+            int mini, maxi, minj, maxj, mink, maxk;
+            mini = minj = mink = int.MaxValue;
+            maxi = maxj = maxk = int.MinValue;
 
-            for (int row = 0; row < mat.Length; row++)
-                for (int col = 0; col < mat[0].Length; col++)
-                {
-                    var elem = mat[row][col];
-                    if (elem == '.') continue;
-                    var adjacent = 0;
-                    for (int krow = row - 1; krow < row + 2; krow++)
-                        for (int kcol = col - 1; kcol < col + 2; kcol++)
+            foreach (var (i, j, k) in cube)
+            {
+                if (i < mini) mini = i;
+                if (j < minj) minj = j;
+                if (k < mink) mink = k;
+                if (i > maxi) maxi = i;
+                if (j > maxj) maxj = j;
+                if (k > maxk) maxk = k;
+            }
+            for (int i = mini - 1; i <= maxi + 1; i++)
+                for (int j = minj - 1; j <= maxj + 1; j++)
+                    for (int k = mink - 1; k <= maxk + 1; k++)
+                    {
+                        var neighbors = 0;
+                        var pos = (i, j, k);
+                        foreach (var neighbor in GetNeighbors(pos))
+                            if (cube.Contains(neighbor))
+                                neighbors += 1;
+                        var active = cube.Contains(pos);
+                        if (active)
                         {
-                            if (row == krow && col == kcol) continue;
-                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
-                                if (mat[krow][kcol] == '#') adjacent += 1;
+                            if (neighbors == 2 || neighbors == 3) tmp_cube.Add(pos);
                         }
-                    tmp_mat[row][col] = elem;
-                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
-                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
-                }
-            (tmp_mat, mat) = (mat, tmp_mat);
+                        else
+                            if (neighbors == 3) tmp_cube.Add(pos);
+                    }
+            (tmp_cube, cube) = (cube, tmp_cube);
         }
+        return cube.Count;
     }
 }
 
