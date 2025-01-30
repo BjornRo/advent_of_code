@@ -1,6 +1,6 @@
 namespace aoc.Solutions;
 
-public class Day16
+public class Day17
 {
     public static void Solve()
     {
