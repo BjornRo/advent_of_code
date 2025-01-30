@@ -78,7 +78,6 @@ public class Day17
         return cube.Count;
     }
 
-
     static int Part2(HashSet<(int, int, int, int)> hypercube, int cycles)
     {
         static IEnumerable<(int, int, int, int)> GetNeighbors((int, int, int, int) t)
