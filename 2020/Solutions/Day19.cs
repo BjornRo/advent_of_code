@@ -52,15 +52,15 @@ public partial class Day19
         {
             var conjunct = true;
             string currWord = word;
-            for (int i = 0; i < arr.Length; i++)
+            foreach (var nextSymbol in arr)
             {
-                if (Descender(grammar, arr[i], target, currWord, part2, out var newWord)) currWord = newWord;
+                if (Descender(grammar, nextSymbol, target, currWord, part2, out var newWord)) currWord = newWord;
                 else
                 {
                     conjunct = false;
                     break;
                 }
-                if (part2 && arr[i] == 11 && currWord == target)
+                if (part2 && nextSymbol == 11 && currWord == target)
                 {
                     rebuilt = currWord;
                     return true;
