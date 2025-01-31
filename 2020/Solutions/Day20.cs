@@ -3,6 +3,19 @@ namespace aoc.Solutions;
 public partial class Day20
 {
     const StringSplitOptions SPLITOPT = StringSplitOptions.RemoveEmptyEntries;
+
+    static Dictionary<int, char[][]> Parse(string[] data)
+    {
+        Dictionary<int, char[][]> tiles = [];
+        foreach (var sub in data)
+        {
+            var subSplit = sub.Split(["\r\n", "\n"], count: 2, SPLITOPT);
+            var tileID = int.Parse(new string([.. subSplit[0].ToCharArray().Where(char.IsDigit)]));
+            tiles[tileID] = [.. subSplit[1].Split(["\r\n", "\n"], SPLITOPT).Select(e => e.ToCharArray())];
+        }
+        return tiles;
+    }
+
     public static void Solve()
     {
         string[] data = File.ReadAllText("in/d20.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
@@ -104,17 +117,6 @@ public partial class Day20
         return a.Zip(b).All(e => e.First == e.Second);
     }
 
-    static bool CornerTieBreaker(Tile a, Tile b)
-    {
-        for (int i = 0; i < 2; i++)
-        {
-            b.Flip();
-            foreach (var v in b.SidesNESW)
-                if (Array.IndexOf(a.SidesNESW, v) != -1) return false;
-        }
-        return true;
-    }
-
     static Tile? IsCorner(Tile a, Tile b, Tile c)
     {
         for (int i = 0; i < 2; i++)
@@ -150,6 +152,17 @@ public partial class Day20
 
     static (Tile[] corners, Tile[] allTiles) Part1(in Dictionary<int, char[][]> inTiles)
     {
+        static bool CornerTieBreaker(Tile a, Tile b)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                b.Flip();
+                foreach (var v in b.SidesNESW)
+                    if (Array.IndexOf(a.SidesNESW, v) != -1) return false;
+            }
+            return true;
+        }
+
         Tile[] tiles = [.. inTiles.Select(e => new Tile(e.Key, e.Value))];
         List<Tile> corners = [];
 
@@ -216,16 +229,16 @@ public partial class Day20
                     }
                     if (aMatch) break;
                 }
-                if (aMatch)
-                    for (int k = 0; k < 2; k++)
+                if (!aMatch) continue;
+                for (int k = 0; k < 2; k++)
+                {
+                    b.FlipGrid();
+                    for (int l = 0; l < 4; l++)
                     {
-                        b.FlipGrid();
-                        for (int l = 0; l < 4; l++)
-                        {
-                            b.RotateGridCW();
-                            if (Matches(corner.South(), b.North())) return;
-                        }
+                        b.RotateGridCW();
+                        if (Matches(corner.South(), b.North())) return;
                     }
+                }
             }
         }
     }
@@ -345,17 +358,5 @@ public partial class Day20
             if (found) break;
         }
         return grid.Grid.SelectMany(row => row).Count(c => c == '#');
-    }
-
-    static Dictionary<int, char[][]> Parse(string[] data)
-    {
-        Dictionary<int, char[][]> tiles = [];
-        foreach (var sub in data)
-        {
-            var subSplit = sub.Split(["\r\n", "\n"], count: 2, SPLITOPT);
-            var tileID = int.Parse(new string([.. subSplit[0].ToCharArray().Where(char.IsDigit)]));
-            tiles[tileID] = [.. subSplit[1].Split(["\r\n", "\n"], SPLITOPT).Select(e => e.ToCharArray())];
-        }
-        return tiles;
     }
 }
