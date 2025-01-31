@@ -1,53 +1,57 @@
-using System.Text.Unicode;
-
 namespace aoc.Solutions;
 
 public partial class Day21
 {
-    struct Ingredient(in string name, in string[] contains)
-    {
-        public HashSet<string> Contains = [.. contains];
-        public readonly string Name = name;
-    }
     public static void Solve()
     {
-        string[] data = File.ReadAllLines("in/d21t.txt");
+        string[] data = File.ReadAllLines("in/d21.txt");
 
-        Console.WriteLine($"Part 1: {Part1(data)}");
-        // Console.WriteLine($"Part 2: {2}");
+        var (p1, p2) = Solver(data);
+        Console.WriteLine($"Part 1: {p1}");
+        Console.WriteLine($"Part 2: {p2}");
     }
 
-    static int Part1(string[] data)
+    static (int, string) Solver(string[] data)
     {
         Dictionary<string, int> counts = [];
-        Dictionary<string, HashSet<string>> ingredients = [];
+        Dictionary<string, HashSet<string>> allergensIngredients = [];
+        HashSet<string> allIngredients = [];
+
         foreach (var row in data)
         {
             var ingCont = row.Split(" (contains ");
-            HashSet<string> contains = [.. ingCont[1][0..^1].Split(", ")];
-            foreach (var ingredient in ingCont[0].Split(" "))
+            string[] ingredients = ingCont[0].Split(" ");
+            string[] allergens = ingCont[1][0..^1].Split(", ");
+
+            foreach (var ingredient in ingredients)
             {
-                if (ingredients.TryGetValue(ingredient, out var cont))
-                {
-                    cont.IntersectWith(contains);
-                }
-                else ingredients[ingredient] = [.. contains];
-                if (counts.TryGetValue(ingredient, out var value))
-                {
-                    counts[ingredient] = value + 1;
-                }
+                allIngredients.Add(ingredient);
+                if (counts.TryGetValue(ingredient, out var value)) counts[ingredient] = value + 1;
                 else counts[ingredient] = 1;
             }
-        }
-        var total = 0;
-        foreach (var item in ingredients)
-        {
-            if (item.Value.Count == 0) {
-                total += counts[item.Key];
-            }
-            // Console.WriteLine($"{item.Key} {item.Value.Count}");
-        }
-        return total;
-    }
 
+            foreach (var allergen in allergens)
+                if (allergensIngredients.TryGetValue(allergen, out var possible)) possible.IntersectWith(ingredients);
+                else allergensIngredients[allergen] = [.. ingredients];
+        }
+
+        while (allergensIngredients.Any(e => e.Value.Count != 1))
+            foreach (var kv in allergensIngredients)
+                if (kv.Value.Count == 1)
+                    foreach (var value in allergensIngredients.Values)
+                        if (value.Count != 1) value.Remove(kv.Value.First());
+
+        List<(string, string)> dangerousList = [];
+        foreach (var kv in allergensIngredients)
+        {
+            var item = kv.Value.First();
+            dangerousList.Add((kv.Key, item));
+            allIngredients.Remove(item);
+        }
+        dangerousList.Sort();
+        return (
+            allIngredients.Aggregate(0, (acc, item) => acc + counts[item]),
+            string.Join(",", dangerousList.Select(e => e.Item2))
+        );
+    }
 }
