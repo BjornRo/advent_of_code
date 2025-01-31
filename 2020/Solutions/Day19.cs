@@ -1,13 +1,13 @@
 namespace aoc.Solutions;
 
-interface IMyValue { }
+interface IValue { }
 
-class IntArray(int[][] value) : IMyValue
+class IntArray(int[][] value) : IValue
 {
     public int[][] Value { get; set; } = value;
 }
 
-class CharValue(char value) : IMyValue
+class CharValue(char value) : IValue
 {
     public char Value { get; set; } = value;
 }
@@ -21,13 +21,20 @@ public partial class Day19
 
         string[] words = data[1].Split(["\r\n", "\n"], SPLITOPT);
         var grammar = GenGrammar(data[0].Split(["\r\n", "\n"], SPLITOPT));
-        Console.WriteLine($"Part 1: {Part1(grammar, words)}");
-        // Console.WriteLine($"Part 2: {data.Aggregate(0L, (acc, str) => acc + Eval(str, false))}");
+        var grammar2 = GenGrammar(data[0].Split(["\r\n", "\n"], SPLITOPT));
+        grammar2[8] = new IntArray([[42], [42, 8]]);
+        grammar2[11] = new IntArray([[42, 31], [42, 11, 31]]);
+        Console.WriteLine(
+            $"Part 1: {words.Count(w => Descender(grammar, 0, w, "", false, out string str) && str == w)}"
+            );
+        Console.WriteLine(
+            $"Part 2: {words.Count(w => Descender(grammar2, 0, w, "", true, out string str) && str == w)}"
+            );
     }
 
-    static Dictionary<int, IMyValue> GenGrammar(string[] data)
+    static Dictionary<int, IValue> GenGrammar(string[] data)
     {
-        Dictionary<int, IMyValue> grammar = [];
+        Dictionary<int, IValue> grammar = [];
 
         foreach (var rawRule in data.Select(e => e.Split(": ")))
         {
@@ -43,21 +50,20 @@ public partial class Day19
         return grammar;
     }
 
-    // 46 23 not right
     static bool Descender(
-        in Dictionary<int, IMyValue> grammar, int symbol, string targetWord, string word, out string rebuiltWord
+        in Dictionary<int, IValue> grammar, int symbol, string target, string word, bool part2, out string rebuilt
         )
     {
-        rebuiltWord = "";
-        if (word.Length > targetWord.Length) return false;
+        rebuilt = "";
+        if (word.Length >= target.Length) return false;
 
         var value = grammar[symbol];
         if (value is CharValue res)
         {
             var newWord = word + res.Value;
-            if (targetWord.StartsWith(newWord))
+            if (target.StartsWith(newWord))
             {
-                rebuiltWord = newWord;
+                rebuilt = newWord;
                 return true;
             }
             return false;
@@ -69,38 +75,22 @@ public partial class Day19
             string currentWord = word;
             for (int i = 0; i < arr.Length; i++)
             {
-                if (Descender(grammar, arr[i], targetWord, currentWord, out string newWord)) currentWord = newWord;
+                if (Descender(grammar, arr[i], target, currentWord, part2, out string newWord)) currentWord = newWord;
                 else
                 {
                     conjunct = false;
                     break;
                 }
+                if (part2 && arr[i] == 11 && currentWord == target)
+                {
+                    rebuilt = currentWord;
+                    return true;
+                }
             }
-            if (conjunct)
-            {
-                rebuiltWord = currentWord;
-                return true;
-            }
+            if (!conjunct) continue;
+            rebuilt = currentWord;
+            return true;
         }
         return false;
-    }
-
-    static int Part1(in Dictionary<int, IMyValue> grammar, string[] words)
-    {
-        int total = 0;
-        foreach (var word in words)
-        {
-            if (Descender(grammar, 0, word, "", out string rebuilt))
-            {
-                Console.WriteLine(word);
-                Console.WriteLine(rebuilt);
-                Console.WriteLine();
-                if (rebuilt == word) total += 1;
-            }
-            // break;
-        }
-
-
-        return total;
     }
 }
