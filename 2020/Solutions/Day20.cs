@@ -1,6 +1,5 @@
 namespace aoc.Solutions;
 
-
 public partial class Day20
 {
     const StringSplitOptions SPLITOPT = StringSplitOptions.RemoveEmptyEntries;
@@ -107,15 +106,13 @@ public partial class Day20
                             break;
                         }
                     }
-                    else
+                    else if (Matches(map[(row, col - 1)].East(), result.West()))
                     {
-                        if (Matches(map[(row, col - 1)].East(), result.West()))
-                        {
-                            map[(row, col)] = result;
-                            foundSlot = true;
-                            break;
-                        }
+                        map[(row, col)] = result;
+                        foundSlot = true;
+                        break;
                     }
+
                 }
                 if (foundSlot) break;
             }
