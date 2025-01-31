@@ -17,7 +17,7 @@ public partial class Day19
     public static void Solve()
     {
         const StringSplitOptions SPLITOPT = StringSplitOptions.RemoveEmptyEntries;
-        string[] data = File.ReadAllText("in/d19t.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
+        string[] data = File.ReadAllText("in/d19.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
 
         string[] words = data[1].Split(["\r\n", "\n"], SPLITOPT);
         var grammar = GenGrammar(data[0].Split(["\r\n", "\n"], SPLITOPT));
@@ -43,49 +43,44 @@ public partial class Day19
         return grammar;
     }
 
-    // 46 not right
-    static bool Descender(in Dictionary<int, IMyValue> grammar, int symbol, int index, string word, out int newIndex)
+    // 46 23 not right
+    static bool Descender(
+        in Dictionary<int, IMyValue> grammar, int symbol, string targetWord, string word, out string rebuiltWord
+        )
     {
-        newIndex = index;
-        if (index >= word.Length) return false;
+        rebuiltWord = "";
+        if (word.Length > targetWord.Length) return false;
 
         var value = grammar[symbol];
         if (value is CharValue res)
         {
-            Console.Write($"i: {index} s: {symbol} {res.Value}, final\n\n");
-            if (res.Value == word[index])
+            var newWord = word + res.Value;
+            if (targetWord.StartsWith(newWord))
             {
-                newIndex += 1;
+                rebuiltWord = newWord;
                 return true;
             }
             return false;
         }
-        // 4, 1, 5 -> 4, 3 2, 5 -> 4, 5 4, 5 5, 5
 
         foreach (var arr in ((IntArray)value).Value)
         {
-            Console.Write($"i: {index}, {symbol} -> ");
-            foreach (var v in arr)
-            {
-                Console.Write($"{v} ");
-            }
-            Console.WriteLine("\n");
             var conjunct = true;
-            int tempIndex = index;
-
+            string currentWord = word;
             for (int i = 0; i < arr.Length; i++)
             {
-                if (Descender(grammar, arr[i], tempIndex, word, out int newIndexRes))
-                {
-                    tempIndex = newIndexRes;
-                }
+                if (Descender(grammar, arr[i], targetWord, currentWord, out string newWord)) currentWord = newWord;
                 else
                 {
                     conjunct = false;
                     break;
                 }
             }
-            if (conjunct) return true;
+            if (conjunct)
+            {
+                rebuiltWord = currentWord;
+                return true;
+            }
         }
         return false;
     }
@@ -95,9 +90,14 @@ public partial class Day19
         int total = 0;
         foreach (var word in words)
         {
-            // Console.WriteLine(word);
-            if (Descender(grammar, 0, 0, word, out _)) total += 1;
-            break;
+            if (Descender(grammar, 0, word, "", out string rebuilt))
+            {
+                Console.WriteLine(word);
+                Console.WriteLine(rebuilt);
+                Console.WriteLine();
+                if (rebuilt == word) total += 1;
+            }
+            // break;
         }
 
 
