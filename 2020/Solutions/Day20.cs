@@ -14,20 +14,31 @@ public partial class Day20
     }
     public static void Solve()
     {
-        string[] data = File.ReadAllText("in/d20t.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
+        string[] data = File.ReadAllText("in/d20.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
 
         Console.WriteLine($"Part 1: {Part1(Parse(data))}");
         // Console.WriteLine($"Part 2: {2}");
     }
 
+    static bool CornerTieBreaker(Tile a, Tile b)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            b.Flip();
+            foreach (var v in b.SidesNESW)
+                if (Array.IndexOf(a.SidesNESW, v) != -1) return false;
+        }
+        return true;
+    }
+
     static Tile? IsCorner(Tile a, Tile b, Tile c)
     {
-        for (int m = 0; m < 2; m++)
+        for (int i = 0; i < 2; i++)
         {
             a.Flip();
             int side1 = -1;
             int side2 = -1;
-            for (int n = 0; n < 2; n++)
+            for (int j = 0; j < 2; j++)
             {
                 b.Flip();
                 foreach (var v in b.SidesNESW)
@@ -37,7 +48,7 @@ public partial class Day20
                 }
                 if (side1 != -1) break;
             }
-            for (int n = 0; n < 2; n++)
+            for (int j = 0; j < 2; j++)
             {
                 c.Flip();
                 foreach (var v in c.SidesNESW)
@@ -51,6 +62,7 @@ public partial class Day20
             // Print(side1);
             // Print(side2);
             // Print(a.ID);
+            // Print(diff);
             if (diff == 1 || diff == 3)
             {
                 return a;
@@ -59,7 +71,7 @@ public partial class Day20
         return null;
     }
 
-    static int Part1(in Dictionary<int, char[][]> inTiles)
+    static ulong Part1(in Dictionary<int, char[][]> inTiles)
     {
         var DIM = (int)Math.Sqrt(inTiles.Count);
         Tile[,] matrix = new Tile[DIM, DIM];
@@ -82,17 +94,34 @@ public partial class Day20
 
         for (int i = 0; i < tiles.Length; i++)
         {
+            if (corners.Count == 4) break;
             var found = false;
             for (int j = 0; j < tiles.Length; j++)
             {
                 if (i == j) continue;
+                if (corners.Count == 4) break;
                 for (int k = 0; k < tiles.Length; k++)
                 {
                     if (i == k || j == k) continue;
+                    if (corners.Count == 4) break;
                     if (IsCorner(tiles[i], tiles[j], tiles[k]) is Tile t)
                     {
-                        Print(t.ID);
-                        found = true;
+                        var isCorner = true;
+                        for (int l = 0; l < tiles.Length; l++)
+                        {
+                            if (l == i || l == j || l == k) continue;
+                            if (!CornerTieBreaker(t, tiles[l]))
+                            {
+                                isCorner = false;
+                                break;
+                            }
+                        }
+                        if (isCorner)
+                        {
+                            found = true;
+                            corners.Add(t);
+                        }
+
                     }
                     if (found) break;
                 }
@@ -106,7 +135,7 @@ public partial class Day20
         }
 
         Print(corners.Count);
-        return 1;
+        return corners.Aggregate(1UL, (acc, corner) => acc * (ulong)corner.ID);
     }
 
 
