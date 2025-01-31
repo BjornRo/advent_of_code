@@ -14,10 +14,12 @@ public partial class Day20
     }
     public static void Solve()
     {
-        string[] data = File.ReadAllText("in/d20.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
+        string[] data = File.ReadAllText("in/d20t.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
+        var (corners, allTiles) = Part1(Parse(data));
 
-        Console.WriteLine($"Part 1: {Part1(Parse(data))}");
-        // Console.WriteLine($"Part 2: {2}");
+        Console.WriteLine($"Part 1: {corners.Aggregate(1UL, (acc, corner) => acc * (ulong)corner.ID)}");
+        Part2(corners, allTiles);
+        Console.WriteLine($"Part 2: {2}");
     }
 
     static bool CornerTieBreaker(Tile a, Tile b)
@@ -59,25 +61,24 @@ public partial class Day20
                 if (side2 != -1) break;
             }
             var diff = int.Abs(int.Abs(side1) - int.Abs(side2));
-            // Print(side1);
-            // Print(side2);
-            // Print(a.ID);
-            // Print(diff);
-            if (diff == 1 || diff == 3)
-            {
-                return a;
-            }
+            if (diff == 1 || diff == 3) return a;
         }
         return null;
     }
 
-    static ulong Part1(in Dictionary<int, char[][]> inTiles)
+    static void Part2(Tile[] corners, Tile[] allTiles)
     {
-        var DIM = (int)Math.Sqrt(inTiles.Count);
+        var DIM = (int)Math.Sqrt(allTiles.Length);
         Tile[,] matrix = new Tile[DIM, DIM];
-        Tile[] tiles = [.. inTiles.Select(e => new Tile(e.Key, e.Value))];
-
-        List<Tile> corners = [];
+        foreach (var c in corners)
+        {
+            Print(c.ID);
+            foreach (var k in c.Neighbors)
+            {
+                Print(k);
+            }
+            Print();
+        }
 
         // tiles[0].Flip();
         // Print(tiles[0].ID);
@@ -91,6 +92,12 @@ public partial class Day20
         //     Console.Write($"{t} ");
         // }
         // Print();
+    }
+
+    static (Tile[] corners, Tile[] allTiles) Part1(in Dictionary<int, char[][]> inTiles)
+    {
+        Tile[] tiles = [.. inTiles.Select(e => new Tile(e.Key, e.Value))];
+        List<Tile> corners = [];
 
         for (int i = 0; i < tiles.Length; i++)
         {
@@ -108,105 +115,109 @@ public partial class Day20
                     {
                         var isCorner = true;
                         for (int l = 0; l < tiles.Length; l++)
-                        {
-                            if (l == i || l == j || l == k) continue;
-                            if (!CornerTieBreaker(t, tiles[l]))
-                            {
-                                isCorner = false;
-                                break;
-                            }
-                        }
+                            if (l != i && l != j && l != k)
+                                if (!CornerTieBreaker(t, tiles[l]))
+                                {
+                                    isCorner = false;
+                                    break;
+                                }
                         if (isCorner)
                         {
+                            tiles[i].Neighbors.Add(tiles[j].ID);
+                            tiles[i].Neighbors.Add(tiles[k].ID);
                             found = true;
                             corners.Add(t);
                         }
-
                     }
                     if (found) break;
                 }
                 if (found) break;
             }
         }
-
-        foreach (var c in corners)
-        {
-            Print(c.ID);
-        }
-
-        Print(corners.Count);
-        return corners.Aggregate(1UL, (acc, corner) => acc * (ulong)corner.ID);
-    }
-
-
-    static uint CharArrToInt(char[] arr)
-    {
-        uint value = 0;
-        foreach (char c in arr)
-        {
-            value <<= 1;
-            if (c == '#') value |= 1;
-        }
-        return value;
+        return ([.. corners], tiles);
     }
 
     class Tile
     {
         public int ID { get; set; }
         public uint[] SidesNESW { get; set; } = new uint[4];
+        public uint[] FlippedSidesNESW { get; set; } = new uint[4];
+        public char[,] Grid { get; set; }
+        public HashSet<int> Neighbors = [];
         readonly int Length;
 
         public Tile(int id, char[][] values)
         {
+            static uint CharArrToInt(char[] arr)
+            {
+                uint value = 0;
+                foreach (char c in arr)
+                {
+                    value <<= 1;
+                    if (c == '#') value |= 1;
+                }
+                return value;
+            }
+
             ID = id;
             Length = values.Length;
+            Grid = new char[Length, Length];
+            for (int i = 0; i < Length; i++)
+                for (int j = 0; j < Length; j++)
+                    Grid[i, j] = values[i][j];
+
             SidesNESW[0] = CharArrToInt(values[0]);
             SidesNESW[1] = CharArrToInt([.. values.Select(e => e[^1])]);
             SidesNESW[2] = CharArrToInt(values[^1]);
             SidesNESW[3] = CharArrToInt([.. values.Select(e => e[0])]);
-        }
-        public void RotateCW()
-        {
-            uint temp = SidesNESW[^1];
-            for (int i = SidesNESW.Length - 1; i > 0; i--) SidesNESW[i] = SidesNESW[i - 1];
-            SidesNESW[0] = temp;
-        }
-        public void RotateCCW()
-        {
-            uint temp = SidesNESW[0];
-            for (int i = 0; i < SidesNESW.Length - 1; i++) SidesNESW[i] = SidesNESW[i + 1];
-            SidesNESW[^1] = temp;
-        }
-        public void Flip()
-        {
-            for (int i = 0; i < SidesNESW.Length; i++)
+            FlippedSidesNESW = (uint[])SidesNESW.Clone();
+            for (int i = 0; i < FlippedSidesNESW.Length; i++)
             {
                 uint reversedValue = 0;
                 for (int j = 0; j < Length; j++)
                 {
                     reversedValue <<= 1;
-                    reversedValue |= SidesNESW[i] & 1;
-                    SidesNESW[i] >>= 1;
+                    reversedValue |= FlippedSidesNESW[i] & 1;
+                    FlippedSidesNESW[i] >>= 1;
                 }
-                SidesNESW[i] = reversedValue;
+                FlippedSidesNESW[i] = reversedValue;
             }
+        }
 
-        }
-        public uint North()
+        public void RotateGridCW()
         {
-            return SidesNESW[0];
+            FlipGrid();
+            TransposeGrid();
         }
-        public uint East()
+
+        public void FlipGrid()
         {
-            return SidesNESW[1];
+            Array.Reverse(Grid);
+            Flip();
         }
-        public uint South()
+
+        public void TransposeGrid()
         {
-            return SidesNESW[2];
+            int rows = Grid.GetLength(0);
+            int cols = Grid.GetLength(1);
+            char[,] newGrid = new char[cols, rows];
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    newGrid[j, i] = Grid[i, j];
+
+            Grid = newGrid;
         }
-        public uint West()
+
+        // public void RotateCW()
+        // {
+        //     uint temp = SidesNESW[^1];
+        //     for (int i = SidesNESW.Length - 1; i > 0; i--) SidesNESW[i] = SidesNESW[i - 1];
+        //     SidesNESW[0] = temp;
+        // }
+
+        public void Flip()
         {
-            return SidesNESW[3];
+            (FlippedSidesNESW, SidesNESW) = (SidesNESW, FlippedSidesNESW);
         }
     }
 
@@ -221,6 +232,4 @@ public partial class Day20
         }
         return tiles;
     }
-
-
 }
