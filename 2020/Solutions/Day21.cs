@@ -19,6 +19,7 @@ public partial class Day21
 
     static int Part1(string[] data)
     {
+        Dictionary<string, int> counts = [];
         Dictionary<string, HashSet<string>> ingredients = [];
         foreach (var row in data)
         {
@@ -31,13 +32,22 @@ public partial class Day21
                     cont.IntersectWith(contains);
                 }
                 else ingredients[ingredient] = [.. contains];
+                if (counts.TryGetValue(ingredient, out var value))
+                {
+                    counts[ingredient] = value + 1;
+                }
+                else counts[ingredient] = 1;
             }
         }
+        var total = 0;
         foreach (var item in ingredients)
         {
-            Console.WriteLine($"{item.Key} {item.Value.Count}");
+            if (item.Value.Count == 0) {
+                total += counts[item.Key];
+            }
+            // Console.WriteLine($"{item.Key} {item.Value.Count}");
         }
-        return 1;
+        return total;
     }
 
 }
