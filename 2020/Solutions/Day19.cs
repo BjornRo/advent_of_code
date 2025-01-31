@@ -45,31 +45,29 @@ public partial class Day19
                 rebuilt = newWord;
                 return true;
             }
-            return false;
         }
-
-        foreach (var arr in ((IntArray)value).Value)
-        {
-            var conjunct = true;
-            string currWord = word;
-            foreach (var nextSymbol in arr)
+        else foreach (var arr in ((IntArray)value).Value)
             {
-                if (Descender(grammar, nextSymbol, target, currWord, part2, out var newWord)) currWord = newWord;
-                else
+                var conjunct = true;
+                string currWord = word;
+                foreach (var nextSymbol in arr)
                 {
-                    conjunct = false;
-                    break;
+                    if (Descender(grammar, nextSymbol, target, currWord, part2, out var newWord)) currWord = newWord;
+                    else
+                    {
+                        conjunct = false;
+                        break;
+                    }
+                    if (part2 && nextSymbol == 11 && currWord == target)
+                    {
+                        rebuilt = currWord;
+                        return true;
+                    }
                 }
-                if (part2 && nextSymbol == 11 && currWord == target)
-                {
-                    rebuilt = currWord;
-                    return true;
-                }
+                if (!conjunct) continue;
+                rebuilt = currWord;
+                return true;
             }
-            if (!conjunct) continue;
-            rebuilt = currWord;
-            return true;
-        }
         return false;
     }
 }
