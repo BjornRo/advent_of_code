@@ -22,6 +22,159 @@ public partial class Day20
         Console.WriteLine($"Part 2: {2}");
     }
 
+    static void OrientateCorner(Tile corner)
+    {
+        Tile a = corner.Neighbors[0];
+        Tile b = corner.Neighbors[1];
+
+        for (int i = 0; i < 2; i++)
+        {
+            corner.FlipGrid();
+            for (int j = 0; j < 4; j++)
+            {
+                corner.RotateGridCW();
+                var aMatch = false;
+                for (int k = 0; k < 2; k++)
+                {
+                    a.FlipGrid();
+                    for (int l = 0; l < 4; l++)
+                    {
+                        a.RotateGridCW();
+                        if (Matches(corner.East(), a.West()))
+                        {
+                            aMatch = true;
+                            break;
+                        }
+                    }
+                    if (aMatch) break;
+                }
+                if (aMatch)
+                    for (int k = 0; k < 2; k++)
+                    {
+                        b.FlipGrid();
+                        for (int l = 0; l < 4; l++)
+                        {
+                            b.RotateGridCW();
+                            if (Matches(corner.South(), b.North())) return;
+                        }
+                    }
+            }
+        }
+    }
+
+    static void Part2(Tile[] corners, Tile[] allTiles)
+    {
+        var DIM = (int)Math.Sqrt(allTiles.Length);
+        OrientateCorner(corners[0]);
+        Dictionary<(int, int), Tile> map = [];
+        map[(0, 0)] = corners[0];
+        map[(0, 1)] = corners[0].Neighbors[0];
+        map[(1, 0)] = corners[0].Neighbors[1];
+
+        int row = 0;
+        int col = 0;
+        Queue<Tile> queue = [];
+        foreach (var t in allTiles)
+        {
+            if (t.ID == corners[0].ID || t.ID == corners[0].Neighbors[0].ID || t.ID == corners[0].Neighbors[1].ID)
+                continue;
+            queue.Enqueue(t);
+        }
+        while (queue.TryDequeue(out var result))
+        {
+            while (map.ContainsKey((row, col)))
+            {
+                col += 1;
+                if (col >= DIM)
+                {
+                    col = 0;
+                    row += 1;
+                }
+            }
+            var foundSlot = false;
+            for (int i = 0; i < 2; i++)
+            {
+                result.FlipGrid();
+                for (int l = 0; l < 4; l++)
+                {
+                    result.RotateGridCW();
+                    if (col == 0)
+                    {
+                        if (Matches(map[(row - 1, col)].South(), result.North()))
+                        {
+                            map[(row, col)] = result;
+                            foundSlot = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (Matches(map[(row, col - 1)].East(), result.West()))
+                        {
+                            map[(row, col)] = result;
+                            foundSlot = true;
+                            break;
+                        }
+                    }
+                }
+                if (foundSlot) break;
+            }
+            if (!foundSlot) queue.Enqueue(result);
+        }
+
+        var subGridDim = corners[0].Grid.Length;
+        var matrixDim = subGridDim * DIM;
+        char[][] matrix = new char[matrixDim][];
+        for (int i = 0; i < matrixDim; i++) matrix[i] = new char[matrixDim];
+        foreach (var kvp in map)
+        {
+            int startRow = kvp.Key.Item1 * subGridDim;
+            int startCol = kvp.Key.Item2 * subGridDim;
+
+            for (int i = 0; i < subGridDim; i++)
+                for (int j = 0; j < subGridDim; j++)
+                    matrix[startRow + i][startCol + j] = kvp.Value.Grid[i][j];
+        }
+
+        // Print(corners[0].ID);
+        // foreach (var r in corners[0].Grid)
+        // {
+        //     Print(new string(r));
+        // }
+        // Print();
+        // foreach (var r in corners[0].Neighbors[0].Grid)
+        // {
+        //     Print(new string(r));
+        // }
+        // Print();
+        // foreach (var r in corners[0].Neighbors[1].Grid)
+        // {
+        //     Print(new string(r));
+        // }
+        Tile grid = new(0, matrix);
+        foreach (var r in grid.Grid)
+        {
+            Print(new string(r));
+        }
+        // grid.Flip();
+        // grid.TransposeGrid();
+
+
+
+        // tiles[0].Flip();
+        // Print(tiles[0].ID);
+        // foreach (var t in tiles[0].SidesNESW)
+        // {
+        //     Console.Write($"{t} ");
+        // }
+        // Print();
+        // foreach (var t in tiles[^1].SidesNESW)
+        // {
+        //     Console.Write($"{t} ");
+        // }
+        // Print();
+    }
+
     static bool CornerTieBreaker(Tile a, Tile b)
     {
         for (int i = 0; i < 2; i++)
@@ -66,33 +219,7 @@ public partial class Day20
         return null;
     }
 
-    static void Part2(Tile[] corners, Tile[] allTiles)
-    {
-        var DIM = (int)Math.Sqrt(allTiles.Length);
-        Tile[,] matrix = new Tile[DIM, DIM];
-        foreach (var c in corners)
-        {
-            Print(c.ID);
-            foreach (var k in c.Neighbors)
-            {
-                Print(k);
-            }
-            Print();
-        }
 
-        // tiles[0].Flip();
-        // Print(tiles[0].ID);
-        // foreach (var t in tiles[0].SidesNESW)
-        // {
-        //     Console.Write($"{t} ");
-        // }
-        // Print();
-        // foreach (var t in tiles[^1].SidesNESW)
-        // {
-        //     Console.Write($"{t} ");
-        // }
-        // Print();
-    }
 
     static (Tile[] corners, Tile[] allTiles) Part1(in Dictionary<int, char[][]> inTiles)
     {
@@ -123,8 +250,8 @@ public partial class Day20
                                 }
                         if (isCorner)
                         {
-                            tiles[i].Neighbors.Add(tiles[j].ID);
-                            tiles[i].Neighbors.Add(tiles[k].ID);
+                            tiles[i].Neighbors.Add(tiles[j]);
+                            tiles[i].Neighbors.Add(tiles[k]);
                             found = true;
                             corners.Add(t);
                         }
@@ -137,13 +264,18 @@ public partial class Day20
         return ([.. corners], tiles);
     }
 
+    static bool Matches(char[] a, char[] b)
+    {
+        return a.Zip(b).All(e => e.First == e.Second);
+    }
+
     class Tile
     {
         public int ID { get; set; }
         public uint[] SidesNESW { get; set; } = new uint[4];
         public uint[] FlippedSidesNESW { get; set; } = new uint[4];
-        public char[,] Grid { get; set; }
-        public HashSet<int> Neighbors = [];
+        public char[][] Grid { get; set; }
+        public List<Tile> Neighbors = [];
         readonly int Length;
 
         public Tile(int id, char[][] values)
@@ -161,10 +293,7 @@ public partial class Day20
 
             ID = id;
             Length = values.Length;
-            Grid = new char[Length, Length];
-            for (int i = 0; i < Length; i++)
-                for (int j = 0; j < Length; j++)
-                    Grid[i, j] = values[i][j];
+            Grid = values;
 
             SidesNESW[0] = CharArrToInt(values[0]);
             SidesNESW[1] = CharArrToInt([.. values.Select(e => e[^1])]);
@@ -183,38 +312,46 @@ public partial class Day20
                 FlippedSidesNESW[i] = reversedValue;
             }
         }
-
         public void RotateGridCW()
         {
             FlipGrid();
             TransposeGrid();
         }
-
         public void FlipGrid()
         {
             Array.Reverse(Grid);
             Flip();
         }
-
         public void TransposeGrid()
         {
-            int rows = Grid.GetLength(0);
-            int cols = Grid.GetLength(1);
-            char[,] newGrid = new char[cols, rows];
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                    newGrid[j, i] = Grid[i, j];
+            int rows = Grid.Length;
+            int cols = Grid[0].Length;
 
-            Grid = newGrid;
+            char[][] transposed = new char[cols][];
+            for (int i = 0; i < cols; i++)
+            {
+                transposed[i] = new char[rows];
+                for (int j = 0; j < rows; j++)
+                    transposed[i][j] = Grid[j][i];
+            }
+            Grid = transposed;
         }
-
-        // public void RotateCW()
-        // {
-        //     uint temp = SidesNESW[^1];
-        //     for (int i = SidesNESW.Length - 1; i > 0; i--) SidesNESW[i] = SidesNESW[i - 1];
-        //     SidesNESW[0] = temp;
-        // }
-
+        public char[] North()
+        {
+            return Grid[0];
+        }
+        public char[] South()
+        {
+            return Grid[^1];
+        }
+        public char[] East()
+        {
+            return [.. Grid.Select(e => e[^1])];
+        }
+        public char[] West()
+        {
+            return [.. Grid.Select(e => e[0])];
+        }
         public void Flip()
         {
             (FlippedSidesNESW, SidesNESW) = (SidesNESW, FlippedSidesNESW);
