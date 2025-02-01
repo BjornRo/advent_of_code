@@ -33,14 +33,11 @@ public partial class Day22
         {
             var play1 = p1.Dequeue();
             var play2 = p2.Dequeue();
-            List<int> plays = [play1, play2];
-            var roundWinner = plays[0] > plays[1] ? p1 : p2;
-
-            plays.Sort((a, b) => b.CompareTo(a));
-            foreach (var c in plays) roundWinner.Enqueue(c);
+            List<(int, Queue<int>)> plays = [(play1, p1), (play2, p2)];
+            plays.Sort((a, b) => b.Item1.CompareTo(a.Item1));
+            foreach (var c in plays.Select(e => e.Item1)) plays[0].Item2.Enqueue(c);
         }
-        var winner = p1.Count != 0 ? p1 : p2;
-        return winner.Reverse().Select((e, i) => e * (i + 1)).Sum();
+        return (p1.Count != 0 ? p1 : p2).Reverse().Select((e, i) => e * (i + 1)).Sum();
     }
 
     static (int, int) Part2(in (int[] p1, int[] p2) players)

@@ -26,7 +26,7 @@ public partial class Day23
 
     public static void Solve()
     {
-        string[] data = File.ReadAllText("in/d22.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
+        string[] data = File.ReadAllText("in/d23.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
         var players = Parse(data);
 
         Console.WriteLine($"Part 1: {Part1(players)}");
