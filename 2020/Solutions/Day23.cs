@@ -58,7 +58,7 @@ public partial class Day23
     static ulong Part2(in int[] data)
     {
         var len = 1000001;
-        Dictionary<int, LinkedListNode<int>> lookup = [];
+        LinkedListNode<int>[] lookup = new LinkedListNode<int>[len];
         LinkedList<int> cards = new([.. data]);
         {
             var head = cards.First!;
