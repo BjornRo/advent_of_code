@@ -21,9 +21,8 @@ public partial class Day22
         var players = Parse(data);
 
         Console.WriteLine($"Part 1: {Part1(players)}");
-        Console.WriteLine($"Part 2: {Part2(players).Item2}");
+        Console.WriteLine($"Part 2: {Part2(players).Item2.Reverse().Select((e, i) => e * (i + 1)).Sum()}");
     }
-
     static int Part1(in (int[] p1, int[] p2) players)
     {
         Queue<int> p1 = new([.. players.p1]);
@@ -40,7 +39,7 @@ public partial class Day22
         return (p1.Count != 0 ? p1 : p2).Reverse().Select((e, i) => e * (i + 1)).Sum();
     }
 
-    static (int, int) Part2(in (int[] p1, int[] p2) players)
+    static (int, Queue<int>) Part2(in (int[] p1, int[] p2) players)
     {
         Queue<int> p1 = new([.. players.p1]);
         Queue<int> p2 = new([.. players.p2]);
@@ -49,26 +48,23 @@ public partial class Day22
         while (p1.Count != 0 && p2.Count != 0)
         {
             var key = string.Join(",", p1) + "|" + string.Join(",", p2);
-            if (visited.Contains(key)) return (1, 0);
+            if (visited.Contains(key)) return (1, p1);
             visited.Add(key);
 
-            var play1 = p1.Dequeue();
-            var play2 = p2.Dequeue();
+            var d1 = p1.Dequeue();
+            var d2 = p2.Dequeue();
 
-            int[] plays;
-            Queue<int> roundWinner;
-            if (play1 <= p1.Count && play2 <= p2.Count)
-                if (Part2((p1.ToArray()[0..play1], p2.ToArray()[0..play2])).Item1 == 1)
-                    (plays, roundWinner) = ([play1, play2], p1);
-                else (plays, roundWinner) = ([play2, play1], p2);
-            else
-            {
-                if (play1 > play2) (plays, roundWinner) = ([play1, play2], p1);
-                else (plays, roundWinner) = ([play2, play1], p2);
-            }
-            foreach (var c in plays) roundWinner.Enqueue(c);
+            int[] cards;
+            Queue<int> roundWin;
+            if (d1 <= p1.Count && d2 <= p2.Count)
+                if (Part2((p1.ToArray()[0..d1], p2.ToArray()[0..d2])).Item1 == 1) (cards, roundWin) = ([d1, d2], p1);
+                else (cards, roundWin) = ([d2, d1], p2);
+            else if (d1 > d2) (cards, roundWin) = ([d1, d2], p1);
+            else (cards, roundWin) = ([d2, d1], p2);
+
+            foreach (var c in cards) roundWin.Enqueue(c);
         }
         var (winnerID, winner) = p1.Count != 0 ? (1, p1) : (2, p2);
-        return (winnerID, winner.Reverse().Select((e, i) => e * (i + 1)).Sum());
+        return (winnerID, winner);
     }
 }
