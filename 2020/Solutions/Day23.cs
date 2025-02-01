@@ -12,87 +12,57 @@ public partial class Day23
         Console.WriteLine();
     }
 
-    static (int[], int[]) Parse(in string[] rawDecks)
-    {
-        List<int[]> players = [];
-        foreach (var rawPlayer in rawDecks)
-            players.Add([.. rawPlayer
-                .Split(["\r\n", "\n"], count: 2, SPLITOPT)[1]
-                .Split(["\r\n", "\n"], SPLITOPT)
-                .Select(int.Parse)]
-                );
-        return (players[0], players[1]);
-    }
-
     public static void Solve()
     {
-        string[] data = File.ReadAllText("in/d23.txt").Split(["\r\n\r\n", "\n\n"], SPLITOPT);
-        var players = Parse(data);
+        int[] data = [.. File.ReadAllText("in/d23.txt").TrimEnd().ToCharArray().Select(e => e - '0')];
 
-        Console.WriteLine($"Part 1: {Part1(players)}");
-        Console.WriteLine($"Part 2: {Part2(players).Item2}");
+        Console.WriteLine($"Part 1: {Part1([.. data])}");
+        // Console.WriteLine($"Part 2: {Part2(players).Item2}");
     }
 
-    static int Part1(in (int[] p1, int[] p2) players)
+    static string Part1(in int[] data)
     {
-        Queue<int> p1 = new([.. players.p1]);
-        Queue<int> p2 = new([.. players.p2]);
+        var len = data.Length + 1;
+        LinkedList<int> cards = new([.. data]);
+        List<int> pickup = [];
 
-        while (p1.Count != 0 && p2.Count != 0)
+        for (int i = 0; i < 100; i++)
         {
-            var play1 = p1.Dequeue();
-            var play2 = p2.Dequeue();
-            List<int> plays = [play1, play2];
-            var roundWinner = plays[0] > plays[1] ? p1 : p2;
+            pickup.Clear();
+            var head = cards.First!;
+            var next = head.Next!;
+            for (int j = 0; j < 3; j++)
+            {
+                var nextNext = next.Next!;
+                pickup.Add(next.Value);
+                cards.Remove(next);
+                next = nextNext;
+            }
+            cards.Remove(head);
+            cards.AddLast(head);
 
-            plays.Sort((a, b) => b.CompareTo(a));
-            foreach (var c in plays) roundWinner.Enqueue(c);
+            var value = head.Value - 1;
+            while (pickup.Contains(value) || value == 0) value = ((value - 1) % len + len) % len;
+
+            var destination = cards.Find(value)!;
+            for (int j = 0; j < 3; j++)
+            {
+                cards.AddAfter(destination, pickup[j]);
+                destination = destination.Next!;
+            }
         }
-        var winner = p1.Count != 0 ? p1 : p2;
-        return winner.Reverse().Select((e, i) => e * (i + 1)).Sum();
+        {
+            var head = cards.First!;
+            while (head.Value != 1)
+            {
+                var next = head.Next!;
+                cards.Remove(head);
+                cards.AddLast(head);
+                head = next;
+            }
+        }
+        cards.RemoveFirst();
+        return string.Join("", cards);
     }
 
-    static (int, int) Part2(in (int[] p1, int[] p2) players)
-    {
-        Queue<int> p1 = new([.. players.p1]);
-        Queue<int> p2 = new([.. players.p2]);
-
-        HashSet<string> visited = [];
-        while (p1.Count != 0 && p2.Count != 0)
-        {
-            var key = string.Join(",", p1) + "|" + string.Join(",", p2);
-            if (visited.Contains(key)) return (1, 0);
-            visited.Add(key);
-
-            var play1 = p1.Dequeue();
-            var play2 = p2.Dequeue();
-
-            int[] plays;
-            Queue<int> roundWinner;
-            if (play1 <= p1.Count && play2 <= p2.Count)
-                if (Part2((p1.ToArray()[0..play1], p2.ToArray()[0..play2])).Item1 == 1)
-                {
-                    plays = [play1, play2];
-                    roundWinner = p1;
-                }
-                else
-                {
-                    plays = [play2, play1];
-                    roundWinner = p2;
-                }
-            else if (play1 > play2)
-            {
-                plays = [play1, play2];
-                roundWinner = p1;
-            }
-            else
-            {
-                plays = [play2, play1];
-                roundWinner = p2;
-            }
-            foreach (var c in plays) roundWinner.Enqueue(c);
-        }
-        var (winnerID, winner) = p1.Count != 0 ? (1, p1) : (2, p2);
-        return (winnerID, winner.Reverse().Select((e, i) => e * (i + 1)).Sum());
-    }
 }
