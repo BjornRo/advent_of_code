@@ -1,8 +1,17 @@
 namespace aoc.Solutions;
 
-public partial class Day22
+public partial class Day23
 {
     const StringSplitOptions SPLITOPT = StringSplitOptions.RemoveEmptyEntries;
+    static void Print(object? s)
+    {
+        Console.WriteLine(s);
+    }
+    static void Print()
+    {
+        Console.WriteLine();
+    }
+
     static (int[], int[]) Parse(in string[] rawDecks)
     {
         List<int[]> players = [];
@@ -62,12 +71,24 @@ public partial class Day22
             Queue<int> roundWinner;
             if (play1 <= p1.Count && play2 <= p2.Count)
                 if (Part2((p1.ToArray()[0..play1], p2.ToArray()[0..play2])).Item1 == 1)
-                    (plays, roundWinner) = ([play1, play2], p1);
-                else (plays, roundWinner) = ([play2, play1], p2);
+                {
+                    plays = [play1, play2];
+                    roundWinner = p1;
+                }
+                else
+                {
+                    plays = [play2, play1];
+                    roundWinner = p2;
+                }
+            else if (play1 > play2)
+            {
+                plays = [play1, play2];
+                roundWinner = p1;
+            }
             else
             {
-                if (play1 > play2) (plays, roundWinner) = ([play1, play2], p1);
-                else (plays, roundWinner) = ([play2, play1], p2);
+                plays = [play2, play1];
+                roundWinner = p2;
             }
             foreach (var c in plays) roundWinner.Enqueue(c);
         }
