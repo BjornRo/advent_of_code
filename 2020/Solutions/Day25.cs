@@ -2,8 +2,18 @@ using System.Numerics;
 
 namespace aoc.Solutions;
 
-public partial class Day24
+public partial class Day25
 {
+    static void Print(object? s)
+    {
+        Console.WriteLine(s);
+    }
+    static void Print()
+    {
+        Console.WriteLine();
+    }
+
+
     enum Direction
     {
         East,
