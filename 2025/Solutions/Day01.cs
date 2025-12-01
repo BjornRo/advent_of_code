@@ -56,8 +56,29 @@ namespace aoc.Solutions
             }
             return count;
         }
-
         static int Part2(in List<Row> list)
+        {
+            double unixTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var dial = 50;
+            var count = 0;
+
+            foreach (Row r in list)
+            {
+                Func<int, int> func = r.Label == Label.L ? (x => x - 1) : (x => x + 1);
+                for (int i = 0; i < r.Value; i++)
+                {
+                    dial = Mod(func(dial), 100);
+                    if (dial == 0)
+                    {
+                        count += 1;
+                    }
+                }
+            }
+            Console.WriteLine(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - unixTime);
+            return count;
+        }
+
+        static int Part2x(in List<Row> list)
         {
             var dial = 50;
             var count = 0;
@@ -99,22 +120,3 @@ namespace aoc.Solutions
     }
 }
 
-// static int Part2(in List<Row> list)
-// {
-//     var dial = 50;
-//     var count = 0;
-
-//     foreach (Row r in list)
-//     {
-//         Func<int, int> func = r.Label == Label.L ? (x => x - 1) : (x => x + 1);
-//         for (int i = 0; i < r.Value; i++)
-//         {
-//             dial = Mod(func(dial), 100);
-//             if (dial == 0)
-//             {
-//                 count += 1;
-//             }
-//         }
-//     }
-//     return count;
-// }
