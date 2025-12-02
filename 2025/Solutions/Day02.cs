@@ -17,7 +17,7 @@ namespace aoc.Solutions
                     })];
 
 
-            // Console.WriteLine($"Part 1: {Part1(records)}");
+            Console.WriteLine($"Part 1: {Part1(records)}");
             Console.WriteLine($"Part 2: {Part2(records)}");
         }
 
@@ -27,7 +27,6 @@ namespace aoc.Solutions
 
             foreach (Range r in list)
             {
-                Console.WriteLine(r);
                 for (ulong i = r.Start; i <= r.End; i++)
                 {
                     string s = i.ToString();
@@ -50,7 +49,7 @@ namespace aoc.Solutions
                 for (ulong i = r.Start; i <= r.End; i++)
                 {
                     string s = i.ToString();
-                    for (int j = s.Length / 2; 0 < j; j -= 1)
+                    for (int j = 1; j <= s.Length / 2; j++)
                     {
                         if (s[j..].Replace(s[..j], "").Length == 0)
                         {
