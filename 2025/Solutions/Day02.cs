@@ -2,55 +2,65 @@
 namespace aoc.Solutions
 {
 
-    readonly struct Coords(int min, int max, char symbol, string pwd)
-    {
-        public int Min { get; } = min;
-        public int Max { get; } = max;
-        public char Symbol { get; } = symbol;
-        public string Password { get; } = pwd;
-    }
+    record Range(ulong Start, ulong End);
 
     public class Day02
     {
         public static void Solve()
         {
-            string[] lines = File.ReadAllLines("in/d02.txt");
+            Range[] records =
+                [.. File.ReadAllText("in/d02.txt").Split(',')
+                    .Select(x =>
+                    {
+                        var parts = x.Trim().Split('-').Select(y => ulong.Parse(y)).ToArray();
+                        return new Range(parts[0], parts[1]);
+                    })];
 
-            List<Coords> list = [];
-            foreach (var line in lines)
-            {
-                string[] split_line = line.Split(" ");
-                var values = split_line[0].Split('-').Select(int.Parse).ToArray();
-                list.Add(new Coords(values[0], values[1], split_line[1][0], split_line[2]));
-            }
 
-            Console.WriteLine($"Part 1: {Part1(list)}");
-            Console.WriteLine($"Part 2: {Part2(list)}");
+            // Console.WriteLine($"Part 1: {Part1(records)}");
+            Console.WriteLine($"Part 2: {Part2(records)}");
         }
 
-        static int Part1(List<Coords> list)
+        static ulong Part1(Range[] list)
         {
-            int total = 0;
+            ulong sum = 0;
 
-            foreach (var pwd in list)
+            foreach (Range r in list)
             {
-                int num = pwd.Password.Count(c => c == pwd.Symbol);
-                if (pwd.Min <= num && num <= pwd.Max) total += 1;
+                Console.WriteLine(r);
+                for (ulong i = r.Start; i <= r.End; i++)
+                {
+                    string s = i.ToString();
+                    if (s.Length % 2 != 0) continue;
+                    if (s[..(s.Length / 2)] == s[(s.Length / 2)..s.Length])
+                    {
+                        sum += i;
+                    }
+                }
             }
-            return total;
+            return sum;
         }
 
-        static int Part2(List<Coords> list)
+        static ulong Part2(Range[] list)
         {
-            int total = 0;
+            ulong sum = 0;
 
-            foreach (var pwd in list)
+            foreach (Range r in list)
             {
-                string pass = pwd.Password;
-                if (pass[pwd.Min - 1] == pwd.Symbol != (pass[pwd.Max - 1] == pwd.Symbol))
-                    total += 1;
+                for (ulong i = r.Start; i <= r.End; i++)
+                {
+                    string s = i.ToString();
+                    for (int j = s.Length / 2; 0 < j; j -= 1)
+                    {
+                        if (s[j..].Replace(s[..j], "").Length == 0)
+                        {
+                            sum += i;
+                            break;
+                        }
+                    }
+                }
             }
-            return total;
+            return sum;
         }
     }
 }
