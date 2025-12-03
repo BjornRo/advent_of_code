@@ -35,8 +35,8 @@ namespace aoc.Solutions
         static string Jolter(string row, int index, int remaining)
         {
             if (remaining == -1) return "";
-            int max_index = index;
-            char max_value = '0';
+            var max_index = index;
+            var max_value = row[index];
 
             for (int i = index; i < row.Length - remaining; i++)
             {
