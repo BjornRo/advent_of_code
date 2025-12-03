@@ -4,30 +4,49 @@ namespace aoc.Solutions
     {
         public static void Solve()
         {
-            string[] matrix = File.ReadAllLines("in/d03.txt");
+            string[] rows = File.ReadAllLines("in/d03.txt");
 
-            Console.WriteLine($"Part 1: {Slope(matrix, 3, 1)}");
-            Console.WriteLine($"Part 2: {Part2(matrix)}");
+            Console.WriteLine($"Part 1: {Part1(rows)}");
+            Console.WriteLine($"Part 2: {Part2(rows)}");
         }
 
-        static int Slope(in string[] matrix, in int col_offset, in int row_offset)
+        static ulong Part1(string[] rows)
         {
-            int total = 0;
-            for (int i = row_offset; i < matrix.Length; i += row_offset)
+            ulong sum = 0;
+            foreach (string row in rows)
             {
-                int j = i * col_offset / row_offset % matrix[0].Length;
-                if (matrix[i][j] == '#') total += 1;
+                List<uint> jolts = [];
+                for (int i = 0; i < row.Length - 1; i++)
+                {
+                    for (int j = i + 1; j < row.Length; j++)
+                    {
+                        jolts.Add(uint.Parse($"{row[i]}{row[j]}"));
+                    }
+                }
+                sum += jolts.Max();
             }
-            return total;
+            return sum;
         }
 
-        static long Part2(in string[] matrix)
+
+        static ulong Part2(string[] rows) =>
+            rows.Aggregate((ulong)0, (sum, row) => sum + ulong.Parse(Jolter(row, 0, 12 - 1)));
+
+        static string Jolter(string row, int index, int remaining)
         {
-            long total_prod = 1;
-            var slopes = new (int, int)[] { (1, 1), (3, 1), (5, 1), (7, 1), (1, 2) };
-            foreach (var (col, row) in slopes)
-                total_prod *= Slope(matrix, col, row);
-            return total_prod;
+            if (remaining == -1) return "";
+            int max_index = index;
+            char max_value = '0';
+
+            for (int i = index; i < row.Length - remaining; i++)
+            {
+                if (row[i] > max_value)
+                {
+                    max_value = row[i];
+                    max_index = i;
+                }
+            }
+            return row[max_index] + Jolter(row, max_index + 1, remaining - 1);
         }
     }
 }

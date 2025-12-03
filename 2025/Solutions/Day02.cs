@@ -16,7 +16,6 @@ namespace aoc.Solutions
                         return new Range(parts[0], parts[1]);
                     })];
 
-
             Console.WriteLine($"Part 1: {Part1(records)}");
             Console.WriteLine($"Part 2: {Part2(records)}");
         }
