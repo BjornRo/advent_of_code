@@ -2,71 +2,80 @@ namespace aoc.Solutions
 {
     public class Day04
     {
+        enum Elem
+        {
+            Empty = '.',
+            Paper = '@',
+        }
         public static void Solve()
         {
-            string inData = File.ReadAllText("in/d04.txt");
+            Elem[][] inData = [.. File.ReadAllLines("in/d04.txt")
+                    .Select(x => x.Select(c => c == '.' ? Elem.Empty : Elem.Paper).ToArray())];
 
-            List<Dictionary<string, string>> passports = [];
-            foreach (var batch in inData.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.RemoveEmptyEntries))
+            Console.WriteLine($"Part 1: {Part1(inData).Count}");
+            Console.WriteLine($"Part 2: {Part2(inData)}");
+        }
+        static (int, int)? PaperDetector3000(int row, int col, Elem[][] matrix)
+        {
+            if (matrix[row][col] == Elem.Paper)
             {
-                Dictionary<string, string> passportData = [];
-                foreach (var data in batch.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-                    foreach (var rawKeyValue in data.Split(" "))
-                    {
-                        string[] keyValue = rawKeyValue.Split(":");
-                        passportData.Add(keyValue[0], keyValue[1]);
-                    }
-                passports.Add(passportData);
-            }
-
-            Console.WriteLine($"Part 1: {Part1(passports)}");
-            Console.WriteLine($"Part 2: {Part2(passports)}");
-        }
-
-        static bool Part1Valid(in Dictionary<string, string> passport)
-        {
-            var count = passport.Count;
-            return count == 8 || (count == 7 && !passport.ContainsKey("cid"));
-        }
-
-        static int Part1(in List<Dictionary<string, string>> passports)
-        {
-            int total = 0;
-            foreach (var passport in passports)
-                if (Part1Valid(passport))
-                    total += 1;
-            return total;
-        }
-
-        static int Part2(in List<Dictionary<string, string>> passports)
-        {
-            int total = 0;
-            var hairColor = new HashSet<string> { "amb", "blu", "brn", "gry", "grn", "hzl", "oth" };
-            foreach (var passport in passports)
-            {
-                if (!Part1Valid(passport)) continue;
-                if (!passport.TryGetValue("byr", out string? v)
-                    || !int.TryParse(v, out int r) || 1920 > r || r > 2002) continue;
-                if (!passport.TryGetValue("iyr", out v)
-                    || !int.TryParse(v, out r) || 2010 > r || r > 2020) continue;
-                if (!passport.TryGetValue("eyr", out v)
-                    || !int.TryParse(v, out r) || 2020 > r || r > 2030) continue;
-                if (passport.TryGetValue("hgt", out v))
+                uint paperRolls = 0;
+                for (int di = -1; di < 2; di++)
                 {
-                    if (!v.Contains("cm") && !v.Contains("in")) continue;
-                    if (v.Contains("cm"))
+                    for (int dj = -1; dj < 2; dj++)
                     {
-                        if (!int.TryParse(v.Replace("cm", ""), out r) || 150 > r || r > 193) continue;
+                        if (di == 0 && dj == 0) continue;
+                        if (0 > row + di || row + di >= matrix.Length) continue;
+                        if (0 > col + dj || col + dj >= matrix[0].Length) continue;
+
+
+                        if (matrix[row + di][col + dj] == Elem.Paper)
+                        {
+                            paperRolls += 1;
+                        }
                     }
-                    else if (!int.TryParse(v.Replace("in", ""), out r) || 59 > r || r > 76) continue;
                 }
-                else continue;
-                if (!passport.TryGetValue("hcl", out v) || !v.Contains('#') || v.Length != 7) continue;
-                if (!passport.TryGetValue("ecl", out v) || !hairColor.Contains(v)) continue;
-                if (!passport.TryGetValue("pid", out v) || v.Length != 9 || !v.All(char.IsDigit)) continue;
-                total += 1;
+                if (paperRolls < 4)
+                {
+                    return (row, col);
+                }
             }
-            return total;
+            return null;
+        }
+        static List<(int, int)> Part1(Elem[][] matrix)
+        {
+            List<(int, int)> accessibleRolls = [];
+
+            for (int row = 0; row < matrix.Length; row++)
+            {
+                for (int col = 0; col < matrix[0].Length; col++)
+                {
+                    if (PaperDetector3000(row, col, matrix) is (int, int) result)
+                    {
+                        accessibleRolls.Add(result);
+                    }
+                }
+            }
+            return accessibleRolls;
+        }
+
+        static uint Part2(Elem[][] matrix)
+        {
+            uint rollinPaper = 0;
+
+            while (true)
+            {
+                List<(int, int)> pendingRemoval = Part1(matrix);
+                if (pendingRemoval.Count == 0) break;
+
+                foreach (var (row, col) in pendingRemoval)
+                {
+                    matrix[row][col] = Elem.Empty;
+                    rollinPaper += 1;
+                }
+            }
+
+            return rollinPaper;
         }
     }
 }
