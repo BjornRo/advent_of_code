@@ -98,7 +98,6 @@ namespace aoc.Solutions
 
             foreach (var range in a)
             {
-                Console.WriteLine($"{range.Start},{range.End}");
                 freshness += range.End - range.Start + 1;
             }
 
