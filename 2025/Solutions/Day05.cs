@@ -1,50 +1,109 @@
+using System.Collections.Immutable;
+
 namespace aoc.Solutions
 {
     public class Day05
     {
+        record Range(ulong Start, ulong End);
         public static void Solve()
         {
-            string[] lines = File.ReadAllLines("in/d05.txt");
-
-            var (p1, p2) = Solver(lines);
-            Console.WriteLine($"Part 1: {p1}\nPart 2: {p2}");
-        }
-
-        static (int, int) SeatFinder(
-            in int minRow, in int maxRow, in int minCol, in int maxCol, in string str, in int i
-        )
-        {
-            if (i >= str.Length) return (minRow, minCol);
-            if (i >= 7)
+            var (ranges, ingredients) = new Func<(ImmutableArray<Range>, ImmutableArray<ulong>)>(() =>
             {
-                if (str[i] == 'L')
-                    return SeatFinder(minRow, maxRow, minCol, (minCol + maxCol) / 2, str, i + 1);
-                return SeatFinder(minRow, maxRow, (minCol + maxCol) / 2 + 1, maxCol, str, i + 1);
-            }
+                string data = File.ReadAllText("in/d05.txt").Replace("\r\n", "\n");
+                string[] range_map = data.Split("\n\n");
 
-            if (str[i] == 'F')
-                return SeatFinder(minRow, (minRow + maxRow) / 2, minCol, maxCol, str, i + 1);
-            return SeatFinder((minRow + maxRow) / 2 + 1, maxRow, minCol, maxCol, str, i + 1);
+                var ranges = range_map[0]
+                    .Split("\n")
+                    .Select(row =>
+                    {
+                        var res = row.Split("-").Select(x => ulong.Parse(x)).ToArray();
+                        return new Range(res[0], res[1]);
+                    })
+                    .ToImmutableArray();
+
+                var ingredients = range_map[1]
+                    .Split("\n")
+                    .Where(x => x.Length != 0)
+                    .Select(x => ulong.Parse(x))
+                    .ToImmutableArray();
+
+                return (ranges, ingredients);
+            })();
+
+            Console.WriteLine($"Part 1: {Part1(ranges, ingredients)}");
+            Console.WriteLine($"Part 2: {Part2(ranges)}");
         }
-
-        static (int, int) Solver(in string[] lines)
+        static ulong Part1(ImmutableArray<Range> ranges, ImmutableArray<ulong> ingredients)
         {
-            List<int> seats = [];
-            foreach (var line in lines)
+            ulong freshness = 0;
+
+            foreach (var ingredient in ingredients)
             {
-                var (row, col) = SeatFinder(0, 127, 0, 7, line, 0);
-                seats.Add(row * 8 + col);
-            }
-            seats.Sort();
-            int seatID = -1;
-            for (int i = 1; i < seats.Count - 1; i++)
-                if (seats[i] - seats[i - 1] >= 2)
+                foreach (var range in ranges)
                 {
-                    seatID = seats[i] - 1;
-                    break;
+                    if (range.Start <= ingredient && ingredient <= range.End)
+                    {
+                        freshness += 1;
+                        break;
+                    }
+                }
+            }
+
+
+            return freshness;
+        }
+
+        static ulong Part2(ImmutableArray<Range> ranges)
+        {
+            ulong freshness = 0;
+
+            var a = ranges.ToList();
+
+            while (true)
+            {
+                bool[] flags = new bool[a.Count];
+                List<Range> b = [];
+
+                for (int i = 0; i < a.Count; i++)
+                {
+                    if (flags[i]) continue;
+
+                    var (start, end) = a[i];
+                    for (int j = i + 1; j < a.Count; j++)
+                    {
+                        if (flags[j]) continue;
+
+                        var (_start, _end) = a[j];
+                        if (start <= _start && _start <= end)
+                        {
+                            end = ulong.Max(_end, end);
+                            flags[j] = true;
+                        }
+                        if (start <= _end && _end <= end)
+                        {
+                            start = ulong.Min(_start, start);
+                            flags[j] = true;
+                        }
+                    }
+                    b.Add(new(start, end));
                 }
 
-            return (seats.Last(), seatID);
+                if (flags.All(x => !x))
+                {
+                    a = b;
+                    break;
+                }
+                a = b;
+                a.Reverse(); // THIS SOLVES IT... Yay bug somewhere :D
+            }
+
+            foreach (var range in a)
+            {
+                Console.WriteLine($"{range.Start},{range.End}");
+                freshness += range.End - range.Start + 1;
+            }
+
+            return freshness;
         }
     }
 }
