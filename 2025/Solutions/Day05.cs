@@ -9,7 +9,7 @@ namespace aoc.Solutions
         {
             var (ranges, ingredients) = new Func<(ImmutableArray<Range>, ImmutableArray<ulong>)>(() =>
             {
-                string data = File.ReadAllText("in/d05.txt").Replace("\r\n", "\n");
+                string data = File.ReadAllText("in/d05.txt").Replace("\r\n", "\n").TrimEnd();
                 string[] range_map = data.Split("\n\n");
 
                 var ranges = range_map[0]
@@ -23,7 +23,6 @@ namespace aoc.Solutions
 
                 var ingredients = range_map[1]
                     .Split("\n")
-                    .Where(x => x.Length != 0)
                     .Select(x => ulong.Parse(x))
                     .ToImmutableArray();
 
