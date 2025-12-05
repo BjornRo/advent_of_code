@@ -16,14 +16,14 @@ namespace aoc.Solutions
                     .Split("\n")
                     .Select(row =>
                     {
-                        var res = row.Split("-").Select(x => ulong.Parse(x)).ToArray();
+                        var res = row.Split("-").Select(ulong.Parse).ToArray();
                         return new Range(res[0], res[1]);
                     })
                     .ToImmutableArray();
 
                 var ingredients = range_map[1]
                     .Split("\n")
-                    .Select(x => ulong.Parse(x))
+                    .Select(ulong.Parse)
                     .ToImmutableArray();
 
                 return (ranges, ingredients);
@@ -47,7 +47,6 @@ namespace aoc.Solutions
                     }
                 }
             }
-
 
             return freshness;
         }
