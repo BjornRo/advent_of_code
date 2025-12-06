@@ -1,57 +1,109 @@
+using System.Text.RegularExpressions;
+
 namespace aoc.Solutions
 {
     public class Day06
     {
         public static void Solve()
         {
-            string inData = File.ReadAllText("in/d06.txt");
+            var data = File.ReadAllText("in/d06.txt");
 
-            List<List<string>> groups = [];
-            foreach (var batch in inData.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.RemoveEmptyEntries))
-            {
-                List<string> group = [];
-                foreach (var person in batch.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-                    group.Add(person);
-                groups.Add(group);
-            }
-
-            Console.WriteLine($"Part 1: {Part1(groups)}");
-            Console.WriteLine($"Part 2: {Part2(groups)}");
+            Console.WriteLine($"Part 1: {Part1(data)}");
+            Console.WriteLine($"Part 2: {Part2(data)}");
         }
 
-
-        static int Part1(in List<List<string>> groups)
+        static long Part1(string data)
         {
-            int total = 0;
-            foreach (var group in groups)
+            var inData = Regex.Replace(data.Trim(), @" +", " ")
+                           .Replace("\r\n", "\n")
+                           .Split("\n")
+                           .Select(x => x.Trim().Split())
+                           .ToArray();
+
+            var numberGroups = new Func<long[][]>(() =>
             {
-                HashSet<char> answers = [];
-                foreach (var answer in group)
-                    foreach (char c in answer) answers.Add(c);
-                total += answers.Count;
-            }
-            return total;
+                var matrix = inData[..^1]
+                    .Select(x => x.Select(long.Parse).ToArray())
+                    .ToArray();
+
+                int rows = matrix.Length;
+                int cols = matrix[0].Length;
+
+                var trans = new long[cols][];
+
+                for (int c = 0; c < cols; c++)
+                {
+                    trans[c] = new long[rows];
+                    for (int r = 0; r < rows; r++)
+                        trans[c][r] = matrix[r][c];
+                }
+                return trans;
+            })();
+
+            return Aggregator(numberGroups, [.. inData[^1].Select(x => x[0])]); ;
         }
 
-        static int Part2(in List<List<string>> groups)
+        static long Part2(string data)
         {
-            int total = 0;
-            foreach (var group in groups)
+            var rawMatrix = data.TrimEnd().Split('\n');
+
+            var numberGroups = new Func<List<List<long>>>(() =>
             {
-                int nGroup = group.Count;
-                Dictionary<char, int> answers = [];
-                foreach (var answer in group)
-                    foreach (char c in answer)
+                var matrix = rawMatrix[..^1];
+
+                int rows = matrix.Length;
+                int cols = matrix[0].Length;
+
+                var trans = new char[cols][];
+
+                for (int c = 0; c < cols; c++)
+                {
+                    trans[c] = new char[rows];
+                    for (int r = 0; r < rows; r++)
                     {
-                        if (!answers.TryGetValue(c, out int value))
-                        {
-                            value = 0;
-                            answers[c] = value;
-                        }
-                        answers[c] = value + 1;
+                        trans[c][r] = matrix[r][c];
                     }
-                foreach (int count in answers.Values) if (count == nGroup) total += 1;
+                }
+
+                List<List<long>> numberGroups = [];
+                List<long> groups = [];
+                foreach (var row in trans)
+                {
+                    var result = string.Join("", row).Trim();
+                    if (result.Length == 0)
+                    {
+                        numberGroups.Add(groups);
+                        groups = [];
+                        continue;
+                    }
+                    groups.Add(long.Parse(result));
+                }
+                numberGroups.Add(groups);
+                return numberGroups;
+            })();
+
+            var operators = rawMatrix[^1].Where(x => !char.IsWhiteSpace(x)).ToArray();
+
+            return Aggregator(numberGroups, operators);
+        }
+
+        static long Aggregator(IEnumerable<IEnumerable<long>> numberGroups, char[] operators)
+        {
+            long total = 0;
+
+            foreach (var (op, numbers) in operators.Zip(numberGroups))
+            {
+                switch (op)
+                {
+                    case '*':
+                        total += numbers.Aggregate((long)1, (prod, value) => prod * value);
+                        break;
+                    case '+':
+                        total += numbers.Aggregate((long)0, (sum, value) => sum + value);
+                        break;
+                }
             }
+
             return total;
         }
     }
