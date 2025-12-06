@@ -1,13 +1,10 @@
 from functools import reduce
-from itertools import batched
+from itertools import groupby
 from operator import add, mul
 
-with open("in/d06t.txt") as f:
-    d = f.read().strip()
-
-n, ops = d.strip().rsplit("\n", 1)
-op = ops.replace(" ", "")
+with open("in/d06.txt") as f:
+    d = f.read().strip().split("\n")
 
 total = 0
-for o, v in zip(op, [[int(y) for y in x if y.strip()] for x in batched(map("".join, (zip(*n.split("\n")))), len(op))]):
+for o, v in zip(d[-1].replace(" ", ""), [[int(y) for y in x] for b,x in groupby(map(lambda x: "".join(x).strip(), (zip(*d[:-1]))), str.isdigit) if b]):
     total += reduce(add, v, 0) if o == "+" else reduce(mul, v, 1)
