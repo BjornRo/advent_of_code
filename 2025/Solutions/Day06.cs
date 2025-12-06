@@ -8,7 +8,7 @@ namespace aoc.Solutions
         {
             var data = File.ReadAllText("in/d06.txt");
 
-            // Console.WriteLine($"Part 1: {Part1(data)}");
+            Console.WriteLine($"Part 1: {Part1(data)}");
             Console.WriteLine($"Part 2: {Part2(data)}");
         }
 
@@ -93,11 +93,6 @@ namespace aoc.Solutions
 
             foreach (var (op, numbers) in operators.Zip(numberGroups))
             {
-                foreach (var n in numbers)
-                {
-                    Console.Write($"{n} ");
-                }
-                Console.WriteLine();
                 switch (op)
                 {
                     case '*':
