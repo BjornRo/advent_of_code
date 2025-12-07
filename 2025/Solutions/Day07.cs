@@ -1,42 +1,96 @@
+using System.Collections.Immutable;
+
 namespace aoc.Solutions;
 
 public class Day07
 {
+
+    enum Elem
+    {
+        Dot = '.',
+        Split = '^',
+        Start = 'S',
+    }
     public static void Solve()
     {
-        string[] bagData = File.ReadAllLines("in/d07.txt");
-
-        Dictionary<string, Dictionary<string, int>> bagRules = [];
-        foreach (var rawRules in Array.ConvertAll(bagData, s => s.Split(" bags contain ")))
-        {
-            string rest = rawRules[1][..^1];
-            Dictionary<string, int> neighbors = [];
-            if (!rest.StartsWith("no"))
-                foreach (var neighbor in rest.Split(", "))
+        var data = File.ReadAllText("in/d07.txt")
+            .TrimEnd()
+            .Split()
+            .Select(x => x.Select(c => c switch
                 {
-                    int num = int.Parse(neighbor[..1]);
-                    neighbors[num == 1 ? neighbor[2..^4] : neighbor[2..^5]] = num;
+                    '.' => Elem.Dot,
+                    '^' => Elem.Split,
+                    'S' => Elem.Start,
+                    _ => throw new NotImplementedException()
                 }
-            bagRules[rawRules[0]] = neighbors;
+                ).ToImmutableArray()
+            ).ToImmutableArray();
+
+
+        Console.WriteLine($"Part 1: {Part1(data)}");
+        Console.WriteLine($"Part 2: {Part2(data, (1, data[0].IndexOf(Elem.Start)))}");
+    }
+
+    static int Part1(ImmutableArray<ImmutableArray<Elem>> data)
+    {
+        // Row, col
+        HashSet<(int, int)> visited = [];
+        Stack<(int, int)> stack = new([(1, data[0].IndexOf(Elem.Start))]);
+
+        int count = 0;
+
+        while (stack.TryPop(out var result))
+        {
+            var (row, col) = result;
+            if (!(0 <= row && row < data.Length && 0 <= col && col < data[0].Length)) continue;
+
+            if (data[row][col] == Elem.Split)
+            {
+                stack.Push((row + 1, col - 1));
+                stack.Push((row + 1, col + 1));
+                count += 1;
+                continue;
+            }
+
+            if (visited.Contains(result)) continue;
+            visited.Add(result);
+
+            stack.Push((row + 1, col));
         }
 
-        Console.WriteLine($"Part 1: {bagRules.Keys.Select(bag => CanHoldBag(bagRules, bag) ? 1 : 0).Sum()}");
-        Console.WriteLine($"Part 2: {BagCounter(bagRules, "shiny gold") - 1}");
+        return count;
     }
 
-    static bool CanHoldBag(in Dictionary<string, Dictionary<string, int>> bagRules, string bag)
+    static readonly Dictionary<(int, int), long> memo = [];
+    // 1484524032 too low
+    static long Part2(ImmutableArray<ImmutableArray<Elem>> data, (int, int) position)
     {
-        foreach (var neighbor in bagRules[bag])
-            if (neighbor.Key.Equals("shiny gold")
-                || CanHoldBag(bagRules, neighbor.Key)) return true;
-        return false;
-    }
-
-    static int BagCounter(in Dictionary<string, Dictionary<string, int>> bagRules, string bag)
-    {
-        var total = 1;
-        foreach (var neighbor in bagRules[bag])
-            total += neighbor.Value * BagCounter(bagRules, neighbor.Key);
-        return total;
+        long count = 0;
+        var (row, col) = position;
+        while (true)
+        {
+            if (!(0 <= row && row < data.Length))
+            {
+                return count + 1;
+            }
+            if (data[row][col] == Elem.Split)
+            {
+                checked
+                {
+                    if (memo.TryGetValue((row, col), out var value))
+                    {
+                        count += value;
+                    }
+                    else
+                    {
+                        var res = Part2(data, (row + 1, col + 1));
+                        memo.Add((row, col), res);
+                        count += res;
+                    }
+                }
+                col -= 1;
+            }
+            row += 1;
+        }
     }
 }
