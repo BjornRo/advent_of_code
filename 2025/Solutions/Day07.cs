@@ -62,7 +62,6 @@ public class Day07
     }
 
     static readonly Dictionary<(int, int), long> memo = [];
-    // 1484524032 too low
     static long Part2(ImmutableArray<ImmutableArray<Elem>> data, (int, int) position)
     {
         long count = 0;
