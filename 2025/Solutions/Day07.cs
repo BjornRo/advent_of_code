@@ -28,7 +28,7 @@ public class Day07
 
 
         Console.WriteLine($"Part 1: {Part1(data)}");
-        Console.WriteLine($"Part 2: {Part2(data, (1, data[0].IndexOf(Elem.Start)))}");
+        Console.WriteLine($"Part 2: {Part2(data, 1, data[0].IndexOf(Elem.Start), [])}");
     }
 
     static int Part1(ImmutableArray<ImmutableArray<Elem>> data)
@@ -61,17 +61,11 @@ public class Day07
         return count;
     }
 
-    static readonly Dictionary<(int, int), long> memo = [];
-    static long Part2(ImmutableArray<ImmutableArray<Elem>> data, (int, int) position)
+    static long Part2(ImmutableArray<ImmutableArray<Elem>> data, int row, int col, Dictionary<(int, int), long> memo)
     {
-        long count = 0;
-        var (row, col) = position;
-        while (true)
+        long count = 1;
+        while (0 <= row && row < data.Length)
         {
-            if (!(0 <= row && row < data.Length))
-            {
-                return count + 1;
-            }
             if (data[row][col] == Elem.Split)
             {
                 checked
@@ -82,7 +76,7 @@ public class Day07
                     }
                     else
                     {
-                        var res = Part2(data, (row + 1, col + 1));
+                        var res = Part2(data, row + 1, col + 1, memo);
                         memo.Add((row, col), res);
                         count += res;
                     }
@@ -91,5 +85,6 @@ public class Day07
             }
             row += 1;
         }
+        return count;
     }
 }
