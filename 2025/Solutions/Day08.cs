@@ -35,16 +35,14 @@ public class Day08
     }
     static (long, long) Solution(ImmutableArray<Junction> junctions, int nConnections)
     {
-        List<(Junction, Junction, double)> connections = [];
-        foreach (var (i, a) in junctions[..^1].Select((e, i) => (i, e)))
-            foreach (var b in junctions[(i + 1)..])
-                connections.Add((a, b, a.Euclidean(b)));
-
-        connections.Sort((x, y) => x.Item3.CompareTo(y.Item3));
-
         long part1 = 0, part2 = 0;
         var graph = junctions.ToDictionary(j => j, _ => new HashSet<Junction>()); ;
-        foreach (var (i, (a, b, _)) in connections.Select((x, index) => (index, x)))
+
+        var iter_conns =
+            junctions
+                .SelectMany((a, i) => junctions.Skip(i + 1).Select(b => (a, b, a.Euclidean(b))))
+                .OrderBy(x => x.Item3);
+        foreach (var (i, a, b) in iter_conns.Select((x, i) => (i, x.a, x.b)))
         {
             graph[a].Add(b);
             graph[b].Add(a);
