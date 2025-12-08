@@ -19,7 +19,6 @@ public class Day08
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
     }
-
     public static void Solve()
     {
         ImmutableArray<Junction> junctions = [.. File.ReadAllLines("in/d08.txt")
@@ -35,22 +34,19 @@ public class Day08
     }
     static (long, long) Solution(ImmutableArray<Junction> junctions, int nConnections)
     {
-        long part1 = 0, part2 = 0;
         var graph = junctions.ToDictionary(j => j, _ => new HashSet<Junction>()); ;
 
-        var iter_conns =
-            junctions
-                .SelectMany((a, i) => junctions.Skip(i + 1).Select(b => (a, b, a.Euclidean(b))))
-                .OrderBy(x => x.Item3);
-        foreach (var (i, a, b) in iter_conns.Select((x, i) => (i, x.a, x.b)))
+        var iter_conns = junctions
+            .SelectMany((a, i) => junctions.Skip(i + 1).Select(b => (a, b, a.Euclidean(b))))
+            .OrderBy(x => x.Item3);
+
+        foreach (var (a, b, _) in iter_conns.Take(nConnections))
         {
             graph[a].Add(b);
             graph[b].Add(a);
-            if (i < nConnections - 1) continue;
+        }
 
-            if (i == nConnections - 1)
-            {
-                part1 = graph.Keys
+        long part1 = graph.Keys
                     .Aggregate((List<HashSet<Junction>>)[], (list, node) =>
                             {
                                 var result = Connectivity(graph, node, []);
@@ -61,17 +57,17 @@ public class Day08
                     .OrderBy(h => -h.Count)
                     .Take(3)
                     .Aggregate(1, (prod, h) => prod * h.Count);
-            }
-            else if (i >= (nConnections * 2)) // optimization
-            {
-                if (Connectivity(graph, a, []).Count == nConnections)
-                {
-                    part2 = a.x * b.x;
-                    break;
-                }
-            }
+
+        foreach (var (i, a, b) in iter_conns.Select((x, i) => (i, x.a, x.b)))
+        {
+            graph[a].Add(b);
+            graph[b].Add(a);
+
+            if (i < (nConnections * 2)) continue;
+            if (Connectivity(graph, a, []).Count != nConnections) continue;
+            return (part1, a.x * b.x);
         }
-        return (part1, part2);
+        return (0, 0);
     }
     static HashSet<Junction> Connectivity(
         Dictionary<Junction, HashSet<Junction>> graph,
