@@ -19,24 +19,6 @@ public class Day08
 
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
-
-        public (Junction, Junction) Key(Junction o)
-        {
-            var a = this;
-            var b = o;
-            if (b.id < a.id) (a, b) = (b, a);
-            return (a, b);
-        }
-
-
-        public void P()
-        {
-            Console.WriteLine($"{x},{y},{z}");
-        }
-        public string W()
-        {
-            return $"{x},{y},{z}";
-        }
     }
 
     public static void Solve()
@@ -86,30 +68,32 @@ public class Day08
             if (!graph.TryGetValue(b, out _)) graph[b] = [];
             graph[b].Add(a);
 
-            if (i == nConnections - 1)
+            if (i >= nConnections - 1)
             {
-                List<HashSet<Junction>> counts = [];
-                foreach (var node in graph.Keys)
+                if (i == nConnections - 1)
                 {
-                    var result = Find(graph, node, []);
-                    bool equal = false;
-                    foreach (var set in counts)
+                    List<HashSet<Junction>> counts = [];
+                    foreach (var node in graph.Keys)
                     {
-                        if (set.SetEquals(result))
+                        var result = Find(graph, node, []);
+                        bool equal = false;
+                        foreach (var set in counts)
                         {
-                            equal = true;
-                            break;
+                            if (set.SetEquals(result))
+                            {
+                                equal = true;
+                                break;
+                            }
                         }
+                        if (!equal) counts.Add(result);
                     }
-                    if (!equal) counts.Add(result);
+                    counts.Sort((x, y) => y.Count.CompareTo(x.Count));
+                    part1 = counts.Take(3).Aggregate(1, (prod, x) => prod * x.Count);
                 }
-                List<int> values = [.. counts.Select(x => x.Count)];
-                values.Sort();
-                part1 = values[^3] * values[^2] * values[^1];
-            }
-            else if (i >= (nConnections * 2) && Find(graph, a, []).Count == nConnections)
-            {
-                return (part1, a.x * b.x);
+                else if (i >= (nConnections * 2) && Find(graph, a, []).Count == nConnections)
+                {
+                    return (part1, a.x * b.x);
+                }
             }
         }
 
