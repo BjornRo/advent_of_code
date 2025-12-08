@@ -4,9 +4,8 @@ namespace aoc.Solutions;
 
 public class Day08
 {
-    readonly struct Junction(int id, in long x, long y, long z)
+    readonly struct Junction(in long x, long y, long z)
     {
-        public readonly int id = id;
         public readonly long x = x;
         public readonly long y = y;
         public readonly long z = z;
@@ -26,7 +25,7 @@ public class Day08
         ImmutableArray<Junction> junctions = [.. File.ReadAllLines("in/d08.txt")
             .Select((x, index) => {
                 var result = x.Split(",").Select(long.Parse).ToArray();
-                return new Junction(index, result[0], result[1], result[2]);
+                return new Junction(result[0], result[1], result[2]);
             })
         ];
 
@@ -35,7 +34,7 @@ public class Day08
         Console.WriteLine($"Part 2: {p2}");
     }
 
-    static HashSet<Junction> Find(
+    static HashSet<Junction> Connectivity(
     Dictionary<Junction, HashSet<Junction>> graph,
     Junction node,
     HashSet<Junction> visited
@@ -44,59 +43,53 @@ public class Day08
         if (!visited.TryGetValue(node, out _))
         {
             visited.Add(node);
-            foreach (var neighbor in graph[node]) Find(graph, neighbor, visited);
+            foreach (var neighbor in graph[node]) Connectivity(graph, neighbor, visited);
         }
         return visited;
     }
     static (long, long) Solution(ImmutableArray<Junction> junctions, int nConnections)
     {
         List<(Junction, Junction, double)> connections = [];
-
-        for (int i = 0; i < junctions.Length - 1; i += 1)
-            for (int j = i + 1; j < junctions.Length; j += 1)
-                connections.Add((junctions[i], junctions[j], junctions[i].Euclidean(junctions[j])));
+        foreach (var (i, a) in junctions[..^1].Select((e, i) => (i, e)))
+            foreach (var b in junctions[(i + 1)..])
+                connections.Add((a, b, a.Euclidean(b)));
 
         connections.Sort((x, y) => x.Item3.CompareTo(y.Item3));
 
-        long part1 = 0;
-
-        Dictionary<Junction, HashSet<Junction>> graph = [];
+        long part1 = 0, part2 = 0;
+        var graph = junctions.ToDictionary(j => j, _ => new HashSet<Junction>()); ;
         foreach (var (i, (a, b, _)) in connections.Select((x, index) => (index, x)))
         {
-            if (!graph.TryGetValue(a, out _)) graph[a] = [];
             graph[a].Add(b);
-            if (!graph.TryGetValue(b, out _)) graph[b] = [];
             graph[b].Add(a);
+            if (i < nConnections - 1) continue;
 
-            if (i >= nConnections - 1)
+            if (i == nConnections - 1)
             {
-                if (i == nConnections - 1)
+                List<HashSet<Junction>> counts = [];
+                foreach (var node in graph.Keys)
                 {
-                    List<HashSet<Junction>> counts = [];
-                    foreach (var node in graph.Keys)
+                    var result = Connectivity(graph, node, []);
+                    bool equal = false;
+                    foreach (var set in counts)
                     {
-                        var result = Find(graph, node, []);
-                        bool equal = false;
-                        foreach (var set in counts)
+                        if (set.SetEquals(result))
                         {
-                            if (set.SetEquals(result))
-                            {
-                                equal = true;
-                                break;
-                            }
+                            equal = true;
+                            break;
                         }
-                        if (!equal) counts.Add(result);
                     }
-                    counts.Sort((x, y) => y.Count.CompareTo(x.Count));
-                    part1 = counts.Take(3).Aggregate(1, (prod, x) => prod * x.Count);
+                    if (!equal) counts.Add(result);
                 }
-                else if (i >= (nConnections * 2) && Find(graph, a, []).Count == nConnections)
-                {
-                    return (part1, a.x * b.x);
-                }
+                counts.Sort((x, y) => y.Count.CompareTo(x.Count));
+                part1 = counts.Take(3).Aggregate(1, (prod, x) => prod * x.Count);
+            }
+            else if (i >= (nConnections * 2) && Connectivity(graph, a, []).Count == nConnections)
+            {
+                part2 = a.x * b.x;
+                break;
             }
         }
-
-        return (0, 0);
+        return (part1, part2);
     }
 }
