@@ -79,11 +79,7 @@ public class Day08
         HashSet<Junction> visited
     )
     {
-        if (!visited.TryGetValue(node, out _))
-        {
-            visited.Add(node);
-            foreach (var neighbor in graph[node]) Connectivity(graph, neighbor, visited);
-        }
+        if (visited.Add(node)) foreach (var neighbor in graph[node]) Connectivity(graph, neighbor, visited);
         return visited;
     }
 }
