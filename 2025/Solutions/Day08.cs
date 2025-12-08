@@ -70,16 +70,8 @@ public class Day08
                 foreach (var node in graph.Keys)
                 {
                     var result = Connectivity(graph, node, []);
-                    bool equal = false;
-                    foreach (var set in counts)
-                    {
-                        if (set.SetEquals(result))
-                        {
-                            equal = true;
-                            break;
-                        }
-                    }
-                    if (!equal) counts.Add(result);
+                    if (!counts.Any(s => s.SetEquals(result)))
+                        counts.Add(result);
                 }
                 counts.Sort((x, y) => y.Count.CompareTo(x.Count));
                 part1 = counts.Take(3).Aggregate(1, (prod, x) => prod * x.Count);
