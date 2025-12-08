@@ -33,20 +33,6 @@ public class Day08
         Console.WriteLine($"Part 1: {p1}");
         Console.WriteLine($"Part 2: {p2}");
     }
-
-    static HashSet<Junction> Connectivity(
-    Dictionary<Junction, HashSet<Junction>> graph,
-    Junction node,
-    HashSet<Junction> visited
-)
-    {
-        if (!visited.TryGetValue(node, out _))
-        {
-            visited.Add(node);
-            foreach (var neighbor in graph[node]) Connectivity(graph, neighbor, visited);
-        }
-        return visited;
-    }
     static (long, long) Solution(ImmutableArray<Junction> junctions, int nConnections)
     {
         List<(Junction, Junction, double)> connections = [];
@@ -66,22 +52,40 @@ public class Day08
 
             if (i == nConnections - 1)
             {
-                List<HashSet<Junction>> counts = [];
-                foreach (var node in graph.Keys)
-                {
-                    var result = Connectivity(graph, node, []);
-                    if (!counts.Any(s => s.SetEquals(result)))
-                        counts.Add(result);
-                }
-                counts.Sort((x, y) => y.Count.CompareTo(x.Count));
-                part1 = counts.Take(3).Aggregate(1, (prod, x) => prod * x.Count);
+                part1 = graph.Keys
+                    .Aggregate((List<HashSet<Junction>>)[], (list, node) =>
+                            {
+                                var result = Connectivity(graph, node, []);
+                                if (!list.Any(s => s.SetEquals(result))) list.Add(result);
+                                return list;
+                            }
+                        )
+                    .OrderBy(m => -m.Count)
+                    .Take(3)
+                    .Aggregate(1, (prod, x) => prod * x.Count);
             }
-            else if (i >= (nConnections * 2) && Connectivity(graph, a, []).Count == nConnections)
+            else if (i >= (nConnections * 2)) // optimization
             {
-                part2 = a.x * b.x;
-                break;
+                if (Connectivity(graph, a, []).Count == nConnections)
+                {
+                    part2 = a.x * b.x;
+                    break;
+                }
             }
         }
         return (part1, part2);
+    }
+    static HashSet<Junction> Connectivity(
+        Dictionary<Junction, HashSet<Junction>> graph,
+        Junction node,
+        HashSet<Junction> visited
+    )
+    {
+        if (!visited.TryGetValue(node, out _))
+        {
+            visited.Add(node);
+            foreach (var neighbor in graph[node]) Connectivity(graph, neighbor, visited);
+        }
+        return visited;
     }
 }
