@@ -60,9 +60,9 @@ public class Day08
                                 return list;
                             }
                         )
-                    .OrderBy(m => -m.Count)
+                    .OrderBy(h => -h.Count)
                     .Take(3)
-                    .Aggregate(1, (prod, x) => prod * x.Count);
+                    .Aggregate(1, (prod, h) => prod * h.Count);
             }
             else if (i >= (nConnections * 2)) // optimization
             {
