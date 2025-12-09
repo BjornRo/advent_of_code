@@ -34,7 +34,7 @@ public class Day09
                 .Skip(i + 1)
                 .Select(b => a.DeltaR(b) * a.DeltaC(b)))
             .Max();
-    static readonly ConcurrentDictionary<Point, bool> memo = [];
+    static readonly Dictionary<Point, bool> memo = [];
     static bool WithinBounds(Point[] list, HashSet<Point> edge, Point p)
     {
         // https://en.wikipedia.org/wiki/Even%E2%80%93odd_rule
@@ -71,9 +71,11 @@ public class Day09
                 }
             }
         }
-        memo.TryAdd(p, c);
+        memo.Add(p, c);
         return c;
     }
+    static readonly Dictionary<Point, bool> memor = [];
+    static readonly Dictionary<Point, bool> memoc = [];
     static bool RectInBounds(Point[] list, Point a, Point b, HashSet<Point> edge)
     {
         int minRow = int.Min(a.Row, b.Row);
@@ -81,14 +83,33 @@ public class Day09
         int minCol = int.Min(a.Col, b.Col);
         int maxCol = int.Max(a.Col, b.Col);
 
-        for (int i = minRow; i <= maxRow; i++)
-            if (!WithinBounds(list, edge, new Point(i, minCol)) ||
-                !WithinBounds(list, edge, new Point(i, maxCol))) return false;
+        Point r = new(minRow, maxRow);
+        Point c = new(minCol, maxCol);
+        bool? rb = memor.TryGetValue(r, out var rr) ? rr : null;
+        bool? cb = memoc.TryGetValue(c, out var cr) ? cr : null;
+        if (rb == true && cb == true) return true;
+        if (rb == false || cb == false) return false;
 
-        for (int i = minCol; i <= maxCol; i++)
-            if (!WithinBounds(list, edge, new Point(minRow, i)) ||
-                !WithinBounds(list, edge, new Point(maxRow, i))) return false;
+        if (rb == null)
+            for (int i = minRow; i <= maxRow; i++)
+                if (!WithinBounds(list, edge, new Point(i, minCol)) ||
+                    !WithinBounds(list, edge, new Point(i, maxCol)))
+                {
+                    memor.Add(r, false);
+                    return false;
+                }
 
+        if (cb == null)
+            for (int i = minCol; i <= maxCol; i++)
+                if (!WithinBounds(list, edge, new Point(minRow, i)) ||
+                    !WithinBounds(list, edge, new Point(maxRow, i)))
+                {
+                    memoc.Add(c, false);
+                    return false;
+                }
+
+        memor.Add(r, true);
+        memoc.Add(c, true);
         return true;
     }
     static long Part2(Point[] list)
@@ -108,12 +129,17 @@ public class Day09
                     edges.Add(new Point(r, c));
         }
 
-        return list
+        var maxIter = list
             .SelectMany((a, i) => list
                 .Skip(i + 1)
-                .AsParallel()
-                .Select(b => RectInBounds(list, a, b, edges) ? a.DeltaR(b) * a.DeltaC(b) : 0)
+                .Select(b => (a.DeltaR(b) * a.DeltaC(b), a, b))
             )
-            .Max();
+            .OrderBy(x => -x.Item1);
+
+        foreach (var (res, a, b) in maxIter)
+            if (RectInBounds(list, a, b, edges))
+                return res;
+
+        return 0;
     }
 }
