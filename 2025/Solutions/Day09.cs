@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 
 namespace aoc.Solutions;
 
+using System;
+using System.Diagnostics;
 public class Day09
 {
     record Point(int Row, int Col)
@@ -19,8 +21,13 @@ public class Day09
                 }
         )];
 
+        var sw = Stopwatch.StartNew();
+
         Console.WriteLine($"Part 1: {Part1(list)}");
         Console.WriteLine($"Part 2: {Part2(list)}");
+
+        sw.Stop();
+        Console.WriteLine(sw.Elapsed.TotalSeconds);
     }
     static long Part1(Point[] list) => list
             .SelectMany((a, i) => list
