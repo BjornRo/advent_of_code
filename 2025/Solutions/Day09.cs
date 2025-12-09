@@ -67,33 +67,32 @@ public class Day09
         memo.TryAdd(p, c);
         return c;
     }
-    static bool RectInBounds(Point[] list, Point[] rect, HashSet<Point> edge)
+    static bool RectInBounds(Point[] list, Point a, Point b, HashSet<Point> edge)
     {
-        int minRow = rect.Min(p => p.Row);
-        int maxRow = rect.Max(p => p.Row);
-        int minCol = rect.Min(p => p.Col);
-        int maxCol = rect.Max(p => p.Col);
+        int minRow = int.Min(a.Row, b.Row);
+        int maxRow = int.Max(a.Row, b.Row);
+        int minCol = int.Min(a.Col, b.Col);
+        int maxCol = int.Max(a.Col, b.Col);
 
-        for (int c = minCol; c <= maxCol; c++)
-            if (!WithinBounds(list, edge, new Point(minRow, c)) ||
-                !WithinBounds(list, edge, new Point(maxRow, c))) return false;
+        for (int i = minRow; i <= maxRow; i++)
+            if (!WithinBounds(list, edge, new Point(i, minCol)) ||
+                !WithinBounds(list, edge, new Point(i, maxCol))) return false;
 
-        for (int r = minRow; r <= maxRow; r++)
-            if (!WithinBounds(list, edge, new Point(r, minCol)) ||
-                !WithinBounds(list, edge, new Point(r, maxCol))) return false;
+        for (int i = minCol; i <= maxCol; i++)
+            if (!WithinBounds(list, edge, new Point(minRow, i)) ||
+                !WithinBounds(list, edge, new Point(maxRow, i))) return false;
 
         return true;
     }
-
-    static long? Part2(Point[] list)
+    static long Part2(Point[] list)
     {
         var edges = new HashSet<Point>();
-        int n = list.Length;
+        int N = list.Length;
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < N; i++)
         {
             Point start = list[i];
-            Point end = list[(i + 1) % n];
+            Point end = list[(i + 1) % N];
 
             int colMin = Math.Min(start.Col, end.Col);
             int colMax = Math.Max(start.Col, end.Col);
@@ -106,16 +105,8 @@ public class Day09
             .SelectMany((a, i) => list
                 .Skip(i + 1)
                 .AsParallel()
-                .Select(b =>
-                    {
-                        Point[] corners = [a, b, new Point(b.Row, a.Col), new Point(a.Row, b.Col)];
-
-                        var res = RectInBounds(list, corners, edges) ? (long?)a.DeltaR(b) * a.DeltaC(b) : null;
-                        if (res != null) Console.WriteLine(res);
-                        return res;
-                    })
-                .Where(x => x != null)
-                )
-            .OrderBy(x => -x).First();
+                .Select(b => RectInBounds(list, a, b, edges) ? a.DeltaR(b) * a.DeltaC(b) : 0)
+            )
+            .Max();
     }
 }
