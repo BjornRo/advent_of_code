@@ -2,56 +2,90 @@ namespace aoc.Solutions;
 
 public class Day09
 {
+    record Point(long Row, long Col)
+    {
+        public long DeltaR(Point o) => long.Abs(o.Row - Row) + 1;
+        public long DeltaC(Point o) => long.Abs(o.Col - Col) + 1;
+    }
     public static void Solve()
     {
-        long[] list = [.. File.ReadAllLines("in/d09.txt").Select(long.Parse)];
+        Point[] list = [.. File.ReadAllLines("in/d09t.txt")
+            .Select(x =>
+                {
+                    var res = x.Split(",").Select(long.Parse).ToArray();
+                    return new Point(res[0], res[1]);
+                }
+        )];
 
-        Console.WriteLine($"Part 1: {PatternFinder(list, 25)}");
-        Console.WriteLine($"Part 2: {WeaknessFinder(list, 25)}");
+        // Console.WriteLine($"Part 1: {Part1(list)}");
+        Console.WriteLine($"Part 2: {Part2(list)}");
     }
 
-    static long PatternFinder(long[] list, int preamble)
+    static bool WithinBounds(Point[] list, Point p)
     {
-        for (int i = 0; i < list.Length - preamble - 1; i++)
+        // https://en.wikipedia.org/wiki/Even%E2%80%93odd_rule
+        var (x, y) = p;
+
+        bool c = false;
+        int N = list.Length;
+        for (int i = 0; i < N; i += 1)
         {
-            long target = list[i + preamble];
-            long[] subList = list[i..(i + preamble + 1)];
-            bool valid = false;
-            for (int j = 0; j < subList.Length - 1; j++)
+            var (ax, ay) = list[i];
+            var (bx, by) = list[(i + 1) % N];
+            if (x == ax && y == ay) return true;
+            if (ay > y != by > y)
             {
-                for (int k = j + 1; k < subList.Length - 1; k++)
-                    if (subList[j] + subList[k] == target)
+                var slope = (x - ax) * (by - ay) - (bx - ax) * (y - ay);
+                if (slope == 0) return true;
+                if (slope < 0 != by < ay) c = !c;
+            }
+        }
+        return c;
+    }
+
+    static bool RectInBounds(Point[] list, Point[] rect)
+    {
+        if (!rect.All(p => WithinBounds(list, p))) return false;
+
+        return true;
+    }
+
+
+    // too high 4582310446
+    //          4562599890
+    // too low  24679722
+    static long? Part2(Point[] list)
+    {
+        // var map = list.ToHashSet();
+
+        var items = list
+            .SelectMany((a, i) => list
+                .Skip(i + 1)
+                .Select(b =>
                     {
-                        valid = true;
-                        break;
-                    }
-                if (valid) break;
-            }
-            if (!valid) return target;
-        }
-        return 0;
-    }
+                        Point[] corners = [a, b, new Point(b.Row, a.Col), new Point(a.Row, b.Col)];
+                        return RectInBounds(list, corners) ? (long?)a.DeltaR(b) * a.DeltaC(b) : null;
+                    })
+                .Where(x => x != null)
+                )
+            .OrderBy(x => -x)
+            .ToArray();
 
-    static long WeaknessFinder(long[] list, int preamble)
-    {
-        long target = PatternFinder(list, preamble);
-        for (int i = 0; i < list.Length - 1; i++)
+
+        foreach (var result in items.Take(30))
         {
-            long min = list[i];
-            long max = list[i];
-            long total = list[i];
-
-            for (int j = i + 1; j < list.Length; j++)
-            {
-                var nextValue = list[j];
-                if (nextValue > max) max = nextValue;
-                else if (nextValue < min) min = nextValue;
-
-                total += nextValue;
-                if (total == target) return min + max;
-                if (total > target) break;
-            }
+            Console.WriteLine(result);
         }
-        return 0;
+
+        Console.WriteLine(items.Length);
+
+
+        return items[0];
     }
+
+    static long Part1(Point[] list) => list
+            .SelectMany((a, i) => list
+                .Skip(i + 1)
+                .Select(b => a.DeltaR(b) * a.DeltaC(b)))
+            .Max();
 }
