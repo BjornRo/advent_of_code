@@ -47,16 +47,16 @@ public class Day08
         }
 
         long part1 = graph.Keys
-                    .Aggregate((List<HashSet<Junction>>)[], (list, node) =>
-                            {
-                                var result = Connectivity(graph, node, []);
-                                if (!list.Any(s => s.SetEquals(result))) list.Add(result);
-                                return list;
-                            }
-                        )
-                    .OrderBy(h => -h.Count)
-                    .Take(3)
-                    .Aggregate(1, (prod, h) => prod * h.Count);
+            .Aggregate((List<HashSet<Junction>>)[], (list, node) =>
+                    {
+                        var result = Connectivity(graph, node, []);
+                        if (!list.Any(s => s.SetEquals(result))) list.Add(result);
+                        return list;
+                    }
+                )
+            .OrderBy(h => -h.Count)
+            .Take(3)
+            .Aggregate(1, (prod, h) => prod * h.Count);
 
         foreach (var (i, a, b) in iter_conns.Select((x, i) => (i, x.a, x.b)))
         {

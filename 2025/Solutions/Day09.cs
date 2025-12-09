@@ -23,17 +23,15 @@ public class Day09
 
         var sw = Stopwatch.StartNew();
 
-        Console.WriteLine($"Part 1: {Part1(list)}");
+        Console.WriteLine($"Part 1: {Part1(list).MaxBy(x => x.Item1).Item1}");
         Console.WriteLine($"Part 2: {Part2(list)}");
 
         sw.Stop();
         Console.WriteLine(sw.Elapsed.TotalSeconds);
     }
-    static long Part1(Point[] list) => list
-            .SelectMany((a, i) => list
-                .Skip(i + 1)
-                .Select(b => a.DeltaR(b) * a.DeltaC(b)))
-            .Max();
+    static IEnumerable<(long, Point a, Point b)> Part1(Point[] list) =>
+        list.SelectMany((a, i) => list.Skip(i + 1).Select(b => (a.DeltaR(b) * a.DeltaC(b), a, b)));
+
     static readonly Dictionary<Point, bool> memo = [];
     static bool WithinBounds(Point[] list, HashSet<Point> edge, Point p)
     {
@@ -129,14 +127,7 @@ public class Day09
                     edges.Add(new Point(r, c));
         }
 
-        var maxIter = list
-            .SelectMany((a, i) => list
-                .Skip(i + 1)
-                .Select(b => (a.DeltaR(b) * a.DeltaC(b), a, b))
-            )
-            .OrderBy(x => -x.Item1);
-
-        foreach (var (res, a, b) in maxIter)
+        foreach (var (res, a, b) in Part1(list).OrderBy(x => -x.Item1))
             if (RectInBounds(list, a, b, edges))
                 return res;
 
