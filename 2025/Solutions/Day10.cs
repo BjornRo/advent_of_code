@@ -26,58 +26,59 @@ public class Day10
     }
     public static void Solve()
     {
-        Row[] list = [.. File.ReadAllLines("in/d10t.txt").Select(Parse)];
+        Row[] list = [.. File.ReadAllLines("in/d10.txt").Select(Parse)];
 
         // Console.WriteLine($"Part 1: {Part1(list)}");
         Console.WriteLine($"Part 2: {Part2x(list)}");
     }
     static int Part2x(Row[] list)
     {
-        static int Solver(Row elem)
+        static uint Solver(Row elem)
         {
             var (target, buttons, joltages) = elem;
             var maxPresses = buttons.Select(v => v.Min(i => joltages[i])).ToArray();
             var maxTotalPresses = joltages.Max();
 
-            HashSet<uint[]> visited = [];
+            HashSet<(uint, uint[])> visited = [];
+            uint? found = null;
 
-            uint? Rec(uint presses, bool[] iState, uint[] jState, uint[] pState)
+            uint Rec(uint presses, uint[] jState)
             {
-                if (!visited.Add(pState)) return uint.MaxValue;
+                if (!visited.Add((presses, jState))) return uint.MaxValue;
+                if (found != null) return (uint)found;
                 // Print(iState);
                 // Print(jState);
                 // Console.WriteLine(presses);
                 // Console.WriteLine();
-                if (iState.SequenceEqual(target) && jState.SequenceEqual(joltages)) return presses;
+                if (jState.SequenceEqual(joltages))
+                {
+                    found = presses;
+                    return presses;
+                }
 
                 foreach (var (btn, k) in buttons.Select((x, i) => (x, i)))
                 {
-                    bool[] new_iState = [.. iState];
-                    uint[] new_jState = [.. jState];
-                    if (pState[k] >= maxPresses[k]) continue;
 
-                    uint[] new_pState = [.. pState];
-                    new_pState[k] += 1;
+                    uint[] new_jState = [.. jState];
                     foreach (var i in btn)
                     {
-                        new_iState[i] = !new_iState[i];
                         new_jState[i] += 1;
                     }
                     if (new_jState.Zip(joltages, (a, b) => a > b).Any(x => x)) continue;
-                    if (Rec(presses + 1, new_iState, new_jState, new_pState) is uint res)
+                    var res = Rec(presses + 1, new_jState);
+                    if (res != uint.MaxValue)
                     {
-                        if (res != uint.MaxValue)
-                            return res;
+                        return res;
                     }
                 }
                 return uint.MaxValue;
             }
-
-            Console.WriteLine(Rec(0, new bool[target.Length], new uint[joltages.Length], new uint[buttons.Length]));
-            return 0;
+            var res = Rec(0, new uint[joltages.Length]);
+            Console.WriteLine(res);
+            return res;
 
         }
-        return list.Aggregate(0, (sum, elem) => sum + Solver(elem));
+        return list.Select(elem => (int)Solver(elem)).Aggregate(0, (sum, v) => sum + v);
     }
     static int Part1(Row[] list)
     {
@@ -146,7 +147,7 @@ public class Day10
                             new_iState[i] = !new_iState[i];
                             new_jState[i] += 1;
                         }
-                        if (new_iState.SequenceEqual(target) && new_jState.SequenceEqual(joltages))
+                        if (new_jState.SequenceEqual(joltages))
                         {
                             return generation;
                         }
