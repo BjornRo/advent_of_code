@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 
 namespace aoc.Solutions;
@@ -36,7 +37,7 @@ public class Day10
                 .Select(short.Parse)
                 .ToArray()
             )
-            .OrderBy(x => x.Length)
+            // .OrderBy(x => x.Length)
             .Select(CreateBtn)
             .ToImmutableArray();
         short[] joltReqRaw = [.. s[^1][1..^1].Split(",").Select(short.Parse)];
@@ -48,7 +49,102 @@ public class Day10
         Row[] list = [.. File.ReadAllLines("in/d10.txt").Select(Parse)];
 
         // Console.WriteLine($"Part 1: {Part1(list)}");
-        Console.WriteLine($"Part 2: {Part2z(list)}");
+        Console.WriteLine($"Part 2: {Part2zx(list)}");
+    }
+    static int Part2zx(Row[] list)
+    {
+        static short[] Solver(Row elem)
+        {
+            var (_, buttons, targetJolt, _) = elem;
+            // short maxJolt = 0;
+            // for (int i = 0; i < Vector<short>.Count; i++) maxJolt = short.Max(maxJolt, joltages[i]);
+            // Dictionary<short[], short> visited = [];
+            HashSet<short[]> visited = [];
+            Dictionary<Vector<short>, int> vvisited = [];
+
+            short SumShort(short[] arr) => arr.Aggregate((short)0, (sum, v) => (short)(sum + v));
+            bool VecEven(Vector<short> v) => Vector.EqualsAll(v & Vector<short>.One, Vector<short>.Zero);
+
+            var minPresses = int.MaxValue;
+
+            short[]? GreedyFind(Vector<short> jState, int totalPresses)
+            {
+                // if (!visited.Add(presses)) return null;
+                if (vvisited.TryGetValue(jState, out var oldVal))
+                {
+                    if (oldVal < totalPresses) return null;
+                }
+                vvisited[jState] = totalPresses;
+                if (totalPresses >= minPresses) return null;
+                if (Vector.EqualsAll(jState, Vector<short>.Zero))
+                {
+                    minPresses = int.Min(minPresses, totalPresses);
+                    return new short[buttons.Length];
+                }
+
+                short[]? minValueArr = null;
+                short minValue = short.MaxValue;
+
+                foreach (var (i, button) in buttons.Select((x, i) => (i, x)))
+                {
+                    var newJState = jState - button;
+                    if (Vector.LessThanAny(newJState, Vector<short>.Zero)) continue;
+
+                    var newPresses = new short[buttons.Length];
+                    newPresses[i] += 1;
+
+                    short newFactor = 1;
+                    if (VecEven(newJState))
+                    {
+                        newFactor = 3;
+                        newJState /= 2;
+                    }
+
+                    var res = GreedyFind(newJState, totalPresses + newFactor);
+                    if (res != null)
+                    {
+                        res = newPresses.Zip(res, (a, b) => (short)(a + (b * newFactor))).ToArray();
+                        var sum = SumShort(res);
+                        if (sum < minValue)
+                        {
+                            minValue = sum;
+                            minValueArr = res;
+                        }
+                        // var sum = (short)res.Aggregate(0, (sum, v) => sum + v);
+                        // if (sum < minValue)
+                        // {
+                        //     minValue = sum;
+                        //     minValueArr = res;
+                        // }
+                    }
+                }
+
+                return minValueArr;
+            }
+
+            var res = GreedyFind(targetJolt, 0);
+            // ?? throw new Exception("null found");
+
+            // Print(res);
+            // Console.WriteLine();
+            // return minValueArr;
+            return res;
+        }
+        return list
+            .Select((x, i) => (x, i + 1))
+            // .OrderBy(x => -CountNonZero(x.x.JoltReq))
+            .AsParallel()
+            .WithDegreeOfParallelism(8)
+            .Select(row =>
+                {
+                    // if (cache.TryGetValue(row.Item2, out var result)) return result;
+
+                    var res = Solver(row.x);
+                    var value = res.Aggregate(0, (sum, press) => sum + press);
+                    Console.WriteLine($"{row.Item2} | {value} | {FmtA(res)}");
+                    return value;
+                })
+            .Aggregate(0, (sum, v) => sum + v);
     }
 
     static int Part2z(Row[] list)
@@ -102,8 +198,9 @@ public class Day10
     static readonly Dictionary<int, int> cache = new()
     {
         { 45, 63 }, // [2, 13, 8, 4, 17, 12, 1, 0, 5, 1]
-        // { 9, 80 },
-        // {10, 51}
+        { 22, 244 },// [4, 13, 12, 155, 15, 20, 9, 8, 8]
+        { 74, 80 }, // [13, 17, 2, 17, 6, 10, 5, 10]
+        { 77, 51 }, // [9, 12, 6, 1, 17, 2, 1, 3]
     };
     record P2State(byte[] JState, byte[] Presses);
     // static int Part2(Row[] list)
