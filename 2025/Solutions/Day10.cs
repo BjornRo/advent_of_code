@@ -67,7 +67,6 @@ public class Day10
                         if (Vector.EqualsAll(target, VecMod2(newState))) return generation;
                         next_states.Add(newState);
                     }
-
                 states = [.. next_states];
             }
         }
@@ -102,12 +101,10 @@ public class Day10
                 if (Vector.EqualsAll(Vector<short>.Zero, jState)) return 0;
 
                 int minValue = 9999;
-                foreach (var (pattern, cost) in patterns)
-                {
-                    var newState = jState - pattern;
+                foreach (var (newState, cost) in patterns.Select(x => (jState - x.Key, x.Value)))
                     if (Vector.LessThanOrEqualAll(Vector<short>.Zero, newState) && VecEven(newState))
                         minValue = Math.Min(minValue, 2 * BinaryReduction(newState / 2) + cost);
-                }
+
                 visited[jState] = minValue;
                 return minValue;
             }
