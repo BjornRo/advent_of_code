@@ -7,10 +7,9 @@ namespace aoc.Solutions;
 public class Day10
 {
     record Row(
-        ImmutableArray<bool> Indicator,
+        Vector<short> Indicator,
         ImmutableArray<Vector<short>> Buttons,
-        Vector<short> JoltReq,
-        byte JoltLen
+        Vector<short> JoltReq
     );
     static Vector<short> CreateBtn(short[] arr)
     {
@@ -30,254 +29,93 @@ public class Day10
     static Row Parse(string row)
     {
         var s = row.Split();
-        var ind = s[0][1..^1].Select(x => x == '#').ToImmutableArray();
+        var ind = ToVector([.. s[0][1..^1].Select(x => (short)(x == '#' ? 1 : 0))]);
         var buttons = s[1..^1].Select(
             x => x[1..^1]
                 .Split(",")
                 .Select(short.Parse)
                 .ToArray()
             )
-            // .OrderBy(x => x.Length)
             .Select(CreateBtn)
             .ToImmutableArray();
         short[] joltReqRaw = [.. s[^1][1..^1].Split(",").Select(short.Parse)];
         var joltreq = ToVector(joltReqRaw);
-        return new Row(ind, buttons, joltreq, (byte)joltReqRaw.Length);
+        return new Row(ind, buttons, joltreq);
     }
     public static void Solve()
     {
         Row[] list = [.. File.ReadAllLines("in/d10.txt").Select(Parse)];
 
-        // Console.WriteLine($"Part 1: {Part1(list)}");
-        Console.WriteLine($"Part 2: {Part2zx(list)}");
+        Console.WriteLine($"Part 1: {Part1(list)}");
+        Console.WriteLine($"Part 2: {Part2(list)}");
     }
-    static int Part2zx(Row[] list)
+    static Vector<short> VecMod2(Vector<short> v) => v & Vector<short>.One;
+    static int Part1(Row[] list)
     {
-        static short[] Solver(Row elem)
+        static int Solve(Vector<short> target, ImmutableArray<Vector<short>> buttons)
         {
-            var (_, buttons, targetJolt, _) = elem;
-            // short maxJolt = 0;
-            // for (int i = 0; i < Vector<short>.Count; i++) maxJolt = short.Max(maxJolt, joltages[i]);
-            // Dictionary<short[], short> visited = [];
-            HashSet<short[]> visited = [];
-            Dictionary<Vector<short>, int> vvisited = [];
-
-            short SumShort(short[] arr) => arr.Aggregate((short)0, (sum, v) => (short)(sum + v));
-            bool VecEven(Vector<short> v) => Vector.EqualsAll(v & Vector<short>.One, Vector<short>.Zero);
-
-            var minPresses = int.MaxValue;
-
-            short[]? GreedyFind(Vector<short> jState, int totalPresses)
+            Vector<short>[] states = [Vector<short>.Zero];
+            int generation = 0;
+            while (true)
             {
-                // if (!visited.Add(presses)) return null;
-                if (vvisited.TryGetValue(jState, out var oldVal))
-                {
-                    if (oldVal < totalPresses) return null;
-                }
-                vvisited[jState] = totalPresses;
-                if (totalPresses >= minPresses) return null;
-                if (Vector.EqualsAll(jState, Vector<short>.Zero))
-                {
-                    minPresses = int.Min(minPresses, totalPresses);
-                    return new short[buttons.Length];
-                }
-
-                short[]? minValueArr = null;
-                short minValue = short.MaxValue;
-
-                foreach (var (i, button) in buttons.Select((x, i) => (i, x)))
-                {
-                    var newJState = jState - button;
-                    if (Vector.LessThanAny(newJState, Vector<short>.Zero)) continue;
-
-                    var newPresses = new short[buttons.Length];
-                    newPresses[i] += 1;
-
-                    short newFactor = 1;
-                    if (VecEven(newJState))
+                List<Vector<short>> next_states = [];
+                generation += 1;
+                foreach (var state in states)
+                    foreach (var button in buttons)
                     {
-                        newFactor = 3;
-                        newJState /= 2;
+                        var newState = state + button;
+                        if (Vector.EqualsAll(target, VecMod2(newState))) return generation;
+                        next_states.Add(newState);
                     }
 
-                    var res = GreedyFind(newJState, totalPresses + newFactor);
-                    if (res != null)
-                    {
-                        res = newPresses.Zip(res, (a, b) => (short)(a + (b * newFactor))).ToArray();
-                        var sum = SumShort(res);
-                        if (sum < minValue)
-                        {
-                            minValue = sum;
-                            minValueArr = res;
-                        }
-                        // var sum = (short)res.Aggregate(0, (sum, v) => sum + v);
-                        // if (sum < minValue)
-                        // {
-                        //     minValue = sum;
-                        //     minValueArr = res;
-                        // }
-                    }
-                }
-
-                return minValueArr;
+                states = [.. next_states];
             }
-
-            var res = GreedyFind(targetJolt, 0);
-            // ?? throw new Exception("null found");
-
-            // Print(res);
-            // Console.WriteLine();
-            // return minValueArr;
-            return res;
         }
-        return list
-            .Select((x, i) => (x, i + 1))
-            // .OrderBy(x => -CountNonZero(x.x.JoltReq))
-            .AsParallel()
-            .WithDegreeOfParallelism(8)
-            .Select(row =>
-                {
-                    // if (cache.TryGetValue(row.Item2, out var result)) return result;
-
-                    var res = Solver(row.x);
-                    var value = res.Aggregate(0, (sum, press) => sum + press);
-                    Console.WriteLine($"{row.Item2} | {value} | {FmtA(res)}");
-                    return value;
-                })
-            .Aggregate(0, (sum, v) => sum + v);
+        return list.Aggregate(0, (sum, elem) => sum + Solve(elem.Indicator, elem.Buttons));
     }
-
-    static int Part2z(Row[] list)
+    static int Part2(Row[] list)
     {
-        static short[] Solver(Row elem)
+        // Hint from reddit-aoc, forcing each step to even numbers, then you can halve the search space each step!
+        static int Solver(Row elem)
         {
-            var (_, buttons, joltages, _) = elem;
-            short maxJolt = 0;
-            for (int i = 0; i < Vector<short>.Count; i++) maxJolt = short.Max(maxJolt, joltages[i]);
+            var (_, buttons, targetJolt) = elem;
 
-            short[]? Backtrack(short[] presses, int pIndex, Vector<short> jState)
+            Dictionary<Vector<short>, int> patterns = new() { { Vector<short>.Zero, 0 } };
+            void FindPatterns(HashSet<Vector<short>> subPattern, int index)
             {
-                if (Vector.EqualsAll(jState, joltages)) return presses;
-                if (pIndex >= buttons.Length) return null;
-
-                for (byte i = 0; i <= maxJolt; i++)
+                for (int i = index; i < buttons.Length; i++)
                 {
-                    var new_jState = jState + buttons[pIndex] * i;
-                    if (!Vector.GreaterThanOrEqualAll(joltages, new_jState)) break;
-
-                    presses[pIndex] = i;
-                    var res = Backtrack(presses, pIndex + 1, new_jState);
-                    if (res != null) return res;
-                    presses[pIndex] = 0;
+                    subPattern.Add(buttons[i]);
+                    var sum = subPattern.Aggregate(Vector<short>.Zero, (v, b) => v + b);
+                    patterns[sum] = Math.Min(patterns.GetValueOrDefault(sum, subPattern.Count), subPattern.Count);
+                    FindPatterns(subPattern, i + 1);
+                    subPattern.Remove(buttons[i]);
                 }
-                return null;
             }
+            FindPatterns([], 0);
 
-            var res = Backtrack(new short[buttons.Length], 0, Vector<short>.Zero) ??
-                throw new Exception("null found");
-            // Print(res);
-            // Console.WriteLine();
-            return res;
+            Dictionary<Vector<short>, int> visited = [];
+            static bool VecEven(Vector<short> v) => Vector.EqualsAll(VecMod2(v), Vector<short>.Zero);
+            int BinaryReduction(Vector<short> jState)
+            {
+                if (visited.TryGetValue(jState, out var result)) return result;
+                if (Vector.EqualsAll(Vector<short>.Zero, jState)) return 0;
+
+                int minValue = 9999;
+                foreach (var (pattern, cost) in patterns)
+                {
+                    var newState = jState - pattern;
+                    if (Vector.LessThanOrEqualAll(Vector<short>.Zero, newState) && VecEven(newState))
+                        minValue = Math.Min(minValue, 2 * BinaryReduction(newState / 2) + cost);
+                }
+                visited[jState] = minValue;
+                return minValue;
+            }
+            return BinaryReduction(targetJolt);
         }
         return list
-            .Select((x, i) => (x, i + 1))
-            .OrderBy(x => -CountNonZero(x.x.JoltReq))
             .AsParallel()
-            .WithDegreeOfParallelism(8)
-            .Select(row =>
-                {
-                    if (cache.TryGetValue(row.Item2, out var result)) return result;
-
-                    var res = Solver(row.x);
-                    var value = res.Aggregate(0, (sum, press) => sum + press);
-                    Console.WriteLine($"{row.Item2} | {value} | {FmtA(res)}");
-                    return value;
-                })
+            .Select(Solver)
             .Aggregate(0, (sum, v) => sum + v);
-    }
-    static readonly Dictionary<int, int> cache = new()
-    {
-        { 45, 63 }, // [2, 13, 8, 4, 17, 12, 1, 0, 5, 1]
-        { 22, 244 },// [4, 13, 12, 155, 15, 20, 9, 8, 8]
-        { 74, 80 }, // [13, 17, 2, 17, 6, 10, 5, 10]
-        { 77, 51 }, // [9, 12, 6, 1, 17, 2, 1, 3]
-    };
-    record P2State(byte[] JState, byte[] Presses);
-    // static int Part2(Row[] list)
-    // {
-    //     static int Solver(Row elem)
-    //     {
-    //         var (target, buttons, joltages) = elem;
-    //         var maxPresses = buttons.Select(v => v.Min(i => joltages[i])).ToArray();
-
-    //         P2State[] states = [new P2State(new byte[joltages.Length], new byte[buttons.Length])];
-    //         int generation = 0;
-    //         while (states.Length != 0)
-    //         {
-    //             List<P2State> next_states = [];
-    //             generation += 1;
-    //             foreach (var (jState, pState) in states)
-    //             {
-    //                 foreach (var (presses, k) in buttons.Select((x, i) => (x, i)))
-    //                 {
-    //                     byte[] new_jState = [.. jState];
-    //                     byte[] new_pState = [.. pState];
-    //                     new_pState[k] += 1;
-    //                     if (new_pState[k] > maxPresses[k]) continue;
-
-    //                     foreach (var i in presses)
-    //                     {
-    //                         new_jState[i] += 1;
-    //                     }
-
-    //                     if (new_jState.SequenceEqual(joltages))
-    //                     {
-    //                         return generation;
-    //                     }
-    //                     if (!new_jState.Zip(joltages, (a, b) => a > b).Any(x => x))
-    //                     {
-    //                         // Console.WriteLine(generation);
-    //                         // Print(new_jState);
-    //                         // Print(joltages.ToArray());
-    //                         // Console.WriteLine(new_jState.Zip(joltages, (a, b) => a > b).Any(x => x));
-    //                         // Console.WriteLine();
-    //                         // Print(new_jState);
-    //                         // Print(joltages.ToArray());
-    //                         // Console.WriteLine();
-    //                         next_states.Add(new P2State(new_jState, new_pState));
-
-    //                     }
-    //                 }
-    //             }
-    //             states = [.. next_states];
-    //         }
-    //         throw new Exception("Not here");
-    //     }
-    //     var res = list
-    //         .AsParallel()
-    //         .Select(r =>
-    //             {
-    //                 var x = Solver(r);
-    //                 Console.WriteLine(x);
-    //                 return x;
-    //             });
-    //     return res.Aggregate(0, (sum, e) => sum + e);
-    // }
-    static string FmtA<T>(T[] array) => $"[{string.Join(", ", array)}]";
-
-    static string FmtV<T>(Vector<T> v) where T : struct
-    {
-        T[] arr = new T[Vector<T>.Count];
-        v.CopyTo(arr);
-        return $"[{string.Join(", ", arr)}]";
-    }
-    static int CountNonZero<T>(Vector<T> v) where T : struct, IEquatable<T>
-    {
-        T[] arr = new T[Vector<T>.Count];
-        v.CopyTo(arr);
-
-        int count = 0;
-        foreach (var x in arr) if (!x.Equals(default)) count++;
-        return count;
     }
 }
