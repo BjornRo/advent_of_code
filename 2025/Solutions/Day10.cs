@@ -105,8 +105,7 @@ public class Day10
                     if (Vector.LessThanOrEqualAll(Vector<short>.Zero, newState) && VecEven(newState))
                         minValue = Math.Min(minValue, 2 * BinaryReduction(newState / 2) + cost);
 
-                visited[jState] = minValue;
-                return minValue;
+                return visited[jState] = minValue;
             }
             return BinaryReduction(targetJolt);
         }
