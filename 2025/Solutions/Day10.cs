@@ -4,26 +4,25 @@ using System.Numerics;
 
 namespace aoc.Solutions;
 
+using Vec = Vector<short>;
 public class Day10
 {
     record Row(
-        Vector<short> Indicator,
-        ImmutableArray<Vector<short>> Buttons,
-        Vector<short> JoltReq
+        Vec Indicator,
+        ImmutableArray<Vec> Buttons,
+        Vec JoltReq
     );
-    static Vector<short> CreateBtn(short[] arr)
+    static Vec CreateBtn(short[] arr)
     {
-        var v = new short[Vector<short>.Count];
-        for (int i = 0; i < arr.Length; i++)
-            v[arr[i]] = 1;
+        var v = new short[Vec.Count];
+        for (int i = 0; i < arr.Length; i++) v[arr[i]] = 1;
         return ToVector(v);
     }
-    static Vector<short> ToVector(short[] data)
+    static Vec ToVector(short[] data)
     {
-        if (data.Length >= Vector<short>.Count) return new Vector<short>(data);
-        short[] padded = new short[Vector<short>.Count];
+        short[] padded = new short[Vec.Count];
         Array.Copy(data, padded, data.Length);
-        return new Vector<short>(padded);
+        return new Vec(padded);
 
     }
     static Row Parse(string row)
@@ -49,69 +48,66 @@ public class Day10
         Console.WriteLine($"Part 1: {Part1(list)}");
         Console.WriteLine($"Part 2: {Part2(list)}");
     }
-    static Vector<short> VecMod2(Vector<short> v) => v & Vector<short>.One;
+    static Vec VecMod2(Vec v) => v & Vec.One;
     static int Part1(Row[] list)
     {
-        static int Solve(Vector<short> target, ImmutableArray<Vector<short>> buttons)
+        static int Solver(Row elem)
         {
-            Vector<short>[] states = [Vector<short>.Zero];
+            Vec[] states = [Vec.Zero];
             int generation = 0;
             while (true)
             {
-                List<Vector<short>> next_states = [];
+                List<Vec> next_states = [];
                 generation += 1;
                 foreach (var state in states)
-                    foreach (var button in buttons)
+                    foreach (var button in elem.Buttons)
                     {
                         var newState = state + button;
-                        if (Vector.EqualsAll(target, VecMod2(newState))) return generation;
+                        if (Vector.EqualsAll(elem.Indicator, VecMod2(newState))) return generation;
                         next_states.Add(newState);
                     }
                 states = [.. next_states];
             }
         }
-        return list.Aggregate(0, (sum, elem) => sum + Solve(elem.Indicator, elem.Buttons));
+        return list.Sum(Solver);
     }
+    // Hint from reddit-aoc, forcing each step to even numbers, then you can halve the search space each step!
     static int Part2(Row[] list)
     {
-        // Hint from reddit-aoc, forcing each step to even numbers, then you can halve the search space each step!
         static int Solver(Row elem)
         {
-            var (_, buttons, targetJolt) = elem;
-
-            Dictionary<Vector<short>, int> patterns = new() { { Vector<short>.Zero, 0 } };
-            void FindPatterns(HashSet<Vector<short>> subPattern, int index)
+            Dictionary<Vec, int> patterns = new() { { Vec.Zero, 0 } };
+            void FindPatterns(HashSet<Vec> subPattern, int index)
             {
-                for (int i = index; i < buttons.Length; i++)
+                for (int i = index; i < elem.Buttons.Length; i++)
                 {
-                    subPattern.Add(buttons[i]);
-                    var sum = subPattern.Aggregate(Vector<short>.Zero, (v, b) => v + b);
+                    subPattern.Add(elem.Buttons[i]);
+                    var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b);
                     patterns[sum] = Math.Min(patterns.GetValueOrDefault(sum, subPattern.Count), subPattern.Count);
                     FindPatterns(subPattern, i + 1);
-                    subPattern.Remove(buttons[i]);
+                    subPattern.Remove(elem.Buttons[i]);
                 }
             }
             FindPatterns([], 0);
 
-            Dictionary<Vector<short>, int> visited = [];
-            static bool VecEven(Vector<short> v) => Vector.EqualsAll(VecMod2(v), Vector<short>.Zero);
-            int BinaryReduction(Vector<short> jState)
+            Dictionary<Vec, int> visited = [];
+            static bool VecEven(Vec v) => Vector.EqualsAll(VecMod2(v), Vec.Zero);
+            int BinaryReduction(Vec jState)
             {
                 if (visited.TryGetValue(jState, out var result)) return result;
-                if (Vector.EqualsAll(Vector<short>.Zero, jState)) return 0;
+                if (Vector.EqualsAll(Vec.Zero, jState)) return 0;
 
                 int minValue = 9999;
                 foreach (var (newState, cost) in patterns.Select(x => (jState - x.Key, x.Value)))
-                    if (Vector.LessThanOrEqualAll(Vector<short>.Zero, newState) && VecEven(newState))
+                    if (Vector.LessThanOrEqualAll(Vec.Zero, newState) && VecEven(newState))
                         minValue = Math.Min(minValue, 2 * BinaryReduction(newState / 2) + cost);
 
                 return visited[jState] = minValue;
             }
-            return BinaryReduction(targetJolt);
+            return BinaryReduction(elem.JoltReq);
         }
         return list
             .AsParallel()
-            .Select(Solver)
-            .Aggregate(0, (sum, v) => sum + v);
+            .Sum(Solver);
     }
 }

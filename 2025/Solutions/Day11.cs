@@ -1,106 +1,47 @@
+using System.Collections.Immutable;
+
 namespace aoc.Solutions;
 
 public class Day11
 {
+    record Node(List<int> Parents, List<int> Children);
+    static int Key(string value) => (value[0] << 16) | (value[1] << 8) | value[2];
     public static void Solve()
     {
-        string[] matrix = File.ReadAllLines("in/d11.txt");
-
-        Console.WriteLine($"Part 1: {Part1([.. matrix.Select(row => row.ToCharArray())])}");
-        Console.WriteLine($"Part 2: {Part2([.. matrix.Select(row => row.ToCharArray())])}");
-    }
-
-    static List<(int, int)>[,] GetVisibleSeats(char[][] grid)
-    {
-        int rows = grid.Length;
-        int cols = grid[0].Length;
-        var directions = new (int, int)[]
-            { (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1) };
-
-        var visibleSeats = new List<(int, int)>[rows, cols];
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
+        Dictionary<int, Node> graph = [];
+        foreach (var line in File.ReadAllLines("in/d11.txt").Select(x => x.Split(": ")))
+        {
+            var left = Key(line[0]);
+            graph.TryAdd(left, new Node([], []));
+            foreach (var right in line[1].Split(" ").Select(Key))
             {
-                if (grid[r][c] == '.') continue;
-                visibleSeats[r, c] = [];
-
-                foreach (var (dr, dc) in directions)
-                {
-                    int nr = r + dr, nc = c + dc;
-                    while (0 <= nr && nr < rows && 0 <= nc && nc < cols)
-                    {
-                        if (grid[nr][nc] == 'L' || grid[nr][nc] == '#')
-                        {
-                            visibleSeats[r, c].Add((nr, nc));
-                            break;
-                        }
-                        nr += dr;
-                        nc += dc;
-                    }
-                }
+                graph.TryAdd(right, new Node([], []));
+                graph[right].Parents.Add(left);
+                graph[left].Children.Add(right);
             }
-        return visibleSeats;
-    }
-
-    static int Part1(char[][] mat)
-    {
-        char[][] tmp_mat = new char[mat.Length][];
-        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
-
-        HashSet<string> visited = [];
-        while (true)
-        {
-            var key = string.Concat(mat.SelectMany(row => row));
-            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
-            visited.Add(key);
-
-            for (int row = 0; row < mat.Length; row++)
-                for (int col = 0; col < mat[0].Length; col++)
-                {
-                    var elem = mat[row][col];
-                    if (elem == '.') continue;
-                    var adjacent = 0;
-                    for (int krow = row - 1; krow < row + 2; krow++)
-                        for (int kcol = col - 1; kcol < col + 2; kcol++)
-                        {
-                            if (row == krow && col == kcol) continue;
-                            if (0 <= krow && krow < mat.Length && 0 <= kcol && kcol < mat[0].Length)
-                                if (mat[krow][kcol] == '#') adjacent += 1;
-                        }
-                    tmp_mat[row][col] = elem;
-                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
-                    else if (elem == '#') { if (adjacent >= 4) tmp_mat[row][col] = 'L'; }
-                }
-            (tmp_mat, mat) = (mat, tmp_mat);
         }
-    }
 
-    static int Part2(char[][] mat)
+        Console.WriteLine($"Part 1: {Part1(graph.ToImmutableDictionary(), Key("you"), Key("out"))}");
+        Console.WriteLine($"Part 2: {Part2(graph.ToImmutableDictionary(), Key("svr"), Key("out"))}");
+    }
+    static int Part1(ImmutableDictionary<int, Node> graph, int node, int end) =>
+        node == end ? 1 : graph[node].Children.Sum(child => Part1(graph, child, end));
+
+    static long Part2(ImmutableDictionary<int, Node> graph, int start, int end)
     {
-        char[][] tmp_mat = new char[mat.Length][];
-        for (int i = 0; i < mat.Length; i++) tmp_mat[i] = (char[])mat[i].Clone();
-
-        var visibleSeats = GetVisibleSeats(mat);
-
-        HashSet<string> visited = [];
-        while (true)
+        long PathPlanner(int start, int end)
         {
-            var key = string.Concat(mat.SelectMany(row => row));
-            if (visited.Contains(key)) return mat.Sum(row => row.Count(c => c == '#'));
-            visited.Add(key);
-
-            for (int row = 0; row < mat.Length; row++)
-                for (int col = 0; col < mat[0].Length; col++)
-                {
-                    var elem = mat[row][col];
-                    if (elem == '.') continue;
-                    var adjacent = visibleSeats[row, col].Count(p => mat[p.Item1][p.Item2] == '#');
-
-                    tmp_mat[row][col] = elem;
-                    if (elem == 'L') { if (adjacent == 0) tmp_mat[row][col] = '#'; }
-                    else if (elem == '#') { if (adjacent >= 5) tmp_mat[row][col] = 'L'; }
-                }
-            (tmp_mat, mat) = (mat, tmp_mat);
+            Dictionary<int, long> memo = [];
+            long CountPaths(int node) => memo.TryGetValue(node, out var value)
+                ? value : node == start
+                ? memo[node] = 1 : memo[node] = graph[node].Parents.Sum(CountPaths);
+            return CountPaths(end);
         }
+
+        var DAC = Key("dac");
+        var FFT = Key("fft");
+        var (B, C) = PathPlanner(start, FFT) > PathPlanner(start, DAC) ? (DAC, FFT) : (FFT, DAC);
+        return PathPlanner(start, B) * PathPlanner(B, C) * PathPlanner(C, end);
     }
+    static string FmtA<T>(T[] array) => $"[{string.Join(", ", array)}]";
 }
