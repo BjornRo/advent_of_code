@@ -40,8 +40,9 @@ public class Day11
 
         var DAC = Key("dac");
         var FFT = Key("fft");
-        var (B, C) = PathPlanner(start, FFT) > PathPlanner(start, DAC) ? (DAC, FFT) : (FFT, DAC);
-        return PathPlanner(start, B) * PathPlanner(B, C) * PathPlanner(C, end);
+        var (A0, A1) = (PathPlanner(start, FFT), PathPlanner(start, DAC));
+        var (A, B, C) = A0 > A1 ? (A1, DAC, FFT) : (A0, FFT, DAC);
+        return A * PathPlanner(B, C) * PathPlanner(C, end);
     }
     static string FmtA<T>(T[] array) => $"[{string.Join(", ", array)}]";
 }
