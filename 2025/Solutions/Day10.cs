@@ -22,8 +22,7 @@ public class Day10
     {
         short[] padded = new short[Vec.Count];
         Array.Copy(data, padded, data.Length);
-        return new Vec(padded);
-
+        return new(padded);
     }
     static Row Parse(string row)
     {
@@ -39,7 +38,7 @@ public class Day10
             .ToImmutableArray();
         short[] joltReqRaw = [.. s[^1][1..^1].Split(",").Select(short.Parse)];
         var joltreq = ToVector(joltReqRaw);
-        return new Row(ind, buttons, joltreq);
+        return new(ind, buttons, joltreq);
     }
     public static void Solve()
     {
