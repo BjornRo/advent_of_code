@@ -112,7 +112,6 @@ public class Day10
                 List<(Vec, int, int, Vec)> next_states = [];
                 foreach (var (state, cost, factor, press) in states)
                 {
-                    if (cost > minValue) continue;
                     if (Vector.EqualsAll(Vec.Zero, state))
                     {
                         if (cost < minValue)
@@ -123,6 +122,7 @@ public class Day10
                         if (cost == minValue) minPresses.Add(ToArray(press, elem.ButtonsLen));
                         continue;
                     }
+                    if (minValue <= cost) continue;
 
                     foreach (var (pattern, newState, btnCost) in patterns.Select(x => (x.Key, state - x.Key, x.Value)))
                         if (Vector.LessThanOrEqualAll(Vec.Zero, newState) && VecEven(newState))
