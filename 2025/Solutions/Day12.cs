@@ -71,33 +71,19 @@ public class Day12
     }
     static long Part1((int, char[][][])[] shapes, ShapeData[] shapedata)
     {
-        bool Backtrack(char[][] matrix, int[] quantity, int shapeIndex, int shapeQuant)
+        bool Backtrack(char[][] matrix, int[] quantity, int shapeIndex, int shapeQuant, int row = 0, int col = 0)
         {
-            // if (shapeNum >= shapes[0].Length) return false;
             if (shapeIndex >= quantity.Length) return true;
             if (quantity[shapeIndex] <= shapeQuant) return Backtrack(matrix, quantity, shapeIndex + 1, 0);
-
-            // PrintM(matrix);
-            // Console.WriteLine();
-
-            for (int i = 0; i <= matrix.Length - Dimension; i++)
-            {
-                for (int j = 0; j <= matrix[0].Length - Dimension; j++)
-                {
+            for (int i = row; i <= matrix.Length - Dimension; i++)
+                for (int j = col; j <= matrix[0].Length - Dimension; j++)
                     foreach (var shape in shapes[shapeIndex].Item2)
-                    {
                         if (ShapeFits(matrix, shape, i, j))
                         {
                             AddShape(matrix, shape, i, j);
-                            if (Backtrack(matrix, quantity, shapeIndex, shapeQuant + 1))
-                            {
-                                return true;
-                            }
+                            if (Backtrack(matrix, quantity, shapeIndex, shapeQuant + 1)) return true;
                             RemoveShape(matrix, shape, i, j);
                         }
-                    }
-                }
-            }
             return false;
         }
 
@@ -106,10 +92,8 @@ public class Day12
             var size = data.Row * data.Col;
             var required = data.Quantity.Select((x, i) => shapes[i].Item1 * x).Sum();
             if (size < required) return 0;
-
             char[][] matrix = new char[data.Row][];
             for (int i = 0; i < data.Row; i++) matrix[i] = new char[data.Col];
-
             return Backtrack(matrix, data.Quantity, 0, 0) ? 1 : 0;
         });
 
@@ -140,16 +124,6 @@ public class Day12
         return trans;
     }
     static char[][] Rotate(char[][] matrix) => Transpose(Flip(matrix));
-    public static char[][] DeepCopy(char[][] source)
-    {
-        char[][] copy = new char[source.Length][];
-        for (int i = 0; i < source.Length; i++)
-        {
-            copy[i] = new char[source[i].Length];
-            Array.Copy(source[i], copy[i], source[i].Length);
-        }
-        return copy;
-    }
     static string FmtA(char[] array) => $"[{string.Join(", ", array)}]";
     static string FmtM(char[][] m)
     {
