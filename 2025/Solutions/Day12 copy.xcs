@@ -19,7 +19,7 @@ public class Day12
         public int Col { get; }
         public int[] Quantity { get; }
     }
-    static (int, char[][][]) GenShapes(char[][] shape)
+    static char[][][] GenShapes(char[][] shape)
     {
         List<char[][]> newShapes = [shape];
         foreach (var ls in new[] { shape, Flip(shape) })
@@ -32,68 +32,61 @@ public class Day12
                     newShapes.Add(s);
             }
         }
-        return (shape.Sum(row => row.Count(c => c == '#')), [.. newShapes]);
+        return [.. newShapes];
     }
 
     public static void Solve()
     {
         string[] data = File.ReadAllText("in/d12.txt").Replace("\r\n", "\n").TrimEnd().Split("\n\n");
-        var shapes = data[..^1]
+        char[][][][] shapes = [.. data[..^1]
             .Select(
                 elem => elem
                     .Split(":\n")[1]
                     .Split("\n")
                     .Select(x => x.ToCharArray().Select(x => x == '.' ? '\0' : x).ToArray())
                     .ToArray())
-            .Select(GenShapes).ToArray();
+            .Select(GenShapes)
+        ];
         ShapeData[] shapedata = [.. data[^1].Split("\n").Select(x => new ShapeData(x))];
 
         Console.WriteLine($"Part 1: {Part1(shapes, shapedata)}");
+        // Console.WriteLine($"Part 2: {Part2(steps)}");
     }
-    static void AddShape(char[][] matrix, char[][] shape, int row, int col)
+    static bool FillMatrix(char[][] matrix, char[][] shape, int row, int col)
     {
         for (int i = 0; i < Dimension; i++)
             for (int j = 0; j < Dimension; j++)
-                if (shape[i][j] != '\0') matrix[row + i][col + j] = shape[i][j];
-    }
-    static void RemoveShape(char[][] matrix, char[][] shape, int row, int col)
-    {
-        for (int i = 0; i < Dimension; i++)
-            for (int j = 0; j < Dimension; j++)
-                if (shape[i][j] != '\0') matrix[row + i][col + j] = '\0';
-    }
-    static bool ShapeFits(char[][] matrix, char[][] shape, int row, int col)
-    {
-        for (int i = 0; i < Dimension; i++)
-            for (int j = 0; j < Dimension; j++)
-                if (shape[i][j] != '\0' && matrix[row + i][col + j] != '\0') return false;
+            {
+                if (shape[i][j] == '\0') continue;
+                if (matrix[row + i][col + j] != '\0') return false;
+                matrix[row + i][col + j] = shape[i][j];
+            }
         return true;
     }
-    static long Part1((int, char[][][])[] shapes, ShapeData[] shapedata)
+    static long Part1(char[][][][] shapes, ShapeData[] shapedata)
     {
-        bool Backtrack(char[][] matrix, int[] quantity, int shapeIndex, int shapeQuant)
+        int fits = 0;
+
+        bool Backtrack(char[][] matrix, int[] quantity, int row, int col, int shapeIndex, int shapeQuant)
         {
             // if (shapeNum >= shapes[0].Length) return false;
             if (shapeIndex >= quantity.Length) return true;
-            if (quantity[shapeIndex] <= shapeQuant) return Backtrack(matrix, quantity, shapeIndex + 1, 0);
+            if (quantity[shapeIndex] <= shapeQuant) return Backtrack(matrix, quantity, 0, 0, shapeIndex + 1, 0);
 
-            // PrintM(matrix);
-            // Console.WriteLine();
 
-            for (int i = 0; i <= matrix.Length - Dimension; i++)
+            for (int i = row; i <= matrix.Length - Dimension; i++)
             {
-                for (int j = 0; j <= matrix[0].Length - Dimension; j++)
+                for (int j = col; j <= matrix[0].Length - Dimension; j++)
                 {
-                    foreach (var shape in shapes[shapeIndex].Item2)
+                    foreach (var shape in shapes[shapeIndex])
                     {
-                        if (ShapeFits(matrix, shape, i, j))
+                        var cMatrix = DeepCopy(matrix);
+                        if (FillMatrix(cMatrix, shape, i, j))
                         {
-                            AddShape(matrix, shape, i, j);
-                            if (Backtrack(matrix, quantity, shapeIndex, shapeQuant + 1))
+                            if (Backtrack(cMatrix, quantity, i, j, shapeIndex, shapeQuant + 1))
                             {
                                 return true;
                             }
-                            RemoveShape(matrix, shape, i, j);
                         }
                     }
                 }
@@ -101,19 +94,17 @@ public class Day12
             return false;
         }
 
-        var res = shapedata.AsParallel().Sum(data =>
-        {
-            var size = data.Row * data.Col;
-            var required = data.Quantity.Select((x, i) => shapes[i].Item1 * x).Sum();
-            if (size < required) return 0;
 
+        foreach (var data in shapedata)
+        {
             char[][] matrix = new char[data.Row][];
             for (int i = 0; i < data.Row; i++) matrix[i] = new char[data.Col];
-
-            return Backtrack(matrix, data.Quantity, 0, 0) ? 1 : 0;
-        });
-
-        return res;
+            if (Backtrack(matrix, data.Quantity, 0, 0, 0, 0))
+            {
+                fits += 1;
+            }
+        }
+        return fits;
     }
     public static char[][] Flip(char[][] matrix)
     {

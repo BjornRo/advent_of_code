@@ -44,5 +44,4 @@ public class Day11
         var (A, B, C) = A0 > A1 ? (A1, DAC, FFT) : (A0, FFT, DAC);
         return A * PathPlanner(B, C) * PathPlanner(C, end);
     }
-    static string FmtA<T>(T[] array) => $"[{string.Join(", ", array)}]";
 }
