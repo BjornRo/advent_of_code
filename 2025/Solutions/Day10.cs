@@ -105,12 +105,13 @@ public class Day10
             static bool VecEven(Vec v) => Vector.EqualsAll(VecMod2(v), Vec.Zero);
 
             var minValue = int.MaxValue;
+            short factor = 1;
             List<short[]> minPresses = [];
-            (Vec, int, int, Vec)[] states = [(elem.JoltReq, 0, 1, Vec.Zero)];
+            (Vec, int, Vec)[] states = [(elem.JoltReq, 0, Vec.Zero)];
             while (states.Length != 0)
             {
-                List<(Vec, int, int, Vec)> next_states = [];
-                foreach (var (state, cost, factor, press) in states)
+                List<(Vec, int, Vec)> next_states = [];
+                foreach (var (state, cost, press) in states)
                 {
                     if (Vector.EqualsAll(Vec.Zero, state))
                     {
@@ -126,10 +127,9 @@ public class Day10
 
                     foreach (var (pattern, newState, btnCost) in patterns.Select(x => (x.Key, state - x.Key, x.Value)))
                         if (Vector.LessThanOrEqualAll(Vec.Zero, newState) && VecEven(newState))
-                            next_states.Add(
-                                (newState / 2, cost + btnCost * factor, factor * 2, press + presses[pattern] * (short)factor)
-                            );
+                            next_states.Add((newState / 2, cost + btnCost * factor, press + presses[pattern] * factor));
                 }
+                factor *= 2;
                 states = [.. next_states];
             }
             // foreach (var press in minPresses)
