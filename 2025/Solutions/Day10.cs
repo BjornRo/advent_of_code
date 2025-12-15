@@ -10,7 +10,8 @@ public class Day10
     record Row(
         Vec Indicator,
         ImmutableArray<Vec> Buttons,
-        Vec JoltReq
+        Vec JoltReq,
+        int ButtonsLen
     );
     static Vec CreateBtn(short[] arr)
     {
@@ -24,6 +25,14 @@ public class Day10
         Array.Copy(data, padded, data.Length);
         return new(padded);
     }
+    static short[] ToArray(Vec v, int length)
+    {
+        var t = new short[Vec.Count];
+        v.CopyTo(t);
+        var r = new short[length];
+        Array.Copy(t, r, length);
+        return r;
+    }
     static Row Parse(string row)
     {
         var s = row.Split();
@@ -36,9 +45,7 @@ public class Day10
             )
             .Select(CreateBtn)
             .ToImmutableArray();
-        short[] joltReqRaw = [.. s[^1][1..^1].Split(",").Select(short.Parse)];
-        var joltreq = ToVector(joltReqRaw);
-        return new(ind, buttons, joltreq);
+        return new(ind, buttons, ToVector([.. s[^1][1..^1].Split(",").Select(short.Parse)]), buttons.Length);
     }
     public static void Solve()
     {
@@ -76,12 +83,85 @@ public class Day10
         static int Solver(Row elem)
         {
             Dictionary<Vec, int> patterns = new() { { Vec.Zero, 0 } };
-            void FindPatterns(HashSet<Vec> subPattern, int index)
+            Dictionary<Vec, Vec> presses = new() { { Vec.Zero, Vec.Zero } };
+            void FindPatterns(Dictionary<Vec, short> subPattern, int index)
             {
                 for (int i = index; i < elem.Buttons.Length; i++)
                 {
-                    subPattern.Add(elem.Buttons[i]);
-                    var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b);
+                    subPattern[elem.Buttons[i]] = (short)i;
+                    var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b.Key);
+
+                    if (!patterns.TryGetValue(sum, out var value) || subPattern.Count < value)
+                    {
+                        patterns[sum] = subPattern.Count;
+                        presses[sum] = ToVector(subPattern.Aggregate(new short[Vec.Count], (v, b) => { v[b.Value] = 1; return v; }));
+                    }
+                    FindPatterns(subPattern, i + 1);
+                    subPattern.Remove(elem.Buttons[i]);
+                }
+            }
+            FindPatterns([], 0);
+
+            static bool VecEven(Vec v) => Vector.EqualsAll(VecMod2(v), Vec.Zero);
+
+            var minValue = int.MaxValue;
+            List<short[]> minPresses = [];
+            (Vec, int, int, Vec)[] states = [(elem.JoltReq, 0, 1, Vec.Zero)];
+            while (states.Length != 0)
+            {
+                List<(Vec, int, int, Vec)> next_states = [];
+                foreach (var (state, cost, factor, press) in states)
+                {
+                    if (cost > minValue) continue;
+                    if (Vector.EqualsAll(Vec.Zero, state))
+                    {
+                        if (cost < minValue)
+                        {
+                            minPresses.Clear();
+                            minValue = cost;
+                        }
+                        if (cost == minValue) minPresses.Add(ToArray(press, elem.ButtonsLen));
+                        continue;
+                    }
+
+                    foreach (var (pattern, newState, btnCost) in patterns.Select(x => (x.Key, state - x.Key, x.Value)))
+                        if (Vector.LessThanOrEqualAll(Vec.Zero, newState) && VecEven(newState))
+                            next_states.Add(
+                                (newState / 2, cost + btnCost * factor, factor * 2, press + presses[pattern] * (short)factor)
+                            );
+                }
+                states = [.. next_states];
+            }
+            // foreach (var press in minPresses)
+            //     Console.WriteLine(FmtA(press));
+            // Console.WriteLine();
+            return minValue;
+        }
+        return list
+            .AsParallel()
+            .Sum(Solver);
+    }
+    static string FmtA<T>(T[] array) => $"[{string.Join(", ", array)}]";
+
+    static string FmtV<T>(Vector<T> v) where T : struct
+    {
+        T[] arr = new T[Vector<T>.Count];
+        v.CopyTo(arr);
+        return $"[{string.Join(", ", arr)}]";
+    }
+    static int Part2rec(Row[] list)
+    {
+        static int Solver(Row elem)
+        {
+            Dictionary<Vec, int> patterns = new() { { Vec.Zero, 0 } };
+            Dictionary<Vec, Vec> presses = new() { { Vec.Zero, Vec.Zero } };
+            void FindPatterns(Dictionary<Vec, short> subPattern, int index)
+            {
+                for (int i = index; i < elem.Buttons.Length; i++)
+                {
+                    subPattern[elem.Buttons[i]] = (short)i;
+                    var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b.Key);
+                    // presses[sum] = subPattern.Aggregate(Vec.Zero, (v, b) => { v[b.Value] = 1; return b; });
                     patterns[sum] = Math.Min(patterns.GetValueOrDefault(sum, subPattern.Count), subPattern.Count);
                     FindPatterns(subPattern, i + 1);
                     subPattern.Remove(elem.Buttons[i]);
