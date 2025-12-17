@@ -82,20 +82,18 @@ public class Day10
     {
         static int Solver(Row elem)
         {
-            Dictionary<Vec, int> patterns = new() { { Vec.Zero, 0 } };
-            Dictionary<Vec, Vec> presses = new() { { Vec.Zero, Vec.Zero } };
+            Dictionary<Vec, (int, Vec)> patterns = new() { { Vec.Zero, (0, Vec.Zero) } };
             void FindPatterns(Dictionary<Vec, short> subPattern, int index)
             {
                 for (int i = index; i < elem.Buttons.Length; i++)
                 {
                     subPattern[elem.Buttons[i]] = (short)i;
                     var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b.Key);
-
-                    if (!patterns.TryGetValue(sum, out var value) || subPattern.Count < value)
-                    {
-                        patterns[sum] = subPattern.Count;
-                        presses[sum] = ToVector(subPattern.Aggregate(new short[Vec.Count], (v, b) => { v[b.Value] = 1; return v; }));
-                    }
+                    if (!patterns.TryGetValue(sum, out var value) || subPattern.Count < value.Item1)
+                        patterns[sum] = (
+                            subPattern.Count,
+                            ToVector(subPattern.Aggregate(new short[Vec.Count], (v, b) => { v[b.Value] = 1; return v; }))
+                            );
                     FindPatterns(subPattern, i + 1);
                     subPattern.Remove(elem.Buttons[i]);
                 }
@@ -103,12 +101,11 @@ public class Day10
             FindPatterns([], 0);
 
             static bool VecEven(Vec v) => Vector.EqualsAll(VecMod2(v), Vec.Zero);
-
             var minValue = int.MaxValue;
             short factor = 1;
             List<short[]> minPresses = [];
-            (Vec, int, Vec)[] states = [(elem.JoltReq, 0, Vec.Zero)];
-            while (states.Length != 0)
+            List<(Vec, int, Vec)> states = [(elem.JoltReq, 0, Vec.Zero)];
+            while (states.Count != 0)
             {
                 List<(Vec, int, Vec)> next_states = [];
                 foreach (var (state, cost, press) in states)
@@ -124,13 +121,15 @@ public class Day10
                         continue;
                     }
                     if (minValue <= cost) continue;
-
-                    foreach (var (pattern, newState, btnCost) in patterns.Select(x => (x.Key, state - x.Key, x.Value)))
-                        if (Vector.LessThanOrEqualAll(Vec.Zero, newState) && VecEven(newState))
-                            next_states.Add((newState / 2, cost + btnCost * factor, press + presses[pattern] * factor));
+                    next_states.AddRange(patterns
+                        .Select(x => (s: state - x.Key, c: x.Value.Item1, p: x.Value.Item2))
+                        .Where(x => Vector.LessThanOrEqualAll(Vec.Zero, x.s) && VecEven(x.s))
+                        .Select(x => (x.s / 2, cost + x.c * factor, press + x.p * factor))
+                    );
                 }
                 factor *= 2;
-                states = [.. next_states];
+                (next_states, states) = (states, next_states);
+                next_states.Clear();
             }
             // foreach (var press in minPresses)
             //     Console.WriteLine(FmtA(press));
