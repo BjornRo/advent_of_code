@@ -100,8 +100,8 @@ public class Day10
             FindPatterns([], 0);
 
             static bool VecEven(Vec v) => Vector.EqualsAll(VecMod2(v), Vec.Zero);
-            var minValue = int.MaxValue;
             short factor = 1;
+            var minValue = int.MaxValue;
             List<short[]> minPresses = [];
             List<(Vec, int, Vec)> states = [(elem.JoltReq, 0, Vec.Zero)];
             while (states.Count != 0)
