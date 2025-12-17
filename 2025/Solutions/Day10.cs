@@ -88,12 +88,11 @@ public class Day10
                 for (int i = index; i < elem.Buttons.Length; i++)
                 {
                     subPattern[elem.Buttons[i]] = (short)i;
-                    var sum = subPattern.Aggregate(Vec.Zero, (v, b) => v + b.Key);
-                    if (!patterns.TryGetValue(sum, out var value) || subPattern.Count < value.Item1)
-                        patterns[sum] = (
-                            subPattern.Count,
-                            ToVector(subPattern.Aggregate(new short[Vec.Count], (v, b) => { v[b.Value] = 1; return v; }))
-                            );
+                    var (v, p) = subPattern.Aggregate(
+                        (a: Vec.Zero, b: new short[Vec.Count]), (v, b) => { v.b[b.Value] = 1; return (v.a + b.Key, v.b); }
+                    );
+                    if (!patterns.TryGetValue(v, out var value) || subPattern.Count < value.Item1)
+                        patterns[v] = (subPattern.Count, ToVector(p));
                     FindPatterns(subPattern, i + 1);
                     subPattern.Remove(elem.Buttons[i]);
                 }
