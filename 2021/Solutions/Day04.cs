@@ -17,8 +17,8 @@ namespace aoc.Solutions
                     .Select(y => y.Split(" ", StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray())
                     .ToArray())];
 
-            Console.WriteLine($"Part 1: {Part1(drawn, boards)}");
-            Console.WriteLine($"Part 2: {Part2(drawn, boards)}");
+            Console.WriteLine($"Part 1: {Part1(drawn, Utils.DeepCopy(boards))}");
+            Console.WriteLine($"Part 2: {Part2(drawn, [.. Utils.DeepCopy(boards)])}");
         }
         static int[]? Won(IEnumerable<int[][]> boards)
         {
@@ -41,15 +41,13 @@ namespace aoc.Solutions
                         if (row[i] == draw) row[i] = -1;
             return Won(boards);
         }
-        static int Part1(int[] drawn, int[][][] _boards)
+        static int Part1(int[] drawn, int[][][] boards)
         {
-            var boards = Utils.DeepCopy(_boards);
             var (draw, won) = drawn.Select(r => (r, Round(r, boards))).First(x => x.Item2 != null);
             return draw * Count(boards[won![^1]]);
         }
-        static int Part2(int[] drawn, int[][][] _boards)
+        static int Part2(int[] drawn, List<int[][]> boards)
         {
-            var boards = Utils.DeepCopy(_boards).ToList();
             foreach (var draw in drawn)
                 if (Round(draw, boards) is int[] value)
                     foreach (var i in value)
