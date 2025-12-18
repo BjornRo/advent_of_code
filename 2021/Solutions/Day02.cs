@@ -1,56 +1,73 @@
-
 namespace aoc.Solutions
 {
-
-    readonly struct Coords(int min, int max, char symbol, string pwd)
-    {
-        public int Min { get; } = min;
-        public int Max { get; } = max;
-        public char Symbol { get; } = symbol;
-        public string Password { get; } = pwd;
-    }
-
     public class Day02
     {
+        enum Dir { Forward, Up, Down }
+        readonly struct Row
+        {
+            public Row(string data)
+            {
+                var s = data.Split(" ");
+                Dir = s[0] switch
+                {
+                    "forward" => Dir.Forward,
+                    "down" => Dir.Down,
+                    "up" => Dir.Up,
+                    _ => throw new NotImplementedException(),
+                };
+                Value = int.Parse(s[1]);
+            }
+            public Dir Dir { get; }
+            public int Value { get; }
+
+        }
         public static void Solve()
         {
-            string[] lines = File.ReadAllLines("in/d02.txt");
+            var data = File.ReadAllLines("in/d02.txt").Select(x => new Row(x)).ToArray();
 
-            List<Coords> list = [];
-            foreach (var line in lines)
-            {
-                string[] split_line = line.Split(" ");
-                var values = split_line[0].Split('-').Select(int.Parse).ToArray();
-                list.Add(new Coords(values[0], values[1], split_line[1][0], split_line[2]));
-            }
-
-            Console.WriteLine($"Part 1: {Part1(list)}");
-            Console.WriteLine($"Part 2: {Part2(list)}");
+            Console.WriteLine($"Part 1: {Part1(data)}");
+            Console.WriteLine($"Part 2: {Part2(data)}");
         }
 
-        static int Part1(List<Coords> list)
+        static int Part1(IEnumerable<Row> list)
         {
-            int total = 0;
-
-            foreach (var pwd in list)
-            {
-                int num = pwd.Password.Count(c => c == pwd.Symbol);
-                if (pwd.Min <= num && num <= pwd.Max) total += 1;
-            }
-            return total;
+            int horizontal = 0;
+            int depth = 0;
+            foreach (var row in list)
+                switch (row.Dir)
+                {
+                    case Dir.Forward:
+                        horizontal += row.Value;
+                        break;
+                    case Dir.Down:
+                        depth += row.Value;
+                        break;
+                    case Dir.Up:
+                        depth -= row.Value;
+                        break;
+                }
+            return horizontal * depth;
         }
-
-        static int Part2(List<Coords> list)
+        static int Part2(IEnumerable<Row> list)
         {
-            int total = 0;
-
-            foreach (var pwd in list)
-            {
-                string pass = pwd.Password;
-                if (pass[pwd.Min - 1] == pwd.Symbol != (pass[pwd.Max - 1] == pwd.Symbol))
-                    total += 1;
-            }
-            return total;
+            int horizontal = 0;
+            int depth = 0;
+            int aim = 0;
+            foreach (var row in list)
+                switch (row.Dir)
+                {
+                    case Dir.Forward:
+                        horizontal += row.Value;
+                        depth += row.Value * aim;
+                        break;
+                    case Dir.Down:
+                        aim += row.Value;
+                        break;
+                    case Dir.Up:
+                        aim -= row.Value;
+                        break;
+                }
+            checked { return horizontal * depth; }
         }
     }
 }

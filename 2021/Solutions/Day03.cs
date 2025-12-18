@@ -4,30 +4,33 @@ namespace aoc.Solutions
     {
         public static void Solve()
         {
-            string[] matrix = File.ReadAllLines("in/d03.txt");
+            var rows = File.ReadAllLines("in/d03.txt").Select(s => s.ToCharArray()).ToArray();
 
-            Console.WriteLine($"Part 1: {Slope(matrix, 3, 1)}");
-            Console.WriteLine($"Part 2: {Part2(matrix)}");
+            Console.WriteLine($"Part 1: {Part1(rows)}");
+            Console.WriteLine($"Part 2: {Part2(rows)}");
         }
-
-        static int Slope(in string[] matrix, in int col_offset, in int row_offset)
+        static long ArrToLong(int[] arr) => arr.Aggregate(0, (agg, bit) => (agg << 1) | (bit <= 0 ? 0 : 1));
+        static long Part1(char[][] data)
         {
-            int total = 0;
-            for (int i = row_offset; i < matrix.Length; i += row_offset)
+            long gamma = ArrToLong(data.Aggregate(new int[data[0].Length],
+                (agg, row) => [.. agg.Zip(row, (a, b) => a + (b == '0' ? -1 : 1))]
+            ));
+            checked { return gamma * (~gamma & ((1 << data[0].Length) - 1)); }
+        }
+        static long Part2(char[][] data)
+        {
+            static long F(char[][] reduced, bool oxygen)
             {
-                int j = i * col_offset / row_offset % matrix[0].Length;
-                if (matrix[i][j] == '#') total += 1;
+                var (a, b) = oxygen ? ('1', '0') : ('0', '1');
+                foreach (var i in Enumerable.Range(0, int.MaxValue))
+                {
+                    var res = 0 <= reduced.Aggregate(0, (agg, row) => agg + (row[i] == '0' ? -1 : 1));
+                    reduced = [.. reduced.Where(x => (res && x[i] == a) || (!res && x[i] == b))];
+                    if (reduced.Length == 1) break;
+                }
+                return ArrToLong([.. reduced[0].Select(x => x - '0')]);
             }
-            return total;
-        }
-
-        static long Part2(in string[] matrix)
-        {
-            long total_prod = 1;
-            var slopes = new (int, int)[] { (1, 1), (3, 1), (5, 1), (7, 1), (1, 2) };
-            foreach (var (col, row) in slopes)
-                total_prod *= Slope(matrix, col, row);
-            return total_prod;
+            checked { return F(data, true) * F(data, false); }
         }
     }
 }
