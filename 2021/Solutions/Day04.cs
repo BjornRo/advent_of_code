@@ -44,8 +44,8 @@ namespace aoc.Solutions
         static int Part1(int[] drawn, int[][][] _boards)
         {
             var boards = Utils.DeepCopy(_boards);
-            var res = drawn.Select(r => (r, Round(r, boards))).First(x => x.Item2 != null);
-            return res.r * Count(boards[res.Item2![^1]]);
+            var (draw, won) = drawn.Select(r => (r, Round(r, boards))).First(x => x.Item2 != null);
+            return draw * Count(boards[won![^1]]);
         }
         static int Part2(int[] drawn, int[][][] _boards)
         {
