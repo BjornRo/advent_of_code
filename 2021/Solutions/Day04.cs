@@ -4,69 +4,58 @@ namespace aoc.Solutions
     {
         public static void Solve()
         {
-            string inData = File.ReadAllText("in/d04.txt");
+            var data = File.ReadAllText("in/d04.txt")
+                .TrimEnd()
+                .Replace("\r\n", "\n")
+                .Split("\n\n", 2);
 
-            List<Dictionary<string, string>> passports = [];
-            foreach (var batch in inData.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.RemoveEmptyEntries))
+            int[] drawn = [.. data[0].Split(",").Select(int.Parse)];
+            int[][][] boards = [.. data[1]
+                .Split("\n\n")
+                .Select(x => x
+                    .Split("\n")
+                    .Select(y => y.Split(" ", StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray())
+                    .ToArray())];
+
+            Console.WriteLine($"Part 1: {Part1(drawn, boards)}");
+            Console.WriteLine($"Part 2: {Part2(drawn, boards)}");
+        }
+        static int[]? Won(IEnumerable<int[][]> boards)
+        {
+            var won = new List<int>();
+            foreach (var (i, b) in boards.Select((x, i) => (i, x)))
             {
-                Dictionary<string, string> passportData = [];
-                foreach (var data in batch.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-                    foreach (var rawKeyValue in data.Split(" "))
-                    {
-                        string[] keyValue = rawKeyValue.Split(":");
-                        passportData.Add(keyValue[0], keyValue[1]);
-                    }
-                passports.Add(passportData);
+                var row = b.Any(row => row.All(x => x == -1));
+                var col = Enumerable.Range(0, b[0].Length)
+                    .Any(i => Enumerable.Range(0, b.Length).All(j => b[j][i] == -1));
+                if (row || col) won.Add(i);
             }
-
-            Console.WriteLine($"Part 1: {Part1(passports)}");
-            Console.WriteLine($"Part 2: {Part2(passports)}");
+            return won.Count == 0 ? null : [.. won.OrderBy(x => -x)];
         }
-
-        static bool Part1Valid(in Dictionary<string, string> passport)
+        static int Count(int[][] board) => board.Sum(r => r.Where(x => x != -1).Sum());
+        static int[]? Round(int draw, IEnumerable<int[][]> boards)
         {
-            var count = passport.Count;
-            return count == 8 || (count == 7 && !passport.ContainsKey("cid"));
+            foreach (var board in boards)
+                foreach (var row in board)
+                    for (int i = 0; i < row.Length; i++)
+                        if (row[i] == draw) row[i] = -1;
+            return Won(boards);
         }
-
-        static int Part1(in List<Dictionary<string, string>> passports)
+        static int Part1(int[] drawn, int[][][] _boards)
         {
-            int total = 0;
-            foreach (var passport in passports)
-                if (Part1Valid(passport))
-                    total += 1;
-            return total;
+            var boards = Utils.DeepCopy(_boards);
+            var res = drawn.Select(r => (r, Round(r, boards))).First(x => x.Item2 != null);
+            return res.r * Count(boards[res.Item2![^1]]);
         }
-
-        static int Part2(in List<Dictionary<string, string>> passports)
+        static int Part2(int[] drawn, int[][][] _boards)
         {
-            int total = 0;
-            var hairColor = new HashSet<string> { "amb", "blu", "brn", "gry", "grn", "hzl", "oth" };
-            foreach (var passport in passports)
-            {
-                if (!Part1Valid(passport)) continue;
-                if (!passport.TryGetValue("byr", out string? v)
-                    || !int.TryParse(v, out int r) || 1920 > r || r > 2002) continue;
-                if (!passport.TryGetValue("iyr", out v)
-                    || !int.TryParse(v, out r) || 2010 > r || r > 2020) continue;
-                if (!passport.TryGetValue("eyr", out v)
-                    || !int.TryParse(v, out r) || 2020 > r || r > 2030) continue;
-                if (passport.TryGetValue("hgt", out v))
-                {
-                    if (!v.Contains("cm") && !v.Contains("in")) continue;
-                    if (v.Contains("cm"))
-                    {
-                        if (!int.TryParse(v.Replace("cm", ""), out r) || 150 > r || r > 193) continue;
-                    }
-                    else if (!int.TryParse(v.Replace("in", ""), out r) || 59 > r || r > 76) continue;
-                }
-                else continue;
-                if (!passport.TryGetValue("hcl", out v) || !v.Contains('#') || v.Length != 7) continue;
-                if (!passport.TryGetValue("ecl", out v) || !hairColor.Contains(v)) continue;
-                if (!passport.TryGetValue("pid", out v) || v.Length != 9 || !v.All(char.IsDigit)) continue;
-                total += 1;
-            }
-            return total;
+            var boards = Utils.DeepCopy(_boards).ToList();
+            foreach (var draw in drawn)
+                if (Round(draw, boards) is int[] value)
+                    foreach (var i in value)
+                        if (boards.Count == 1) return draw * Count(boards[i]);
+                        else boards.RemoveAt(i);
+            return -1;
         }
     }
 }
