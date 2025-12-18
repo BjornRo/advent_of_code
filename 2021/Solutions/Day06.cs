@@ -4,55 +4,43 @@ namespace aoc.Solutions
     {
         public static void Solve()
         {
-            string inData = File.ReadAllText("in/d06.txt");
+            var data = File.ReadAllText("in/d06.txt").TrimEnd().Split(",").Select(sbyte.Parse).ToArray();
 
-            List<List<string>> groups = [];
-            foreach (var batch in inData.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.RemoveEmptyEntries))
-            {
-                List<string> group = [];
-                foreach (var person in batch.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-                    group.Add(person);
-                groups.Add(group);
-            }
-
-            Console.WriteLine($"Part 1: {Part1(groups)}");
-            Console.WriteLine($"Part 2: {Part2(groups)}");
+            Console.WriteLine($"Part 1: {Part1([.. data])}");
+            Console.WriteLine($"Part 2: {Part2([.. data])}");
         }
-
-
-        static int Part1(in List<List<string>> groups)
+        static long Part1(List<sbyte> data)
         {
-            int total = 0;
-            foreach (var group in groups)
+            foreach (var _ in Enumerable.Range(0, 80))
             {
-                HashSet<char> answers = [];
-                foreach (var answer in group)
-                    foreach (char c in answer) answers.Add(c);
-                total += answers.Count;
+                var len = data.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    data[i] -= 1;
+                    if (data[i] != -1) continue;
+                    data[i] = 6;
+                    data.Add(8);
+                }
             }
-            return total;
+            return data.Count;
         }
-
-        static int Part2(in List<List<string>> groups)
+        static long Part2(List<sbyte> data, int days = 256)
         {
-            int total = 0;
-            foreach (var group in groups)
+            var numbers = data.Aggregate(new long[9], (agg, v) => { agg[v] += 1; return agg; }).ToList();
+            var newNumbers = new long[numbers.Count].ToList();
+            foreach (var _ in Enumerable.Range(0, days))
             {
-                int nGroup = group.Count;
-                Dictionary<char, int> answers = [];
-                foreach (var answer in group)
-                    foreach (char c in answer)
-                    {
-                        if (!answers.TryGetValue(c, out int value))
-                        {
-                            value = 0;
-                            answers[c] = value;
-                        }
-                        answers[c] = value + 1;
-                    }
-                foreach (int count in answers.Values) if (count == nGroup) total += 1;
+                var tmp = numbers[0];
+                for (int i = 1; i < numbers.Count; i++)
+                {
+                    newNumbers[i - 1] = numbers[i];
+                    numbers[i] = 0;
+                }
+                newNumbers[6] += tmp;
+                newNumbers[8] += tmp;
+                (numbers, newNumbers) = (newNumbers, numbers);
             }
-            return total;
+            return numbers.Sum();
         }
     }
 }
