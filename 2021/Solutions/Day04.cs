@@ -15,7 +15,7 @@ namespace aoc.Solutions
                 .Select(x => x
                     .Split("\n")
                     .Select(y => y.Split(" ", StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray())
-                    .ToArray())];
+                .ToArray())];
 
             Console.WriteLine($"Part 1: {Part1(drawn, Utils.DeepCopy(boards))}");
             Console.WriteLine($"Part 2: {Part2(drawn, [.. Utils.DeepCopy(boards)])}");
