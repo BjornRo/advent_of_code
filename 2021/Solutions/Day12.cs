@@ -24,33 +24,10 @@ public class Day12
             .Where(kv => kv.Key != "start" && kv.Key != "end" && kv.Key.All(char.IsLower))
             .Aggregate(0, (mask, kv) => mask | (1 << kv.Value));
 
-        Console.WriteLine($"Part 1: {Part1(graph, smallCaves)}");
-        Console.WriteLine($"Part 2: {Part2(graph, smallCaves)}");
+        Console.WriteLine($"Part 1: {Solve(graph, smallCaves, false)}");
+        Console.WriteLine($"Part 2: {Solve(graph, smallCaves, true)}");
     }
-    static int Part1(ImmutableDictionary<ushort, ImmutableArray<ushort>> graph, ushort smallCaves)
-    {
-        var end = (ushort)(1 << graph.Count - 1);
-        int paths = 0;
-        Stack<(ushort, ushort)> stack = new([(1 << 0, 0)]);
-        while (stack.TryPop(out var state))
-        {
-            var (node, visited) = state;
-            if (node == end)
-            {
-                paths += 1;
-                continue;
-            }
-            if ((smallCaves & node) != 0)
-            {
-                if ((visited & node) != 0) continue;
-                visited |= node;
-            }
-            foreach (var neighbor in graph[node].Where(x => x != (1 << 0)))
-                stack.Push((neighbor, visited));
-        }
-        return paths;
-    }
-    static int Part2(ImmutableDictionary<ushort, ImmutableArray<ushort>> graph, ushort smallCaves)
+    static int Solve(ImmutableDictionary<ushort, ImmutableArray<ushort>> graph, ushort smallCaves, bool p2)
     {
         var end = (ushort)(1 << graph.Count - 1);
         int paths = 0;
@@ -67,7 +44,7 @@ public class Day12
             {
                 if ((visited & node) != 0)
                 {
-                    if (secondVisit) continue;
+                    if (!p2 || secondVisit) continue;
                     secondVisit = true;
                 }
                 visited |= node;
