@@ -37,7 +37,7 @@ public class Day08
             var three = fiveSeg.First(s => one.All(c => s.Contains(c)));
             fiveSeg.Remove(three);
 
-            var sixSeg = signal.Where(s => s.Count == 6).ToList();
+            var sixSeg = signal.Where(s => s.Count == 6).ToList(); // 0,6,9
             var nine = sixSeg.First(s => four.All(c => s.Contains(c)));
             sixSeg.Remove(nine);
 
