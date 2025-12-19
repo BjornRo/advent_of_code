@@ -2,93 +2,82 @@ namespace aoc.Solutions;
 
 public class Day08
 {
-    enum OpCode
+    readonly struct Line
     {
-        Acc,
-        Jmp,
-        Nop,
+        public Line(string raw)
+        {
+            var r = raw.Split(" | ");
+            Signal = [.. r[0].Split(" ").Select(x => x.ToHashSet()).OrderBy(x => x.Count)];
+            Output = [.. r[1].Split(" ")];
+        }
+        public HashSet<char>[] Signal { get; }
+        public string[] Output { get; }
+        public (HashSet<char>[], string[]) Tuple() => (Signal, Output);
 
     }
-
-    readonly struct Instruction
-    {
-        public readonly OpCode Op;
-        public readonly int Value;
-
-        public Instruction(string op, string value)
-        {
-            Op = op switch
-            {
-                "acc" => OpCode.Acc,
-                "jmp" => OpCode.Jmp,
-                _ => OpCode.Nop,
-            };
-            Value = int.Parse(value);
-        }
-
-        public Instruction(OpCode op, int value)
-        {
-            Op = op;
-            Value = value;
-        }
-    }
-
     public static void Solve()
     {
-        List<Instruction> instructions = [];
-        foreach (var rawInstruction in File.ReadAllLines("in/d08.txt"))
-        {
-            string[] splitRawIns = rawInstruction.Split(" ");
-            instructions.Add(new Instruction(splitRawIns[0], splitRawIns[1]));
-        }
+        var lines = File.ReadAllLines("in/d08.txt").Select(x => new Line(x)).ToArray();
 
-        Console.WriteLine($"Part 1: {Machine(instructions).Item2}");
-        Console.WriteLine($"Part 2: {Part2(instructions)}");
+        Console.WriteLine($"Part 1: {Part1(lines)}");
+        Console.WriteLine($"Part 2: {Part2(lines)}");
     }
-
-    static (bool, int) Machine(in List<Instruction> instructions)
+    static long Part1(Line[] lines) => lines.Sum(x => x.Output.Sum(y => y.Length is 2 or 4 or 3 or 7 ? 1 : 0));
+    static long Part2(Line[] lines)
     {
-        HashSet<int> visited = [];
-        int accumulator = 0;
-
-        int pc = 0;
-        while (pc < instructions.Count)
+        long total = 0;
+        foreach (var (signal, output) in lines.Select(x => x.Tuple()))
         {
-            if (visited.Contains(pc)) return (false, accumulator);
-            visited.Add(pc);
+            var one = signal.First(s => s.Count == 2); // 1
+            var seven = signal.First(s => s.Count == 3); // 7
+            var four = signal.First(s => s.Count == 4); // 4
+            var eight = signal.First(s => s.Count == 7); // 8
 
-            var ins = instructions[pc];
-            switch (ins.Op)
+            var fiveSeg = signal.Where(s => s.Count == 5).ToList(); // 2,3,5
+            var three = fiveSeg.First(s => one.All(c => s.Contains(c)));
+            fiveSeg.Remove(three);
+
+            var sixSeg = signal.Where(s => s.Count == 6).ToList();
+            var nine = sixSeg.First(s => four.All(c => s.Contains(c)));
+            sixSeg.Remove(nine);
+
+            var zero = sixSeg.First(s => one.All(c => s.Contains(c)));
+            sixSeg.Remove(zero);
+
+            var six = sixSeg.First();
+            var five = fiveSeg.Single(s => s.All(c => six.Contains(c)));
+
+            var segment = new char[7].ToList();
+            segment[0] = seven.Except(one).Single();
+            segment[6] = nine.Except(four).Except([segment[0]]).Single();
+            segment[3] = three.Except(one).Except([segment[0], segment[6]]).Single();
+            segment[1] = four.Except(three).Single();
+            segment[5] = one.Intersect(three).Single(six.Contains);
+            segment[2] = one.Intersect(three).Single(c => !six.Contains(c));
+            segment[4] = eight.Except(nine).Single();
+
+            string number = "";
+            foreach (var op in output)
             {
-                case OpCode.Jmp:
-                    pc += ins.Value;
-                    continue;
-                case OpCode.Acc:
-                    accumulator += ins.Value;
-                    break;
+                byte digits = 0;
+                foreach (var c in op) digits |= (byte)(1 << segment.IndexOf(c));
+                number += digits switch
+                {
+                    0b010_0100 => '1',
+                    0b101_1101 => '2',
+                    0b110_1101 => '3',
+                    0b010_1110 => '4',
+                    0b110_1011 => '5',
+                    0b111_1011 => '6',
+                    0b010_0101 => '7',
+                    0b111_1111 => '8',
+                    0b110_1111 => '9',
+                    0b111_0111 => '0',
+                    _ => throw new Exception(digits.ToString()),
+                };
             }
-            pc += 1;
+            total += long.Parse(number);
         }
-        return (true, accumulator);
-    }
-
-    static int Part2(List<Instruction> instructions)
-    {
-        for (int i = 0; i < instructions.Count; i++)
-        {
-            var ins = instructions[i];
-            if (ins.Op.Equals(OpCode.Jmp) || ins.Op.Equals(OpCode.Nop))
-            {
-                var newOp = ins.Op.Equals(OpCode.Jmp) ? OpCode.Nop : OpCode.Jmp;
-                instructions[i] = new Instruction(newOp, ins.Value);
-
-                var result = Machine(instructions);
-                if (result.Item1) return result.Item2;
-
-                instructions[i] = ins;
-            }
-
-        }
-        return 0;
+        return total;
     }
 }
