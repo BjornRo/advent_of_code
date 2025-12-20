@@ -53,4 +53,8 @@ public static class Utils
                 }
     }
     public static int Manhattan((int x, int y) a, (int x, int y) b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
+    public static T InvArithmetic<T>(T t) where T : INumber<T>, IRootFunctions<T> =>
+        (T.Sqrt(T.CreateChecked(8) * t + T.One) - T.One) / T.CreateChecked(2);
+    public static T Arithmetic<T>(T n) where T : INumber<T> => n * (n + T.One) / T.CreateChecked(2);
+
 }

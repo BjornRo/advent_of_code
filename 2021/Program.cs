@@ -19,8 +19,8 @@ if (int.TryParse(args[0], out int day))
         // case 13: Day13.Solve(); break;
         // case 14: Day14.Solve(); break;
         // case 15: Day15.Solve(); break;
-        case 16: Day16.Solve(); break;
-        // case 17: Day17.Solve(); break;
+        // case 16: Day16.Solve(); break;
+        case 17: Day17.Solve(); break;
         // case 18: Day18.Solve(); break;
         // case 19: Day19.Solve(); break;
         // case 20: Day20.Solve(); break;
