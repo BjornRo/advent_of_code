@@ -4,7 +4,7 @@ public class Day18
 {
     public static void Solve()
     {
-        string[] dataMasking = File.ReadAllLines("in/d18.txt");
+        string[] dataMasking = File.ReadAllLines("in/d18t.txt");
 
         Console.WriteLine($"Part 1: {Part1()}");
         Console.WriteLine($"Part 2: {Part2()}");

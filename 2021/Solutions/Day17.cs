@@ -40,10 +40,10 @@ public class Day17
             }
             return false;
         }
-        HashSet<(int, int)> map = [];
+        int total = 0;
         for (int row = -area.RowMax; row < area.RowMax; row++)
             for (int col = (int)Utils.InvArithmetic((double)area.ColMin); col <= area.ColMax; col++)
-                if (Cannon(area, row, col)) map.Add((row, col));
-        return map.Count;
+                if (Cannon(area, row, col)) total += 1;
+        return total;
     }
 }
