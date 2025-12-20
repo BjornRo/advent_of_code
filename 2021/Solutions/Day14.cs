@@ -1,83 +1,60 @@
+using System.Collections.Immutable;
+
 namespace aoc.Solutions;
 
 public class Day14
 {
     public static void Solve()
     {
-        string[] dataMasking = File.ReadAllLines("in/d14.txt");
+        var data = File.ReadAllText("in/d14.txt").TrimEnd().Replace("\r\n", "\n").Split("\n\n");
+        var template = data[0].Trim();
+        var rules = data[1].Split("\n").Select(r => r.Split(" -> ")).ToImmutableDictionary(e => e[0], e => e[1]);
 
-        Console.WriteLine($"Part 1: {Part1(dataMasking)}");
-        Console.WriteLine($"Part 2: {Part2(dataMasking)}");
+        Console.WriteLine($"Part 1: {Part1(template, rules)}");
+        Console.WriteLine($"Part 2: {Part2(template, rules)}");
     }
-
-    static ulong Part1(in string[] dataMasking)
+    static int Part1(string template, ImmutableDictionary<string, string> rules)
     {
-        Dictionary<ulong, ulong> memory = [];
-
-        ulong maskSet = 0;
-        ulong maskUnset = long.MaxValue;
-        foreach (var line in dataMasking)
+        foreach (var _ in Enumerable.Range(1, 10))
         {
-            var maskMem = line.Split(" = ");
-            if (maskMem[0].StartsWith("mask"))
+            var tmpTemp = "";
+            for (int i = 0; i < template.Length - 1; i++)
             {
-                maskSet = 0;
-                maskUnset = ulong.MaxValue;
-                var revMask = maskMem[1].Reverse().ToArray();
-                for (int i = 0; i < 36; i++)
+                var subStr = template[i..(i + 2)];
+                tmpTemp += subStr[0];
+                if (rules.TryGetValue(subStr, out var result))
                 {
-                    if (revMask[i] == '1') maskSet |= 1UL << i;
-                    else if (revMask[i] == '0') maskUnset ^= 1UL << i;
+                    tmpTemp += result;
+                    continue;
                 }
+                tmpTemp += subStr[1];
             }
-            else
-            {
-                var value = ulong.Parse(maskMem[1]);
-                value |= maskSet;
-                value &= maskUnset;
-                var addr = ulong.Parse(new string([.. maskMem[0].Where(char.IsDigit)]));
-                memory[addr] = value;
-            }
+            template = tmpTemp + template[^1];
         }
-        return memory.Values.Aggregate((acc, value) => acc + value);
+        var counts = new Dictionary<char, int>();
+        foreach (var c in template) counts[c] = counts.GetValueOrDefault(c) + 1;
+        return counts.Values.Max() - counts.Values.Min();
     }
-
-    static void ApplyMask(in char[] mask, in int idx, in ulong addr, in ulong val, Dictionary<ulong, ulong> mem)
+    static ulong Part2(string template, ImmutableDictionary<string, string> rules)
     {
-        if (mask.Length == idx)
+        Dictionary<string, ulong> occurrences = [];
+        for (int i = 0; i < template.Length - 1; i++)
         {
-            mem[addr] = val;
-            return;
+            var subStr = template[i..(i + 2)];
+            occurrences[subStr] = occurrences.GetValueOrDefault(subStr) + 1;
         }
-
-        var c = mask[idx];
-        var shift = 1UL << idx;
-        if (c == 'X')
-        {
-            ApplyMask(mask, idx + 1, addr | shift, val, mem);
-            ApplyMask(mask, idx + 1, addr & ~shift, val, mem);
-        }
-        else
-        {
-            var new_addr = c == '1' ? addr | shift : addr;
-            ApplyMask(mask, idx + 1, new_addr, val, mem);
-        }
-    }
-
-    static ulong Part2(in string[] dataMasking)
-    {
-        Dictionary<ulong, ulong> memory = [];
-        char[] mask = [];
-        foreach (var line in dataMasking)
-        {
-            var maskMem = line.Split(" = ");
-            if (maskMem[0].StartsWith("mask")) mask = [.. maskMem[1].Reverse()];
-            else
+        foreach (var _ in Enumerable.Range(1, 40))
+            occurrences = occurrences.Aggregate((Dictionary<string, ulong>)[], (agg, kv) =>
             {
-                var address = ulong.Parse(new string([.. maskMem[0].Where(char.IsDigit)]));
-                ApplyMask(mask, 0, address, ulong.Parse(maskMem[1]), memory);
-            }
-        }
-        return memory.Values.Aggregate((acc, value) => acc + value);
+                if (rules.TryGetValue(kv.Key, out var result))
+                    foreach (var subStr in new[] { kv.Key[0] + result, result + kv.Key[1] })
+                        agg[subStr] = agg.GetValueOrDefault(subStr) + kv.Value;
+                else agg[kv.Key] += kv.Value;
+                return agg;
+            });
+
+        var values = occurrences.Aggregate(new Dictionary<char, ulong>() { { template[^1], 1UL } }, (agg, kv) =>
+            { agg[kv.Key[0]] = agg.GetValueOrDefault(kv.Key[0]) + kv.Value; return agg; }).Values;
+        return values.Max() - values.Min();
     }
 }
