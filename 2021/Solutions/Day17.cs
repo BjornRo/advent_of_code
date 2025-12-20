@@ -29,14 +29,11 @@ public class Day17
     {
         static bool Cannon(Area area, int deltaRow, int deltaCol)
         {
-            int row = 0;
-            int col = 0;
-            int max = 0;
+            int row = 0, col = 0;
             while (!area.Overshot(row, col))
             {
                 row += -deltaRow;
                 col += deltaCol;
-                max = Math.Max(max, -row);
                 if (area.Within(row, col)) return true;
                 deltaRow -= 1;
                 if (deltaCol != 0) deltaCol -= 1;
