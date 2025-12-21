@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.IO.Compression;
 
 namespace aoc.Solutions;
 
@@ -7,8 +6,8 @@ public class Day19
 {
     record Scan(int X, int Y, int Z)
     {
-        public double Len = Math.Sqrt(X * X + Y * Y + Z * Z);
-        public double LenSq = X * X + Y * Y + Z * Z;
+        // public double Len = Math.Sqrt(X * X + Y * Y + Z * Z);
+        public int LenSq() => X * X + Y * Y + Z * Z;
         public static Scan Init(string s)
         {
             var d = s.Split(",").Select(int.Parse).ToArray();
@@ -55,7 +54,7 @@ public class Day19
         // Console.WriteLine($"Part 2: {Part2(data)}");
     }
     static readonly Dictionary<Scan, Scan[]> memo = [];
-    static (Scan[], Scan[]) FindMatch(Scan[] a, Scan[] b)
+    static ((Scan, Scan), (Scan, Scan))[] FindMatch(Scan[] a, Scan[] b)
     {
         static Scan[] MemoRot(Scan s) => memo.TryGetValue(s, out var rots) ? rots : (memo[s] = [.. s.Rotations()]);
         static bool RotationMatch(Scan a, Scan b) => MemoRot(a).Any(rotA => MemoRot(b).Any(rotB => rotA == rotB));
@@ -67,43 +66,84 @@ public class Day19
         }
         var aDeltas = Deltas(a).ToArray();
         var bDeltas = Deltas(b).ToArray();
-        var filterDist = aDeltas.Select(d => d.Item2.LenSq).Intersect(bDeltas.Select(d => d.Item2.LenSq));
+        var filterDist = aDeltas.Select(d => d.Item2.LenSq()).Intersect(bDeltas.Select(d => d.Item2.LenSq()));
 
-        HashSet<Scan> matchesA = [];
-        HashSet<Scan> matchesB = [];
-        foreach (var ((a0, a1), da) in aDeltas.Where(s => filterDist.Contains(s.Item2.LenSq)))
+        List<((Scan, Scan), (Scan, Scan))> matchesA = [];
+        foreach (var ((a0, a1), da) in aDeltas.Where(s => filterDist.Contains(s.Item2.LenSq())))
         {
             foreach (var ((b0, b1), db) in bDeltas)
             {
-                if (da.LenSq != db.LenSq) continue;
+                if (da.LenSq() != db.LenSq()) continue;
                 if (RotationMatch(da, db))
                 {
-                    matchesA.Add(a0);
-                    matchesA.Add(a1);
-                    matchesB.Add(b0);
-                    matchesB.Add(b1);
+                    matchesA.Add(((a0, a1), (b0, b1)));
                     break;
                 }
             }
             if (matchesA.Count == 12) break;
         }
-        return ([.. matchesA], [.. matchesB]);
+        return [.. matchesA];
     }
     // 735 too high
     static int Part1(Scan[][] scans)
     {
-        HashSet<Scan> beacons = [];
-        for (int i = 0; i < scans.Length; i++)
+        HashSet<Scan> beacons = [.. scans[0]];
+        // var transK = new (Scan, int)?[scans.Length];
+        for (int i = 0; i < scans.Length - 1; i++)
         {
-            for (int j = 0; j < scans.Length; j++)
+            for (int j = i + 1; j < scans.Length; j++)
             {
-                if (i == j) continue;
-                var (a, b) = FindMatch(scans[i], scans[j]);
-                beacons.UnionWith(a);
-                beacons.UnionWith(b);
+                // if (i == j) continue;
+                var matches = FindMatch(scans[i], scans[j]);
+                if (matches.Length == 0) continue;
+                foreach (var k in Enumerable.Range(0, 23))
+                {
+                    int nMatch = 0;
+                    foreach (var ((a0, a1), (b0, b1)) in matches)
+                    {
+                        var v0 = a0.Sub(a1);
+                        if (b0.Sub(b1).Rotations().Skip(k).First() != v0) break;
+                        nMatch += 1;
+                    }
+                    if (nMatch != 12) continue;
+                    var T = matches[0].Item1.Item2.Sub(matches[0].Item2.Item2.Rotations().Skip(k).First());
+                    // transK[j] = (T, k);
+                    foreach (var ((a0, a1), (b0, b1)) in matches)
+                    {
+                        var bGlobal = b1.Rotations().Skip(k).First().Add(T);
+                        if (a1 != bGlobal) Console.WriteLine("boo");
+                        // Console.WriteLine(a1 == bGlobal);
+                    }
+                    foreach (var s in scans[j])
+                    {
+                        beacons.Add(s.Rotations().Skip(k).First().Add(T));
+                    }
+                    break;
+                }
             }
         }
+        foreach (var s in beacons.OrderBy(x => x.X))
+        {
+            Console.WriteLine(s);
+        }
 
+
+        // foreach (var (Tk, scanner) in transK.Zip(scans).Skip(1))
+        // {
+        //     if (Tk is (var T, var k))
+        //     {
+        //         var res = scanner.Select(s => s.Rotations().Skip(k).First().Add(T));
+        //         beacons.UnionWith(res);
+        //     }
+        // }
+
+        // foreach (var ((a0, a1), (b0, b1)) in matches)
+        // {
+        //     var bGlobal = b1.Rotations().Skip(k).First().Add(T);
+        //     Console.WriteLine(a1 == bGlobal);
+        // }
+        // return 1;
+        // var aT = scans[i].Zip(scans[j], (a, b) => a.Sub(b.Rotations().Skip(k).First())).ToArray();
         return beacons.Count;
     }
     static ulong Part2(ImmutableArray<ImmutableArray<Scan>> scans)
