@@ -4,13 +4,13 @@ public class Day20
 {
     public static void Solve()
     {
-        var data = File.ReadAllText("in/d20t.txt").Trim().Replace("\r\n", "\n").Split("\n\n");
+        var data = File.ReadAllText("in/d20.txt").Trim().Replace("\r\n", "\n").Split("\n\n");
 
         var enhance = data[0];
         var image = data[1].Split("\n");
 
-        Console.WriteLine($"Part 1: {Part1(enhance, image)}");
-        Console.WriteLine($"Part 2: {Part2()}");
+        Console.WriteLine($"Part 1: {Enhancer(enhance, image, 2)}");
+        Console.WriteLine($"Part 2: {Enhancer(enhance, image, 50)}");
     }
     static int Arr2Int(IEnumerable<byte> arr) => arr.Aggregate(0, (agg, v) => (agg << 1) | (v & 1));
     public static IEnumerable<(int, int)> Kernel3(int row, int col)
@@ -19,8 +19,7 @@ public class Day20
             for (int j = -1; j < 2; j++)
                 yield return (row + i, col + j);
     }
-    // 5520 5357 too high
-    static int Part1(string enhance, string[] image)
+    static int Enhancer(string enhance, string[] image, int enhances)
     {
         HashSet<(int, int)> img = [];
         for (int row = 0; row < image.Length; row++)
@@ -28,22 +27,18 @@ public class Day20
                 if (image[row][col] == '#') img.Add((row, col));
 
         HashSet<(int, int)> tmpImg = [];
-        foreach (var _ in Enumerable.Range(0, 2))
+        bool pixel = false;
+        foreach (var _ in Enumerable.Range(0, enhances))
         {
-            var ((minRow, maxRow), (minCol, maxCol)) = Utils.MinMax(img.ToArray());
-            for (int row = minRow - 1; row <= maxRow + 1; row++)
-                for (int col = minCol - 1; col <= maxCol + 1; col++)
-                {
-                    var bin = new byte[9];
-                    foreach (var (i, pos) in Kernel3(row, col).Select((x, i) => (i, x)))
-                    {
-                        if (img.Contains(pos)) bin[i] = 1;
-                    }
-                    if (enhance[Arr2Int(bin)] == '#') tmpImg.Add((row, col));
-                }
+            var ((minR, maxR), (minC, maxC)) = Utils.MinMax(img.ToArray());
+            byte Test((int r, int c) a) =>
+                (byte)(img.Contains(a) || (pixel && (a.r < minR || a.r > maxR || a.c < minC || a.c > maxC)) ? 1 : 0);
+            for (int row = minR - 1; row <= maxR + 1; row++)
+                for (int col = minC - 1; col <= maxC + 1; col++)
+                    if (enhance[Arr2Int(Kernel3(row, col).Select(Test))] == '#') tmpImg.Add((row, col));
             (img, tmpImg) = (tmpImg, img);
             tmpImg.Clear();
-            // PM(img);
+            if (enhance[0] == '#' && enhance[^1] == '.') pixel = !pixel;
         }
         return img.Count;
     }
@@ -63,9 +58,5 @@ public class Day20
         foreach (var row in matrix)
             Console.WriteLine(string.Join("", row));
         Console.WriteLine();
-    }
-    static ulong Part2()
-    {
-        return 1;
     }
 }
