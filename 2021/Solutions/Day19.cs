@@ -131,11 +131,8 @@ public class Day19
                 {
                     int nMatch = 0;
                     foreach (var ((a0, a1), (b0, b1)) in matches)
-                    {
-                        var v0 = a0.Sub(a1);
-                        if (b0.Sub(b1).Rotate(k) != v0) break;
-                        nMatch += 1;
-                    }
+                        if (b0.Sub(b1).Rotate(k) != a0.Sub(a1)) break;
+                        else nMatch += 1;
                     if (nMatch != 12) continue;
                     var T = matches[0].Item1.Item2.Sub(matches[0].Item2.Item2.Rotate(k));
                     mappings[(j, i)] = (T, k);
@@ -149,13 +146,11 @@ public class Day19
     {
         HashSet<Scan> beacons = [.. scans[0]];
         foreach (var (i, scan) in scans.Skip(1).Select((s, i) => (i + 1, s)))
-        {
             beacons.UnionWith(scan.Select(s => FindMapping(mappings, i).Aggregate(s, (agg, step) =>
             {
                 var (T, k) = mappings[step];
                 return agg.Rotate(k).Add(T);
             })));
-        }
         return beacons.Count;
     }
     static int Part2(Scan[][] scans, Dictionary<(int, int), (Scan, int)> mappings)
@@ -172,8 +167,7 @@ public class Day19
 
         int max = 0;
         foreach (var s0 in scanLoc)
-            foreach (var s1 in scanLoc)
-                max = Math.Max(s0.Manhattan(s1), max);
+            foreach (var s1 in scanLoc) max = Math.Max(s0.Manhattan(s1), max);
         return max;
     }
 }
