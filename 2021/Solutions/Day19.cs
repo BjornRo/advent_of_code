@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-
 namespace aoc.Solutions;
 
 public class Day19
@@ -11,19 +10,45 @@ public class Day19
         public static Scan Init(string s)
         {
             var d = s.Split(",").Select(int.Parse).ToArray();
-            return new Scan(d[0], d[1], d[2]);
+            return new(d[0], d[1], d[2]);
         }
         public override string ToString() => $"{X},{Y},{Z}";
         public int Manhattan(Scan o) => Utils.Manhattan((X, Y, Z), (o.X, o.Y, o.Z));
         public Scan Sub(Scan o) => new(X - o.X, Y - o.Y, Z - o.Z);
         public Scan Add(Scan o) => new(X + o.X, Y + o.Y, Z + o.Z);
-        public IEnumerable<Scan> Rotations()
+        public Scan Neg() => new(-X, -Y, -Z);
+        public static int[] InvRot()
+        {
+            var p = new Scan(1, 2, 3);
+            var rots = p.Rotations();
+            var inv = new int[rots.Length];
+
+            for (int i = 0; i < rots.Length; i++)
+                for (int j = 0; j < rots.Length; j++)
+                    if (rots[j].Rotate(i) == p)
+                    {
+                        inv[i] = j;
+                        break;
+                    }
+            return inv;
+        }
+        public virtual bool Equals(Scan? o) => o is not null && X == o.X && Y == o.Y && Z == o.Z;
+        public override int GetHashCode() => HashCode.Combine(X, Y, Z);
+        private Scan[] Rots = [];
+        public Scan[] Rotations()
+        {
+            if (Rots.Length == 0) Rots = [.. IRotations()];
+            return Rots;
+        }
+        public Scan Rotate(int k) => Rotations().Skip(k).First();
+        private IEnumerable<Scan> IRotations()
         {
             static Scan RotX(Scan p) => new(p.X, -p.Z, p.Y);
             static Scan RotY(Scan p) => new(p.Z, p.Y, -p.X);
             static Scan RotZ(Scan p) => new(-p.Y, p.X, p.Z);
             HashSet<Scan> visited = [this];
             Queue<Scan> queue = new([this]);
+            yield return this;
             foreach (var _ in Enumerable.Range(0, 24))
             {
                 int count = queue.Count;
@@ -87,45 +112,111 @@ public class Day19
     // 735 too high
     static int Part1(Scan[][] scans)
     {
-        HashSet<Scan> beacons = [.. scans[0]];
-        // var transK = new (Scan, int)?[scans.Length];
+        int[] kInvs = Scan.InvRot();
+        Dictionary<(int, int), (Scan, int)> mappings = [];
         for (int i = 0; i < scans.Length - 1; i++)
         {
             for (int j = i + 1; j < scans.Length; j++)
             {
-                // if (i == j) continue;
+                if (i == j) continue;
                 var matches = FindMatch(scans[i], scans[j]);
-                if (matches.Length == 0) continue;
+                if (matches.Length != 12) continue;
                 foreach (var k in Enumerable.Range(0, 23))
                 {
                     int nMatch = 0;
                     foreach (var ((a0, a1), (b0, b1)) in matches)
                     {
                         var v0 = a0.Sub(a1);
+                        // Console.WriteLine(a1.Rotations().Length);
                         if (b0.Sub(b1).Rotations().Skip(k).First() != v0) break;
                         nMatch += 1;
                     }
                     if (nMatch != 12) continue;
                     var T = matches[0].Item1.Item2.Sub(matches[0].Item2.Item2.Rotations().Skip(k).First());
-                    // transK[j] = (T, k);
-                    foreach (var ((a0, a1), (b0, b1)) in matches)
-                    {
-                        var bGlobal = b1.Rotations().Skip(k).First().Add(T);
-                        if (a1 != bGlobal) Console.WriteLine("boo");
-                        // Console.WriteLine(a1 == bGlobal);
-                    }
-                    foreach (var s in scans[j])
-                    {
-                        beacons.Add(s.Rotations().Skip(k).First().Add(T));
-                    }
+                    mappings[(j, i)] = (T, k);
+                    mappings[(i, j)] = (T.Rotate(kInvs[k]).Neg(), kInvs[k]);
                     break;
                 }
             }
         }
-        foreach (var s in beacons.OrderBy(x => x.X))
+        /*
+               // (1, 0)
+               // (68,-1246,-43, 7)
+               // (0, 1)
+               // (68,1246,-43, 7)
+
+               // (2, 1)
+               // (-1037,41,-1272, 11)
+               // (1, 2)
+               // (1037,-1272,-41, 1)
+
+               // (4, 1)
+               // (88,113,-1104, 5)
+               // (1, 4)
+               // (-1104,-88,113, 20)
+
+               // (4, 2)
+               // (1125,-168,72, 13)
+               // (2, 4)
+               // (168,-1125,72, 13)
+
+               // (0, 4)
+               // (-1061,-20,-1133, 22)
+               // (4, 0)
+               // (-20,-1133,1061, 9)
+
+               // (4, 3)
+               // (-72,1247,-1081, 5)
+               // (3, 4)
+               // (-1081,72,1247, 20)
+       */
+        // foreach (var ((i, j), (T, k)) in mappings)
+        // {
+        //     Console.WriteLine((i, j));
+        //     Console.WriteLine((T, k));
+        //     Console.WriteLine();
+        // }
+        foreach (var ((i, j), (T, k)) in mappings)
         {
-            Console.WriteLine(s);
+            // beacons.Add(s.Rotations().Skip(k).First().Add(T));
         }
+
+        (int, int)[] FindMapping(int i)
+        {
+            Queue<(int, List<(int, int)>)> queue = new([(i, [])]);
+            HashSet<int> visited = [i];
+
+            while (queue.TryDequeue(out var state))
+            {
+                var (index, path) = state;
+                if (index == 0) return [.. path];
+                foreach (var ((from, to), _) in mappings)
+                {
+                    if (from != index) continue;
+                    if (visited.Contains(to)) continue;
+                    visited.Add(to);
+                    var newPath = new List<(int, int)>(path) { (from, to) };
+                    queue.Enqueue((to, newPath));
+                }
+            }
+            throw new Exception("No");
+        }
+
+        HashSet<Scan> beacons = [.. scans[0]];
+        foreach (var (i, scan) in scans.Skip(1).Select((s, i) => (i + 1, s)))
+        {
+            var map = FindMapping(i);
+            beacons.UnionWith(scan.Select(s => map.Aggregate(s, (agg, step) =>
+            {
+                var (T, k) = mappings[step];
+                return agg.Rotate(k).Add(T);
+            })));
+        }
+
+        // foreach (var s in beacons.OrderBy(x => x.X))
+        // {
+        //     Console.WriteLine(s);
+        // }
 
 
         // foreach (var (Tk, scanner) in transK.Zip(scans).Skip(1))
