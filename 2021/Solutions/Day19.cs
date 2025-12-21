@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 namespace aoc.Solutions;
 
 public class Day19
@@ -32,6 +33,9 @@ public class Day19
         }
         public virtual bool Equals(Scan? o) => o is not null && X == o.X && Y == o.Y && Z == o.Z;
         public override int GetHashCode() => HashCode.Combine(X, Y, Z);
+        static readonly Dictionary<Scan, HashSet<Scan>> memoRot = [];
+        public HashSet<Scan> RotationSet() =>
+            memoRot.TryGetValue(this, out var result) ? result : memoRot[this] = [.. Rotations()];
         private Scan[] Rots = [];
         public Scan[] Rotations() => Rots.Length == 0 ? Rots = [.. IRotations()] : Rots;
         public Scan Rotate(int k) => Rotations().Skip(k).First();
@@ -65,37 +69,24 @@ public class Day19
             .ToArray();
 
         var mappings = GenerateMappings(data);
-
         Console.WriteLine($"Part 1: {Part1(data, mappings)}");
         Console.WriteLine($"Part 2: {Part2(data, mappings)}");
     }
-    static readonly Dictionary<Scan, Scan[]> memo = [];
     static ((Scan, Scan), (Scan, Scan))[] FindMatch(Scan[] a, Scan[] b)
     {
-        static Scan[] MemoRot(Scan s) => memo.TryGetValue(s, out var rots) ? rots : (memo[s] = [.. s.Rotations()]);
-        static bool RotationMatch(Scan a, Scan b) => MemoRot(a).Any(rotA => MemoRot(b).Any(rotB => rotA == rotB));
         static IEnumerable<((Scan, Scan), Scan)> Deltas(Scan[] scan)
         {
             for (int i = 0; i < scan.Length; i++)
                 for (int j = 0; j < scan.Length; j++)
                     if (i != j) yield return ((scan[i], scan[j]), scan[i].Sub(scan[j]));
         }
-        var aDeltas = Deltas(a).ToArray();
         var bDeltas = Deltas(b).ToArray();
-        var filterDist = aDeltas.Select(d => d.Item2.LenSq()).Intersect(bDeltas.Select(d => d.Item2.LenSq()));
-
         List<((Scan, Scan), (Scan, Scan))> matchesA = [];
-        foreach (var ((a0, a1), da) in aDeltas.Where(s => filterDist.Contains(s.Item2.LenSq())))
+        foreach (var ((a0, a1), da) in Deltas(a))
         {
             foreach (var ((b0, b1), db) in bDeltas)
-            {
-                if (da.LenSq() != db.LenSq()) continue;
-                if (RotationMatch(da, db))
-                {
+                if (da.LenSq() == db.LenSq() && da.RotationSet().Overlaps(db.RotationSet()))
                     matchesA.Add(((a0, a1), (b0, b1)));
-                    break;
-                }
-            }
             if (matchesA.Count == 12) break;
         }
         return [.. matchesA];
@@ -104,17 +95,13 @@ public class Day19
     {
         Queue<(int, List<(int, int)>)> queue = new([(i, [])]);
         HashSet<int> visited = [i];
-
         while (queue.TryDequeue(out var state))
         {
             var (index, path) = state;
             if (index == 0) return [.. path];
             foreach (var ((from, to), _) in mappings)
-            {
-                if (from != index || !visited.Add(to)) continue;
-                var newPath = new List<(int, int)>(path) { (from, to) };
-                queue.Enqueue((to, newPath));
-            }
+                if (from == index && visited.Add(to))
+                    queue.Enqueue((to, [.. path, (from, to)]));
         }
         throw new Exception("No");
     }
@@ -157,7 +144,7 @@ public class Day19
     {
         Scan[] scanLoc = [new(0,0,0),.. Enumerable.Range(1, scans.Length - 1)
             .Select(i => {
-                var m = FindMapping(mappings, i).Select(i => mappings[i]).ToArray();
+                var m = FindMapping(mappings, i).Select(j => mappings[j]).ToArray();
                 return m.Skip(1).Aggregate(m[0].T, (agg, Tk) => agg.Rotate(Tk.k).Add(Tk.T));
             })];
 
