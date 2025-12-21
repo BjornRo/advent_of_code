@@ -58,5 +58,31 @@ public static class Utils
     public static T InvArithmetic<T>(T t) where T : INumber<T>, IRootFunctions<T> =>
         (T.Sqrt(T.CreateChecked(8) * t + T.One) - T.One) / T.CreateChecked(2);
     public static T Arithmetic<T>(T n) where T : INumber<T> => n * (n + T.One) / T.CreateChecked(2);
+    public static (T min, T max) MinMax<T>(T[] numbers) where T : IComparable<T>
+    {
+        T min = numbers[0], max = numbers[0];
+        for (int i = 1; i < numbers.Length; i++)
+        {
+            if (numbers[i].CompareTo(min) < 0) min = numbers[i];
+            if (numbers[i].CompareTo(max) > 0) max = numbers[i];
+        }
+        return (min, max);
+    }
+    public static ((T1 min, T1 max), (T2 min, T2 max)) MinMax<T1, T2>((T1, T2)[] values)
+    where T1 : IComparable<T1>
+    where T2 : IComparable<T2>
+    {
+        T1 min1 = values[0].Item1, max1 = values[0].Item1;
+        T2 min2 = values[0].Item2, max2 = values[0].Item2;
 
+        for (int i = 1; i < values.Length; i++)
+        {
+            var (a, b) = values[i];
+            if (a.CompareTo(min1) < 0) min1 = a;
+            if (a.CompareTo(max1) > 0) max1 = a;
+            if (b.CompareTo(min2) < 0) min2 = b;
+            if (b.CompareTo(max2) > 0) max2 = b;
+        }
+        return ((min1, max1), (min2, max2));
+    }
 }
