@@ -153,21 +153,18 @@ public class Day19
             })));
         return beacons.Count;
     }
-    static int Part2(Scan[][] scans, Dictionary<(int, int), (Scan, int)> mappings)
+    static int Part2(Scan[][] scans, Dictionary<(int, int), (Scan T, int k)> mappings)
     {
-        Scan[] scanLoc = [new(0,0,0),.. Enumerable
-            .Range(1, scans.Length - 1)
-            .Select(i => FindMapping(mappings, i)
-                .Aggregate(new Scan(0, 0, 0), (agg, map) =>
-                {
-                    var (T, k) = mappings[map];
-                    if (agg == new Scan(0,0,0)) return agg.Add(T);
-                    return agg.Rotate(k).Add(T);
-                }))];
+        Scan[] scanLoc = [new(0,0,0),.. Enumerable.Range(1, scans.Length - 1)
+            .Select(i => {
+                var m = FindMapping(mappings, i).Select(i => mappings[i]).ToArray();
+                return m.Skip(1).Aggregate(m[0].T, (agg, Tk) => agg.Rotate(Tk.k).Add(Tk.T));
+            })];
 
         int max = 0;
-        foreach (var s0 in scanLoc)
-            foreach (var s1 in scanLoc) max = Math.Max(s0.Manhattan(s1), max);
+        for (int i = 0; i < scanLoc.Length - 1; i++)
+            for (int j = i + 1; j < scanLoc.Length; j++)
+                max = Math.Max(scanLoc[i].Manhattan(scanLoc[j]), max);
         return max;
     }
 }
