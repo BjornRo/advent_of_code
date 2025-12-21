@@ -71,9 +71,8 @@ public class Day18
             {
                 if (Explode()) continue;
                 if (Split()) continue;
-                break;
+                return this;
             }
-            return this;
         }
         public override bool Split() => Left.Split() || Right.Split();
         Leaf? FindLeaf(bool left)
