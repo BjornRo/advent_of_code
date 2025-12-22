@@ -8,36 +8,31 @@ public class Day21
         Console.WriteLine($"Part 1: {Part1(startPos[0], startPos[1])}");
         Console.WriteLine($"Part 2: {Part2(startPos[0], startPos[1])}");
     }
-    class Dice(int value = 0, int turnOver = 100)
-    {
-        public long Value = value;
-        public long Rolls = 0;
-        public long TurnOver = turnOver;
-        public IEnumerable<long> Roll()
-        {
-            while (true)
-            {
-                Rolls += 1;
-                Value += 1;
-                if (Value > TurnOver) Value = 1;
-                yield return Value;
-            }
-        }
-    }
     static long Mod(long value) => (value - 1) % 10 + 1;
     static long Part1(long p1Pos, long p2Pos)
     {
-        var dice = new Dice();
-        var rolldice = dice.Roll();
+        var rolls = 0;
+        var value = 0;
+        IEnumerable<long> Roll()
+        {
+            while (true)
+            {
+                rolls += 1;
+                value += 1;
+                if (value > 100) value = 1;
+                yield return value;
+            }
+        }
+        var rolldice = Roll();
         long p1Score = 0, p2Score = 0;
         while (true)
         {
             p1Pos = Mod(rolldice.Take(3).Sum() + p1Pos);
             p1Score += p1Pos;
-            if (p1Score >= 1000) return p2Score * dice.Rolls;
+            if (p1Score >= 1000) return p2Score * rolls;
             p2Pos = Mod(rolldice.Take(3).Sum() + p2Pos);
             p2Score += p2Pos;
-            if (p2Score >= 1000) return p1Score * dice.Rolls;
+            if (p2Score >= 1000) return p1Score * rolls;
         }
     }
     static long Part2(long p1Pos, long p2Pos)
