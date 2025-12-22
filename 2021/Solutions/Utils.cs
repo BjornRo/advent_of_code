@@ -35,11 +35,16 @@ public static class Utils
     { foreach (var arr in mat) Console.WriteLine(FmtA(arr)); }
     public static void PrintM<T>(IEnumerable<ImmutableArray<T>> mat)
     { foreach (var arr in mat) Console.WriteLine(FmtA(arr)); }
-    public static IEnumerable<(int, int)> Cross3(int maxRow, int maxCol, int row, int col)
+    public static IEnumerable<(int, int)> Cross3Filter(int maxRow, int maxCol, int row, int col)
     {
         foreach (var (dr, dc) in new[] { (row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1) })
             if (0 <= dr && dr < maxRow && 0 <= dc && dc < maxCol)
                 yield return (dr, dc);
+    }
+    public static IEnumerable<(int, int)> Cross3(int row, int col)
+    {
+        foreach (var (dr, dc) in new[] { (row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1) })
+            yield return (dr, dc);
     }
     public static IEnumerable<(int, int)> Kernel3(int maxRow, int maxCol, int row, int col)
     {
@@ -86,7 +91,7 @@ public static class Utils
         return ((min1, max1), (min2, max2));
     }
     public static IEnumerable<int> Range(int start, int stop) { for (int i = start; i < stop; i++) yield return i; }
-    public static IEnumerable<int> Range(int start, int stop, bool inclusive = true)
+    public static IEnumerable<int> Range(int start, int stop, bool inclusive)
     {
         int end = inclusive ? stop : stop - 1;
         for (int i = start; i <= end; i++) yield return i;
@@ -105,6 +110,13 @@ public static class Utils
             for (int j = 0; j < list.Length; j++)
                 if (i != j) yield return (list[i], list[j]);
     }
-    public static IEnumerable<(int, T b)> Enumerate<T>(IEnumerable<T> source) => source.Select((x, i) => (i, x));
-    public static IEnumerable<(int, T b)> Enumerate<T>(int start, IEnumerable<T> source) => source.Skip(start).Select((x, i) => (i + start, x));
+    public static IEnumerable<(T a, T b)> Cartesian<T>(IEnumerable<T> source)
+    {
+        T[] list = [.. source];
+        for (int i = 0; i < list.Length; i++)
+            for (int j = 0; j < list.Length; j++)
+                yield return (list[i], list[j]);
+    }
+    public static IEnumerable<(int i, T b)> Enumerate<T>(IEnumerable<T> source) => source.Select((x, i) => (i, x));
+    public static IEnumerable<(int i, T b)> Enumerate<T>(int start, IEnumerable<T> source) => source.Skip(start).Select((x, i) => (i + start, x));
 }

@@ -43,7 +43,7 @@ public class Day15
             }
             if (cost >= minCost) continue;
             if (!visited.Add(pos)) continue;
-            foreach (var (dr, dc) in Utils.Cross3(grid.Length, grid[0].Length, pos.r, pos.c))
+            foreach (var (dr, dc) in Utils.Cross3Filter(grid.Length, grid[0].Length, pos.r, pos.c))
                 queue.Enqueue((dr, dc), cost + grid[dr][dc]);
         }
         return minCost;
