@@ -1,12 +1,12 @@
-using System.Collections.Immutable;
 using System.Diagnostics;
+
 namespace aoc.Solutions;
 
 public class Day19
 {
     record Scan(int X, int Y, int Z)
     {
-        public int LenSq() => X * X + Y * Y + Z * Z;
+        public int Len = X * X + Y * Y + Z * Z;
         public static Scan Init(string s)
         {
             var d = s.Split(",").Select(int.Parse).ToArray();
@@ -16,12 +16,10 @@ public class Day19
         public Scan Sub(Scan o) => new(X - o.X, Y - o.Y, Z - o.Z);
         public Scan Add(Scan o) => new(X + o.X, Y + o.Y, Z + o.Z);
         public Scan Neg() => new(-X, -Y, -Z);
-        public static int[] InvRot()
+        public static int[] InvRot(Scan p)
         {
-            var p = new Scan(1, 2, 3);
             var rots = p.Rotations();
             var inv = new int[rots.Length];
-
             for (int i = 0; i < rots.Length; i++)
                 for (int j = 0; j < rots.Length; j++)
                     if (rots[j].Rotate(i) == p)
@@ -36,8 +34,8 @@ public class Day19
         static readonly Dictionary<Scan, HashSet<Scan>> memoRot = [];
         public HashSet<Scan> RotationSet() =>
             memoRot.TryGetValue(this, out var result) ? result : memoRot[this] = [.. Rotations()];
-        private Scan[] Rots = [];
-        public Scan[] Rotations() => Rots.Length == 0 ? Rots = [.. IRotations()] : Rots;
+        private static readonly Dictionary<Scan, Scan[]> memoRots = [];
+        public Scan[] Rotations() => memoRots.TryGetValue(this, out var rots) ? rots : memoRots[this] = [.. IRotations()];
         public Scan Rotate(int k) => Rotations().Skip(k).First();
         private IEnumerable<Scan> IRotations()
         {
@@ -68,11 +66,12 @@ public class Day19
             .Select(set => set.Split("\n").Skip(1).Select(Scan.Init).ToArray())
             .ToArray();
 
+
         var mappings = GenerateMappings(data);
         Console.WriteLine($"Part 1: {Part1(data, mappings)}");
         Console.WriteLine($"Part 2: {Part2(data, mappings)}");
     }
-    static ((Scan, Scan), (Scan, Scan))[] FindMatch(Scan[] a, Scan[] b)
+    static ((Scan, Scan), (Scan, Scan))[]? FindMatch(Scan[] a, Scan[] b)
     {
         static IEnumerable<((Scan, Scan), Scan)> Deltas(Scan[] scan)
         {
@@ -80,16 +79,19 @@ public class Day19
                 for (int j = 0; j < scan.Length; j++)
                     if (i != j) yield return ((scan[i], scan[j]), scan[i].Sub(scan[j]));
         }
-        var bDeltas = Deltas(b).ToArray();
+        var aD = Deltas(a).ToArray();
+        var bD = Deltas(b).ToArray();
+        if (bD.Select(x => x.Item2.Len).Intersect(aD.Select(x => x.Item2.Len)).Count() <= 12) return null;
+
         List<((Scan, Scan), (Scan, Scan))> matchesA = [];
-        foreach (var ((a0, a1), da) in Deltas(a))
+        foreach (var (pa, da) in aD)
         {
-            foreach (var ((b0, b1), db) in bDeltas)
-                if (da.LenSq() == db.LenSq() && da.RotationSet().Overlaps(db.RotationSet()))
-                    matchesA.Add(((a0, a1), (b0, b1)));
-            if (matchesA.Count == 12) break;
+            matchesA.AddRange(bD
+                .Where(e => e.Item2.Len == da.Len && da.RotationSet().Overlaps(e.Item2.RotationSet()))
+                .Select(e => (pa, e.Item1)));
+            if (matchesA.Count == 12) return [.. matchesA];
         }
-        return [.. matchesA];
+        return null;
     }
     static (int, int)[] FindMapping(Dictionary<(int, int), (Scan, int)> mappings, int i)
     {
@@ -107,26 +109,24 @@ public class Day19
     }
     static Dictionary<(int, int), (Scan, int)> GenerateMappings(Scan[][] scans)
     {
-        int[] kInvs = Scan.InvRot();
+        int[] kInvs = Scan.InvRot(scans[0][0]);
         Dictionary<(int, int), (Scan, int)> mappings = [];
         for (int i = 0; i < scans.Length - 1; i++)
             for (int j = i + 1; j < scans.Length; j++)
-            {
-                var matches = FindMatch(scans[i], scans[j]);
-                if (matches.Length != 12) continue;
-                foreach (var k in Enumerable.Range(0, 23))
-                {
-                    int nMatch = 0;
-                    foreach (var ((a0, a1), (b0, b1)) in matches)
-                        if (b0.Sub(b1).Rotate(k) != a0.Sub(a1)) break;
-                        else nMatch += 1;
-                    if (nMatch != 12) continue;
-                    var T = matches[0].Item1.Item2.Sub(matches[0].Item2.Item2.Rotate(k));
-                    mappings[(j, i)] = (T, k);
-                    mappings[(i, j)] = (T.Rotate(kInvs[k]).Neg(), kInvs[k]);
-                    break;
-                }
-            }
+                if (FindMatch(scans[i], scans[j]) is { } matches)
+                    foreach (var k in Enumerable.Range(0, 23))
+                    {
+                        int nMatch = 0;
+                        foreach (var ((a0, a1), (b0, b1)) in matches)
+                            if (b0.Sub(b1).Rotate(k) != a0.Sub(a1)) break;
+                            else nMatch += 1;
+                        if (nMatch != 12) continue;
+                        var T = matches[0].Item1.Item2.Sub(matches[0].Item2.Item2.Rotate(k));
+                        mappings[(j, i)] = (T, k);
+                        mappings[(i, j)] = (T.Rotate(kInvs[k]).Neg(), kInvs[k]);
+                        break;
+                    }
+
         return mappings;
     }
     static int Part1(Scan[][] scans, Dictionary<(int, int), (Scan, int)> mappings)
