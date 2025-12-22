@@ -85,4 +85,26 @@ public static class Utils
         }
         return ((min1, max1), (min2, max2));
     }
+    public static IEnumerable<int> Range(int start, int stop) { for (int i = start; i < stop; i++) yield return i; }
+    public static IEnumerable<int> Range(int start, int stop, bool inclusive = true)
+    {
+        int end = inclusive ? stop : stop - 1;
+        for (int i = start; i <= end; i++) yield return i;
+    }
+    public static IEnumerable<(T a, T b)> DistinctPairs<T>(IEnumerable<T> source)
+    {
+        T[] list = [.. source];
+        for (int i = 0; i < list.Length - 1; i++)
+            for (int j = i + 1; j < list.Length; j++)
+                yield return (list[i], list[j]);
+    }
+    public static IEnumerable<(T a, T b)> OrderedPairs<T>(IEnumerable<T> source)
+    {
+        T[] list = [.. source];
+        for (int i = 0; i < list.Length; i++)
+            for (int j = 0; j < list.Length; j++)
+                if (i != j) yield return (list[i], list[j]);
+    }
+    public static IEnumerable<(int, T b)> Enumerate<T>(IEnumerable<T> source) => source.Select((x, i) => (i, x));
+    public static IEnumerable<(int, T b)> Enumerate<T>(int start, IEnumerable<T> source) => source.Skip(start).Select((x, i) => (i + start, x));
 }
