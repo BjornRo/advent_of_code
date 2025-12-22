@@ -6,7 +6,7 @@ public class Day22
 {
     record Range(int Start, int End)
     {
-        public BigInteger Length = End - Start + 1;
+        public BigInteger Len() => End - Start + 1;
         public Range? Intersect(Range o)
         {
             var start = Math.Max(Start, o.Start);
@@ -15,16 +15,13 @@ public class Day22
         }
         public bool InBounds(Range r) => r.Start <= Start && End <= r.End;
     }
-
     record Cube(BigInteger St, Range X, Range Y, Range Z)
     {
         public BigInteger St { get; set; } = St;
-        public Cube FlipSign() { St *= -1; return this; }
-        public BigInteger Volume = X.Length * Y.Length * Z.Length;
         public Cube? Intersect(Cube o) =>
             X.Intersect(o.X) is Range x &&
             Y.Intersect(o.Y) is Range y &&
-            Z.Intersect(o.Z) is Range z ? new(St, x, y, z) : null;
+            Z.Intersect(o.Z) is Range z ? new(St * -1, x, y, z) : null;
     }
     static Cube Parse(string s)
     {
@@ -47,6 +44,6 @@ public class Day22
     }
     static BigInteger Solve(IEnumerable<Cube> data) =>
         data.Aggregate(Array.Empty<Cube>(), (acc, c) =>
-            [.. acc, .. acc.Select(b => b.Intersect(c)?.FlipSign()).OfType<Cube>().Concat(c.St == 1 ? [c] : [])]
-        ).Aggregate(BigInteger.Zero, (acc, c) => acc + c.St * c.Volume);
+            [.. acc, .. acc.Select(b => b.Intersect(c)).OfType<Cube>().Concat(c.St == 1 ? [c] : [])]
+        ).Aggregate(BigInteger.Zero, (acc, c) => acc + c.St * c.X.Len() * c.Y.Len() * c.Z.Len());
 }
