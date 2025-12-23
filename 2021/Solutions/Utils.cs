@@ -117,6 +117,8 @@ public static class Utils
             for (int j = 0; j < list.Length; j++)
                 yield return (list[i], list[j]);
     }
+    public static T Mod<T>(T a, T b) where T : INumber<T> => ((a % b) + b) % b;
+
     public static IEnumerable<(int i, T b)> Enumerate<T>(IEnumerable<T> source) => source.Select((x, i) => (i, x));
     public static IEnumerable<(int i, T b)> Enumerate<T>(int start, IEnumerable<T> source) => source.Skip(start).Select((x, i) => (i + start, x));
 }
