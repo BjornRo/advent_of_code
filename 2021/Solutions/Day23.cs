@@ -1,99 +1,135 @@
 namespace aoc.Solutions;
 
-using MT = (char c, byte R, byte C);
 public class Day23
 {
+    const byte _DOT = (byte)'.';
+    const byte _A = (byte)'A';
+    const byte _B = (byte)'B';
+    const byte _C = (byte)'C';
+    const byte _D = (byte)'D';
     public static void Solve()
     {
-        var grid = File.ReadAllLines("in/d23t.txt").Select(x => x.ToCharArray()).ToArray();
+        var grid = File.ReadAllLines("in/d23.txt").Select(x => x.ToCharArray()).ToArray();
+        var lc = Utils.Range(0, 3, true)
+            .Select(i => Utils.Range(2, grid.Length - 1).Select(j => grid[j][3 + (i * 2)]).ToArray())
+            .Select(x => x.Select(y => (byte)y).ToArray())
+            .ToArray();
 
-        var piecesList = Enumerable.Range(0, 4).Select(_ => new List<MT>()).ToArray();
-        foreach (var (i, row) in Utils.Enumerate(grid))
-            foreach (var (j, c) in Utils.Enumerate(row))
-                if ('A' <= grid[i][j] && grid[i][j] <= 'D') piecesList[grid[i][j] - 'A'].Add((grid[i][j], (byte)i, (byte)j));
+        var grid2 = grid[..3].Append([.. "  #D#C#B#A#"]).Append([.. "  #D#B#A#C#"]).Concat(grid[3..]).ToArray();
+        var lc2 = Utils.Range(0, 3, true)
+            .Select(i => Utils.Range(2, grid2.Length - 1).Select(j => grid2[j][3 + (i * 2)]).ToArray())
+            .Select(x => x.Select(y => (byte)y).ToArray())
+            .ToArray();
 
-        var pieces = piecesList.Select(x => x.ToArray()).ToArray();
-        List<(int, int)> locked = [];
-        while (true)
+        byte[] hallway = [.. "..a.b.c.d..".ToCharArray().Select(x => (byte)x)];
+        Console.WriteLine($"Part 1: {Solve(new State(lc[0], lc[1], lc[2], lc[3], hallway))}");
+        Console.WriteLine($"Part 2: {Solve(new State(lc2[0], lc2[1], lc2[2], lc2[3], hallway))}");
+    }
+    static int CharCost(byte c) => c switch { _A => 1, _B => 10, _C => 100, _ => 1000 };
+    struct State(byte[] BurrowA, byte[] BurrowB, byte[] BurrowC, byte[] BurrowD, byte[] Hallway)
+    {
+        public byte[] Hallway = Hallway;
+        public readonly IEnumerable<(byte c, int burrowCol, byte burrowChar, int depth)> GetMovableBurrows()
         {
-            var finished = FinishedPiece(pieces);
-            if (finished is null) break;
-            pieces = LockInBurrow(pieces, finished.Value.B);
-            locked.Add((finished.Value.G.gridRow, finished.Value.G.gridCol));
-        }
+            byte[][] burrows = [BurrowA, BurrowB, BurrowC, BurrowD];
+            byte[] mapping = [_A, _B, _C, _D];
 
-        Console.WriteLine($"Part 1: {Part1(grid, locked, pieces)}");
-        Console.WriteLine($"Part 2: {Part2()}");
-    }
-    static MT[][] LockInBurrow(MT[][] burrow, (int i, int j) toRemove)
-    {
-        var newBurrow = Utils.DeepCopy(burrow);
-        newBurrow[toRemove.i] = [.. burrow[toRemove.i].Where((_, j) => j != toRemove.j)];
-        return newBurrow;
-    }
-    static MT[][] MovePiece(MT[][] burrow, int i, int j, int row, int col)
-    {
-        var newBurrow = Utils.DeepCopy(burrow);
-        newBurrow[i][j] = (burrow[i][j].c, (byte)row, (byte)col);
-        return newBurrow;
-    }
-    static ((int, int) B, (int gridRow, int gridCol) G)? FinishedPiece(MT[][] burrow)
-    {
-        foreach (var (i, symbol) in Utils.Enumerate(burrow))
+            for (int burrowIndex = 0; burrowIndex < burrows.Length; burrowIndex++)
+            {
+                var burrow = burrows[burrowIndex];
+                var m = mapping[burrowIndex];
+                if (burrow.All(c => c == m || c == 0)) continue;
+                for (int depth = 0; depth < BurrowA.Length; depth++)
+                {
+                    byte c = burrow[depth];
+                    if (c == 0 || depth > 0 && burrow[..depth].Any(x => x != 0)) continue;
+                    yield return (c, 3 + (burrowIndex * 2), m, depth);
+                }
+            }
+        }
+        public readonly byte[] GetCompartment(byte c) => c switch { _A => BurrowA, _B => BurrowB, _C => BurrowC, _ => BurrowD };
+        public readonly int? CompartmentSpot(byte c)
         {
-            var rowSlot = symbol.Length + 1;
-            foreach (var (j, (c, R, C)) in Utils.Enumerate(symbol))
-                if (R == rowSlot && C == c switch { 'A' => 3, 'B' => 5, 'C' => 7, _ => 9 })
-                    return ((i, j), (R, C));
+            var comp = GetCompartment(c);
+            if (comp.Any(x => x != 0 && x != c)) return null;
+            for (int i = comp.Length - 1; i >= 0; i--) if (comp[i] == 0) return i;
+            return null;
         }
-        return null;
+        public readonly bool Finished() =>
+            BurrowA.All(c => c == _A) && BurrowB.All(c => c == _B) && BurrowC.All(c => c == _C) && BurrowD.All(c => c == _D);
+        public readonly State Clone() => new([.. BurrowA], [.. BurrowB], [.. BurrowC], [.. BurrowD], [.. Hallway]);
+        public readonly (ulong, ulong, ulong, ulong) Key()
+        {
+            ulong h0 = 0, h1 = 0, b0 = 0, b1 = 0;
+            for (int i = 0; i < 8; i++) h0 |= (ulong)Hallway[i] << (i * 8);
+            for (int i = 8; i < 11; i++) h1 |= (ulong)Hallway[i] << ((i - 8) * 8);
+            for (int i = 0; i < BurrowA.Length; i++)
+            {
+                b0 |= (ulong)BurrowA[i] << (i * 8);
+                b0 |= (ulong)BurrowB[i] << ((i + 4) * 8);
+                b1 |= (ulong)BurrowC[i] << (i * 8);
+                b1 |= (ulong)BurrowD[i] << ((i + 4) * 8);
+            }
+            return (h0, h1, b0, b1);
+        }
     }
-    static bool Finished(MT[][] burrow) => burrow.All(l => l.Length == 0);
-    static long Part1(char[][] grid, List<(int, int)> locked, MT[][] pieces)
+    static int Solve(State init)
     {
-        PriorityQueue<(MT[][], List<(int, int)>), int> queue = new([((pieces, locked), 0)]);
-        HashSet<MT[][]> visited = [];
-
-        long minCost = long.MaxValue;
+        PriorityQueue<State, int> queue = new([(init, 0)]);
+        HashSet<(ulong, ulong, ulong, ulong)> visited = [];
+        int minCost = int.MaxValue;
         while (queue.TryDequeue(out var state, out var cost))
         {
-            var (sBurrow, sLock) = state;
-            if (Finished(sBurrow))
+            if (state.Finished())
             {
-                Utils.PrintM(sBurrow);
-                Utils.PrintA(sLock);
-                Console.WriteLine();
-                if (cost < minCost) minCost = cost;
+                if (cost < minCost)
+                {
+                    minCost = cost;
+                    break;
+                }
                 continue;
             }
-            if (cost >= minCost) continue;
-            if (!visited.Add(sBurrow)) continue;
-
-            foreach (var (i, symbols) in Utils.Enumerate(sBurrow))
-            {
-                foreach (var (j, symbol) in Utils.Enumerate(symbols))
+            if (cost >= minCost || !visited.Add(state.Key())) continue;
+            var hw = state.Hallway;
+            foreach (var (c, burrowIndex, burrowChar, depth) in state.GetMovableBurrows())
+                foreach (var dir in new int[] { -1, 1 })
                 {
-                    foreach (var (dr, dc) in Utils.Cross3(symbol.R, symbol.C))
+                    int steps = depth + 1;
+                    for (int i = burrowIndex - 1 + dir; i >= 0 && i < hw.Length; i += dir)
                     {
-                        if (grid[dr][dc] == '#') continue;
-                        if (sLock.Contains((dr, dc))) continue;
-                        var newBurrow = MovePiece(sBurrow, i, j, dr, dc);
-                        if (FinishedPiece(newBurrow) is ((int, int) B, (int, int) G))
+                        if (_A <= hw[i] && hw[i] <= _D) break;
+                        steps += 1;
+                        if ((hw[i] - 32 == c) || hw[i] == _DOT)
                         {
-                            sLock = [.. sLock];
-                            sLock.Add(G);
-                            newBurrow = LockInBurrow(newBurrow, B);
+                            var newState = state.Clone();
+                            newState.Hallway[i] = c;
+                            newState.GetCompartment(burrowChar)[depth] = 0;
+                            queue.Enqueue(newState, cost + steps * CharCost(c));
                         }
-                        var stepCost = symbol.c switch { 'A' => 1, 'B' => 1, 'C' => 1, _ => 1 };
-                        queue.Enqueue((newBurrow, sLock), cost + stepCost);
+                    }
+                }
+            foreach (var (k, c) in Utils.Enumerate(state.Hallway))
+            {
+                if (!(_A <= c && c <= _D)) continue;
+                foreach (var dir in new int[] { -1, 1 })
+                {
+                    int steps = 0;
+                    for (int i = k + dir; i >= 0 && i < hw.Length; i += dir)
+                    {
+                        if (_A <= hw[i] && hw[i] <= _D) break;
+                        steps += 1;
+                        if ((char)(hw[i] - 32) == c) // a,b,c,d
+                            if (state.CompartmentSpot(c) is int iSpot)
+                            { // 1 is for iSpot, it costs to move to compartment
+                                var newState = state.Clone();
+                                newState.Hallway[k] = _DOT;
+                                newState.GetCompartment(c)[iSpot] = c;
+                                queue.Enqueue(newState, (steps + 1 + iSpot) * CharCost(c) + cost);
+                            }
                     }
                 }
             }
         }
         return minCost;
-    }
-    static ulong Part2()
-    {
-        return 1;
     }
 }
