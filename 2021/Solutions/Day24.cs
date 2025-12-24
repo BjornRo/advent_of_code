@@ -17,10 +17,8 @@ public class Day24
             byte[]? numbers = null;
             foreach (var i in part2 ? Utils.Range(1, 9, true) : Utils.Range(9, 1, true))
                 if (Search((byte)(index + 1), D24(i, index, zValue), memo) is byte[] res)
-                {
-                    numbers = [(byte)i, .. res];
-                    break;
-                }
+                    return [(byte)i, .. res];
+
             return memo[(index, zValue)] = numbers;
         }
         return Search(0, 0, []) is byte[] res ? string.Join("", res) : "";

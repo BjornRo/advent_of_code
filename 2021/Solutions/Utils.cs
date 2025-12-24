@@ -90,6 +90,7 @@ public static class Utils
         }
         return ((min1, max1), (min2, max2));
     }
+    public static IEnumerable<int> Range(int count) { for (int i = 0; i < count; i++) yield return i; }
     public static IEnumerable<int> Range(int start, int stop) { for (int i = start; i < stop; i++) yield return i; }
     public static IEnumerable<int> Range(int start, int stop, bool inclusive)
     {
@@ -124,6 +125,12 @@ public static class Utils
         for (int i = 0; i < list.Length; i++)
             for (int j = 0; j < list.Length; j++)
                 yield return (list[i], list[j]);
+    }
+    public static IEnumerable<(T a, T b)> Cartesian<T>(T a, T b) where T : INumber<T>
+    {
+        for (var i = T.Zero; i < a; i++)
+            for (var j = T.Zero; j < b; j++)
+                yield return (i, j);
     }
     public static T Mod<T>(T a, T b) where T : INumber<T> => ((a % b) + b) % b;
 
