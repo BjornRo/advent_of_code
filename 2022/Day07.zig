@@ -62,8 +62,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         while (rowIter.next()) |elem| try row.append(alloc, elem);
 
         if (row.items[0][0] == '$') {
-            const cmd = row.items[1];
-            if (std.mem.eql(u8, cmd, "cd")) {
+            if (std.mem.eql(u8, row.items[1], "cd")) {
                 if (row.items[2][0] == '/') {
                     if (dir == null) {
                         dir = try Directory.init(alloc, row.items[2], null);
