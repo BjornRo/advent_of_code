@@ -114,11 +114,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     var it = map.valueIterator();
     while (it.next()) |value| {
         if (value.* <= 100000) total1 += value.*;
-        if (value.* >= 30_000_000 - (70_000_000 - total_used)) {
-            if (value.* < total2) {
-                total2 = value.*;
-            }
-        }
+        if (value.* >= 30_000_000 - (70_000_000 - total_used) and value.* < total2) total2 = value.*;
     }
     return .{ .p1 = total1, .p2 = total2 };
 }
