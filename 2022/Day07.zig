@@ -3,11 +3,11 @@ const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 
 pub fn main() !void {
-    var da = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var da = std.heap.DebugAllocator(.{}).init;
     const alloc = da.allocator();
-    defer da.deinit();
+    defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d07t.txt");
+    const data = try utils.read(alloc, "in/d07.txt");
     defer alloc.free(data);
 
     const result = try solve(alloc, data);
@@ -51,6 +51,8 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     var splitIter = std.mem.splitScalar(u8, data, '\n');
 
     var root_dir: ?*Directory = null;
+    defer root_dir.?.deinit(alloc);
+
     var dir: ?*Directory = null;
     var row: std.ArrayList([]const u8) = .{};
     defer row.deinit(alloc);
@@ -81,28 +83,48 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
                         dir = new_dir;
                     }
                 }
-                // } else if (std.mem.eql(u8, cmd, "ls")) {
-                // do nothing
-                //
+            }
+        } else if (std.mem.eql(u8, row.items[0], "dir")) {
+            for (dir.?.subdirs.items) |subdir| {
+                if (std.mem.eql(u8, subdir.name, row.items[1])) break;
+            } else {
+                try dir.?.subdirs.append(alloc, try Directory.init(alloc, row.items[1], dir.?));
             }
         } else {
-            if (std.mem.eql(u8, row.items[0], "dir")) {
-                std.debug.print("{s}\n", .{row.items[0]});
-                for (dir.?.subdirs.items) |subdir| {
-                    if (std.mem.eql(u8, subdir.name, row.items[1])) break;
-                } else {
-                    try dir.?.subdirs.append(alloc, try Directory.init(alloc, row.items[1], dir.?));
-                }
+            for (dir.?.files.items) |file| {
+                if (std.mem.eql(u8, file.name, row.items[1])) break;
             } else {
-                for (dir.?.files.items) |file| {
-                    if (std.mem.eql(u8, file.name, row.items[1])) break;
-                } else {
-                    const new_file: File = .{ .name = row.items[1], .size = try std.fmt.parseUnsigned(usize, row.items[0], 10) };
-                    try dir.?.files.append(alloc, new_file);
-                }
+                const new_file: File = .{ .name = row.items[1], .size = try std.fmt.parseUnsigned(usize, row.items[0], 10) };
+                try dir.?.files.append(alloc, new_file);
             }
         }
     }
 
-    return .{ .p1 = root_dir.?.size(), .p2 = 2 };
+    var map = std.StringHashMap(usize).init(alloc);
+    try directorySize(alloc, root_dir.?, try alloc.dupe(u8, root_dir.?.name), &map);
+    defer {
+        var it = map.keyIterator();
+        while (it.next()) |k| alloc.free(k.*);
+        map.deinit();
+    }
+
+    const total_used = root_dir.?.size();
+    var total1: usize = 0;
+    var total2: usize = total_used;
+    var it = map.valueIterator();
+    while (it.next()) |value| {
+        if (value.* <= 100000) total1 += value.*;
+        if (value.* >= 30_000_000 - (70_000_000 - total_used)) {
+            if (value.* < total2) {
+                total2 = value.*;
+            }
+        }
+    }
+    return .{ .p1 = total1, .p2 = total2 };
+}
+
+fn directorySize(alloc: Allocator, dir: *Directory, name: []const u8, map: *std.StringHashMap(usize)) !void {
+    try map.put(name, dir.size());
+    for (dir.subdirs.items) |next_dir|
+        try directorySize(alloc, next_dir, try std.mem.join(alloc, "/", &[_][]const u8{ name, next_dir.name }), map);
 }
