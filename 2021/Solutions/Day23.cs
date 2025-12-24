@@ -118,14 +118,13 @@ public class Day23
                     {
                         if (_A <= hw[i] && hw[i] <= _D) break;
                         steps += 1;
-                        if ((char)(hw[i] - 32) == c) // a,b,c,d
-                            if (state.CompartmentSpot(c) is int iSpot)
-                            { // 1 is for iSpot, it costs to move to compartment
-                                var newState = state.Clone();
-                                newState.Hallway[k] = _DOT;
-                                newState.GetCompartment(c)[iSpot] = c;
-                                queue.Enqueue(newState, (steps + 1 + iSpot) * CharCost(c) + cost);
-                            }
+                        if ((char)(hw[i] - 32) == c && state.CompartmentSpot(c) is int iSpot) // a,b,c,d
+                        { // 1 is for iSpot, it costs to move to compartment
+                            var newState = state.Clone();
+                            newState.Hallway[k] = _DOT;
+                            newState.GetCompartment(c)[iSpot] = c;
+                            queue.Enqueue(newState, (steps + 1 + iSpot) * CharCost(c) + cost);
+                        }
                     }
                 }
             }

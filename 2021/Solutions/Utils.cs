@@ -93,8 +93,16 @@ public static class Utils
     public static IEnumerable<int> Range(int start, int stop) { for (int i = start; i < stop; i++) yield return i; }
     public static IEnumerable<int> Range(int start, int stop, bool inclusive)
     {
-        int end = inclusive ? stop : stop - 1;
-        for (int i = start; i <= end; i++) yield return i;
+        if (stop < start)
+        {
+            int end = inclusive ? stop : stop + 1;
+            for (int i = start; i >= end; i--) yield return i;
+        }
+        else
+        {
+            int end = inclusive ? stop : stop - 1;
+            for (int i = start; i <= end; i++) yield return i;
+        }
     }
     public static IEnumerable<(T a, T b)> DistinctPairs<T>(IEnumerable<T> source)
     {
