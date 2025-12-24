@@ -7,7 +7,7 @@ pub fn main() !void {
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d04t.txt");
+    const data = try utils.read(alloc, "in/d06.txt");
     defer alloc.free(data);
 
     const result = try solve(alloc, data);
@@ -15,11 +15,21 @@ pub fn main() !void {
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
 
-fn solve(_: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
-    var splitIter = std.mem.splitScalar(u8, data, '\n');
-    while (splitIter.next()) |item| {
-        //
-    }
+fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
+    var set: std.AutoArrayHashMap(u8, void) = .init(alloc);
+    defer set.deinit();
 
-    return .{ .p1 = 1, .p2 = 2 };
+    var distinct: usize = 4;
+
+    var p1: usize = 0;
+    for (0..data.len - distinct) |i| {
+        set.clearRetainingCapacity();
+        for (data[i .. i + distinct]) |elem| try set.put(elem, {});
+        if (set.count() == distinct) {
+            if (distinct == 14) return .{ .p1 = p1, .p2 = i + distinct };
+            p1 = i + distinct;
+            distinct = 14;
+        }
+    }
+    unreachable;
 }
