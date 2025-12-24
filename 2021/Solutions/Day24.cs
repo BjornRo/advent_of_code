@@ -10,21 +10,20 @@ public class Day24
     }
     static string Runner(bool part2 = false)
     {
-        Dictionary<(byte, long), byte[]?> memo = [];
-        byte[]? Search(byte index, long zValue)
+        byte[]? Search(byte index, long zValue, Dictionary<(byte, long), byte[]?> memo)
         {
             if (index == 14) return zValue == 0 ? [] : null;
             if (memo.TryGetValue((index, zValue), out var mRes)) return mRes;
             byte[]? numbers = null;
             foreach (var i in part2 ? Utils.Range(1, 9, true) : Utils.Range(9, 1, true))
-                if (Search((byte)(index + 1), D24(i, index, zValue)) is byte[] res)
+                if (Search((byte)(index + 1), D24(i, index, zValue), memo) is byte[] res)
                 {
                     numbers = [(byte)i, .. res];
                     break;
                 }
             return memo[(index, zValue)] = numbers;
         }
-        return Search(0, 0) is byte[] res ? string.Join("", res) : "";
+        return Search(0, 0, []) is byte[] res ? string.Join("", res) : "";
     }
     static void Codegen(string inputFile, string outputFile = "out.txt")
     {

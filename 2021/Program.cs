@@ -27,8 +27,8 @@ if (int.TryParse(args[0], out int day))
         // case 21: Day21.Solve(); break;
         // case 22: Day22.Solve(); break;
         // case 23: Day23.Solve(); break;
-        case 24: Day24.Solve(); break;
-        // case 25: Day25.Solve(); break;
+        // case 24: Day24.Solve(); break;
+        case 25: Day25.Solve(); break;
         default: Console.WriteLine("Day not implemented."); break;
     }
 }
