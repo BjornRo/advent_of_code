@@ -11,27 +11,31 @@ const Entity = struct {
     rtrue: usize,
     rfalse: usize,
     inspect: usize,
-    factor: i64,
 
     const Self = @This();
-    fn throw(self: *Self) ?struct { index: usize, value: i64 } {
+    fn throw(self: *Self, modulo: ?i64) ?struct { index: usize, value: i64 } {
         if (self.items.popFront()) |item| {
             self.inspect += 1;
-            const result = @divTrunc(switch (self.op) {
-                .Add => item + (self.cons orelse item),
-                .Mul => item * (self.cons orelse item),
-            }, self.factor);
+            const result = if (modulo) |value|
+                @mod(switch (self.op) {
+                    .Add => item + (self.cons orelse item),
+                    .Mul => item * (self.cons orelse item),
+                }, value)
+            else
+                @divTrunc(switch (self.op) {
+                    .Add => item + (self.cons orelse item),
+                    .Mul => item * (self.cons orelse item),
+                }, 3);
             return .{
-                .index = if (@rem(result, self.@"test") == 0) self.rtrue else self.rfalse,
+                .index = if (@mod(result, self.@"test") == 0) self.rtrue else self.rfalse,
                 .value = result,
             };
         }
         return null;
     }
-    fn init(alloc: Allocator, raw_str: []const u8, factor: i64) !*Self {
+    fn init(alloc: Allocator, raw_str: []const u8) !*Self {
         var new = try alloc.create(Self);
         new.inspect = 0;
-        new.factor = factor;
         new.items = try .init(alloc);
         var row_iter = std.mem.splitScalar(u8, raw_str, '\n');
         _ = row_iter.next();
@@ -59,11 +63,11 @@ pub fn main() !void {
     const data = try utils.read(alloc, "in/d11.txt");
     defer alloc.free(data);
 
-    std.debug.print("Part 1: {d}\n", .{try solve_p1(alloc, data)});
-    std.debug.print("Part 2: {d}\n", .{1});
+    std.debug.print("Part 1: {d}\n", .{try solve_p1(alloc, data, false)});
+    std.debug.print("Part 2: {d}\n", .{try solve_p1(alloc, data, true)});
 }
 
-fn solve_p1(alloc: Allocator, data: []const u8) !usize {
+fn solve_p1(alloc: Allocator, data: []const u8, p2: bool) !usize {
     var monkeys: std.ArrayList(*Entity) = .empty;
     defer {
         for (monkeys.items) |m| m.deinit(alloc);
@@ -71,15 +75,18 @@ fn solve_p1(alloc: Allocator, data: []const u8) !usize {
     }
 
     var splitIter = std.mem.splitSequence(u8, data, "\n\n");
-    while (splitIter.next()) |item| {
-        try monkeys.append(alloc, try .init(alloc, item, 3));
+    while (splitIter.next()) |item| try monkeys.append(alloc, try .init(alloc, item));
+
+    var modulo: ?i64 = null;
+    if (p2) {
+        modulo = 1;
+        for (monkeys.items) |m| modulo.? *= m.@"test";
     }
 
-    for (0..20) |_| {
+    for (0..if (p2) 10000 else 20) |_|
         for (monkeys.items) |m|
-            while (m.throw()) |res|
+            while (m.throw(modulo)) |res|
                 try monkeys.items[res.index].items.pushBack(res.value);
-    }
 
     var max1: usize = 0;
     var max2: usize = 0;
