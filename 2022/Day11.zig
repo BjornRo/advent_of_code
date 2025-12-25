@@ -17,18 +17,18 @@ const Entity = struct {
 
         var row_iter = std.mem.splitScalar(u8, raw_str, '\n');
         _ = row_iter.next();
-        var item_iter = NumberIter{ .string = row_iter.next().? };
+        var item_iter = utils.NumberIter(i32){ .string = row_iter.next().? };
         while (try item_iter.next()) |value| try new.items.append(alloc, value);
 
         const op_row = row_iter.next().?;
         new.op = if (std.mem.containsAtLeastScalar(u8, op_row, 1, '+')) .Add else .Mul;
-        var op_iter = NumberIter{ .string = op_row };
+        var op_iter = utils.NumberIter(i32){ .string = op_row };
         new.cons = try op_iter.next();
-        var test_iter = NumberIter{ .string = row_iter.next().? };
+        var test_iter = utils.NumberIter(i32){ .string = row_iter.next().? };
         new.@"test" = (try test_iter.next()).?;
-        var true_iter = NumberIter{ .string = row_iter.next().? };
+        var true_iter = utils.NumberIter(usize){ .string = row_iter.next().? };
         new.rtrue = @intCast((try true_iter.next()).?);
-        var false_iter = NumberIter{ .string = row_iter.next().? };
+        var false_iter = utils.NumberIter(usize){ .string = row_iter.next().? };
         new.rfalse = @intCast((try false_iter.next()).?);
 
         std.debug.print("{any}\n", .{new});
@@ -50,23 +50,6 @@ const Entity = struct {
     fn deinit(self: *Self, alloc: Allocator) void {
         @constCast(self).items.deinit(alloc);
         alloc.destroy(self);
-    }
-};
-
-const NumberIter = struct {
-    index: usize = 0,
-    string: []const u8,
-    const Self = @This();
-    fn next(self: *Self) !?i32 {
-        var start = self.index;
-        while (start < self.string.len) : (start += 1)
-            if ('0' <= self.string[start] and self.string[start] <= '9') break;
-        if (start >= self.string.len) return null;
-        var end = start + 1;
-        while (end < self.string.len) : (end += 1)
-            if (!('0' <= self.string[end] and self.string[end] <= '9')) break;
-        self.index = end;
-        return try std.fmt.parseInt(i32, self.string[start..end], 10);
     }
 };
 

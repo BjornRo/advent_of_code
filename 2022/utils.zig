@@ -87,3 +87,20 @@ fn PermutationIterator(comptime T: type) type {
         }
     };
 }
+
+pub fn NumberIter(comptime T: type) type {
+    return struct {
+        index: usize = 0,
+        string: []const u8,
+        pub fn next(self: *@This()) !?T {
+            while (self.index < self.string.len) : (self.index += 1)
+                if ('0' <= self.string[self.index] and self.string[self.index] <= '9') break;
+            if (self.index >= self.string.len) return null;
+            var end = self.index + 1;
+            while (end < self.string.len) : (end += 1)
+                if (!('0' <= self.string[end] and self.string[end] <= '9')) break;
+            defer self.index = end;
+            return try std.fmt.parseInt(T, self.string[self.index..end], 10);
+        }
+    };
+}
