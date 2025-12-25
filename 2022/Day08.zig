@@ -34,7 +34,7 @@ fn scenic(grid: [][]const u8, row: usize, col: usize) usize {
         const lj = col - i - 1;
         if (grid[row][lj] >= value) break;
     }
-    for (col + 1..grid[row].len) |j| {
+    for (col + 1..grid[0].len) |j| {
         right += 1;
         if (grid[row][j] >= value) break;
     }
@@ -50,41 +50,42 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     defer map.deinit();
 
     const grid = matrix.items;
-    for (1..grid.len - 1) |row| {
+    const rows = grid[0].len;
+    const cols = grid[0].len;
+    for (1..rows - 1) |row| {
         var curr = grid[row][0];
-        for (1..grid[row].len - 1) |col| {
+        for (1..cols - 1) |col| {
             if (grid[row][col] <= curr) continue;
             try map.put(.{ .row = row, .col = col }, {});
             curr = grid[row][col];
         }
-        curr = grid[row][grid[row].len - 1];
-        for (1..grid[row].len - 1) |j| {
-            const rcol = grid[row].len - 1 - j;
+        curr = grid[row][cols - 1];
+        for (1..cols - 1) |j| {
+            const rcol = cols - 1 - j;
             if (grid[row][rcol] <= curr) continue;
             try map.put(.{ .row = row, .col = rcol }, {});
             curr = grid[row][rcol];
         }
     }
-    for (1..grid[0].len - 1) |col| {
+    for (1..cols - 1) |col| {
         var curr = grid[0][col];
-        for (1..grid.len - 1) |row| {
+        for (1..rows - 1) |row| {
             if (grid[row][col] <= curr) continue;
             try map.put(.{ .row = row, .col = col }, {});
             curr = grid[row][col];
         }
-        curr = grid[grid.len - 1][col];
-        for (1..grid.len - 1) |row| {
-            const rrow = grid.len - 1 - row;
+        curr = grid[rows - 1][col];
+        for (1..rows - 1) |row| {
+            const rrow = rows - 1 - row;
             if (grid[rrow][col] <= curr) continue;
             try map.put(.{ .row = rrow, .col = col }, {});
             curr = grid[rrow][col];
         }
     }
-
     var total: usize = 0;
-    for (0..grid.len) |i| for (0..grid[0].len) |j| {
+    for (0..rows) |i| for (0..cols) |j| {
         const result = scenic(grid, i, j);
         if (result > total) total = result;
     };
-    return .{ .p1 = grid.len * 2 + grid[0].len * 2 - 4 + map.count(), .p2 = total };
+    return .{ .p1 = rows * 2 + cols * 2 - 4 + map.count(), .p2 = total };
 }
