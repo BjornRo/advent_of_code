@@ -76,17 +76,14 @@ fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
     defer head.deinit(alloc);
 
     while (splitIter.next()) |item| {
-        var rowIter = std.mem.splitBackwardsScalar(u8, item, ' ');
-        const value = try std.fmt.parseUnsigned(u8, rowIter.next().?, 10);
+        var rowIter = std.mem.splitScalar(u8, item, ' ');
         const dir = rowIter.next().?[0];
-        for (0..value) |_| {
-            switch (dir) {
-                'R' => try head.right(&visited),
-                'L' => try head.left(&visited),
-                'U' => try head.up(&visited),
-                else => try head.down(&visited),
-            }
-        }
+        for (0..try std.fmt.parseUnsigned(u8, rowIter.next().?, 10)) |_| switch (dir) {
+            'R' => try head.right(&visited),
+            'L' => try head.left(&visited),
+            'U' => try head.up(&visited),
+            else => try head.down(&visited),
+        };
     }
 
     return visited.count();
