@@ -3,7 +3,6 @@ const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 
 const Set = std.AutoHashMap(struct { isize, isize }, void);
-
 pub fn main() !void {
     var da = std.heap.DebugAllocator(.{}).init;
     const alloc = da.allocator();
@@ -58,11 +57,6 @@ const Node = struct {
     }
 };
 fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
-    var splitIter = std.mem.splitScalar(u8, data, '\n');
-
-    var visited = Set.init(alloc);
-    defer visited.deinit();
-
     const head = blk: {
         const head = try Node.init(alloc, null, null);
         var curr: ?*Node = head;
@@ -75,6 +69,10 @@ fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
     };
     defer head.deinit(alloc);
 
+    var visited = Set.init(alloc);
+    defer visited.deinit();
+
+    var splitIter = std.mem.splitScalar(u8, data, '\n');
     while (splitIter.next()) |item| {
         var rowIter = std.mem.splitScalar(u8, item, ' ');
         const dir = rowIter.next().?[0];
@@ -85,6 +83,5 @@ fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
             else => try head.down(&visited),
         };
     }
-
     return visited.count();
 }

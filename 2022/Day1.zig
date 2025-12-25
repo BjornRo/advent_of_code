@@ -7,7 +7,7 @@ pub fn main() !void {
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d04t.txt");
+    const data = try utils.read(alloc, "in/d10t.txt");
     defer alloc.free(data);
 
     const result = try solve(alloc, data);

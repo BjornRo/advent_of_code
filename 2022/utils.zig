@@ -14,22 +14,17 @@ pub fn read(alloc: Allocator, file_name: []const u8) ![]const u8 {
     }
 
     var i: usize = 0;
-    var j: usize = 0;
-    while (j < file_size) {
-        if (buffer[j] != '\r') {
-            buffer[i] = buffer[j];
-            i += 1;
-        }
-        j += 1;
+    for (buffer) |c| {
+        if (c == '\r') continue;
+        buffer[i] = c;
+        i += 1;
     }
     if (buffer[i - 1] == '\n') i -= 1;
-    if (i != file_size) {
-        const mem = try alloc.alloc(u8, i);
-        defer alloc.free(buffer);
-        @memcpy(mem, buffer[0..i]);
-        return mem;
-    }
-    return buffer;
+    if (i == file_size) return buffer;
+    const mem = try alloc.alloc(u8, i);
+    defer alloc.free(buffer);
+    @memcpy(mem, buffer[0..i]);
+    return mem;
 }
 
 pub fn sum(sequence: anytype) @TypeOf(sequence[0]) {
