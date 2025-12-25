@@ -9,20 +9,11 @@ pub fn main() !void {
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d09t.txt");
+    const data = try utils.read(alloc, "in/d09.txt");
     defer alloc.free(data);
 
-    const result = try solve(alloc, data);
-    std.debug.print("Part 1: {d}\n", .{result.p1});
-    std.debug.print("Part 2: {d}\n", .{result.p2});
-}
-fn delta(hrow: isize, hcol: isize, trow: isize, tcol: isize) isize {
-    const dr = if (hrow >= trow) hrow - trow else trow - hrow;
-    const dc = if (hcol >= tcol) hcol - tcol else tcol - hcol;
-    return if (dr > dc) dr else dc;
-}
-fn valid(hrow: isize, hcol: isize, trow: isize, tcol: isize) bool {
-    return delta(hrow, hcol, trow, tcol) <= 1;
+    std.debug.print("Part 1: {d}\n", .{try solve(alloc, data, 2)});
+    std.debug.print("Part 2: {d}\n", .{try solve(alloc, data, 10)});
 }
 const Node = struct {
     row: isize = 0,
@@ -37,59 +28,36 @@ const Node = struct {
         new.child = child;
         return new;
     }
-    fn right(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| {
-            if (!p.valid(self)) {
-                self.col = p.col - 1;
-                self.row = p.row;
-            }
-            try visited.put(.{ self.row, self.col }, {});
-        }
-        self.col += 1;
-        if (self.child) |c| c.right(visited);
-    }
-    fn left(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| {
-            if (!p.valid(self)) {
-                self.col = p.col + 1;
-                self.row = p.row;
-            }
-            try visited.put(.{ self.row, self.col }, {});
-        }
-        self.col -= 1;
-        if (self.child) |c| c.left(visited);
-    }
-    fn up(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| {
-            if (!p.valid(self)) {
-                self.row = p.row + 1;
-                self.col = p.col;
-            }
-            try visited.put(.{ self.row, self.col }, {});
-        }
-        self.row -= 1;
-        if (self.child) |c| c.up(visited);
-    }
-    fn down(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| {
-            if (!p.valid(self)) {
-                self.row = p.row - 1;
-                self.col = p.col;
-            }
-            try visited.put(.{ self.row, self.col }, {});
-        }
-        self.row += 1;
-        if (self.child) |c| c.up(visited);
-    }
-    fn valid(self: Self, child: *Self) bool {
-        return delta(self.row, self.col, child.row, child.col) <= 1;
-    }
     fn deinit(self: *Self, alloc: Allocator) void {
-        if (self.child) |c| c.deinit();
+        if (self.child) |c| c.deinit(alloc);
         alloc.destroy(self);
     }
+    fn follow(self: *Self, p: *Self) void {
+        const dr = p.row - self.row;
+        const dc = p.col - self.col;
+        if (@abs(dr) > 1 or @abs(dc) > 1) {
+            self.row += std.math.sign(dr);
+            self.col += std.math.sign(dc);
+        }
+    }
+    fn right(self: *Self, visited: *Set) !void {
+        if (self.parent) |p| self.follow(p) else self.col += 1;
+        if (self.child) |c| try c.right(visited) else try visited.put(.{ self.row, self.col }, {});
+    }
+    fn left(self: *Self, visited: *Set) !void {
+        if (self.parent) |p| self.follow(p) else self.col -= 1;
+        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
+    }
+    fn up(self: *Self, visited: *Set) !void {
+        if (self.parent) |p| self.follow(p) else self.row -= 1;
+        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
+    }
+    fn down(self: *Self, visited: *Set) !void {
+        if (self.parent) |p| self.follow(p) else self.row += 1;
+        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
+    }
 };
-fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
+fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
     var splitIter = std.mem.splitScalar(u8, data, '\n');
 
     var visited = Set.init(alloc);
@@ -98,63 +66,28 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     const head = blk: {
         const head = try Node.init(alloc, null, null);
         var curr: ?*Node = head;
-        for (0..2) |_| {
+        for (0..tail_len - 1) |_| {
             const next = try Node.init(alloc, curr, null);
+            if (curr) |c| c.child = next;
             curr = next;
         }
         break :blk head;
     };
+    defer head.deinit(alloc);
 
-    var head_row: isize = 0;
-    var head_col: isize = 0;
-    var tail_row: isize = 0;
-    var tail_col: isize = 0;
     while (splitIter.next()) |item| {
         var rowIter = std.mem.splitBackwardsScalar(u8, item, ' ');
         const value = try std.fmt.parseUnsigned(u8, rowIter.next().?, 10);
-        switch (rowIter.next().?[0]) {
-            'R' => {
-                for (0..value) |_| {
-                    head_col += 1;
-                    if (!valid(head_row, head_col, tail_row, tail_col)) {
-                        tail_col = head_col - 1;
-                        tail_row = head_row;
-                    }
-                    try visited.put(.{ tail_row, tail_col }, {});
-                }
-            },
-            'L' => {
-                for (0..value) |_| {
-                    head_col -= 1;
-                    if (!valid(head_row, head_col, tail_row, tail_col)) {
-                        tail_col = head_col + 1;
-                        tail_row = head_row;
-                    }
-                    try visited.put(.{ tail_row, tail_col }, {});
-                }
-            },
-            'U' => {
-                for (0..value) |_| {
-                    head_row -= 1;
-                    if (!valid(head_row, head_col, tail_row, tail_col)) {
-                        tail_row = head_row + 1;
-                        tail_col = head_col;
-                    }
-                    try visited.put(.{ tail_row, tail_col }, {});
-                }
-            },
-            else => {
-                for (0..value) |_| {
-                    head_row += 1;
-                    if (!valid(head_row, head_col, tail_row, tail_col)) {
-                        tail_row = head_row - 1;
-                        tail_col = head_col;
-                    }
-                    try visited.put(.{ tail_row, tail_col }, {});
-                }
-            },
+        const dir = rowIter.next().?[0];
+        for (0..value) |_| {
+            switch (dir) {
+                'R' => try head.right(&visited),
+                'L' => try head.left(&visited),
+                'U' => try head.up(&visited),
+                else => try head.down(&visited),
+            }
         }
     }
 
-    return .{ .p1 = visited.count(), .p2 = 2 };
+    return visited.count();
 }
