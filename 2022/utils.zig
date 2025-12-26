@@ -117,16 +117,27 @@ pub const Matrix = struct {
     cols: usize,
     stride: usize,
 
-    pub fn get(self: *Matrix, row: usize, col: usize) u8 {
+    const Self = @This();
+    pub fn get(self: *Self, row: usize, col: usize) u8 {
         return self.data[row * self.stride + col];
     }
-    pub fn set(self: *Matrix, row: usize, col: usize, value: u8) void {
+    pub fn set(self: *Self, row: usize, col: usize, value: u8) void {
         self.data[row * self.stride + col] = value;
     }
-    pub fn inBounds(self: *Matrix, row: isize, col: isize) bool {
+    pub fn inBounds(self: *Self, row: isize, col: isize) bool {
         const maxRows: isize = @intCast(self.rows);
         const maxCols: isize = @intCast(self.cols);
         return 0 <= row and row < maxRows and 0 <= col and col < maxCols;
+    }
+    pub fn print(self: *Self, comptime empty: u8, comptime exists: u8) void {
+        for (0..self.rows) |i| {
+            for (0..self.cols) |j|
+                if (self.get(i, j) == exists)
+                    std.debug.print(&.{exists}, .{})
+                else
+                    std.debug.print(&.{empty}, .{});
+            std.debug.print("\n", .{});
+        }
     }
 };
 

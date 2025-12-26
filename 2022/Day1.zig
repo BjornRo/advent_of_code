@@ -17,8 +17,8 @@ pub fn main() !void {
 }
 
 fn solve(_: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
-    var splitIter = std.mem.splitScalar(u8, data, '\n');
-    while (splitIter.next()) |item| {
+    var split_iter = std.mem.splitScalar(u8, data, '\n');
+    while (split_iter.next()) |item| {
         //
     }
 
