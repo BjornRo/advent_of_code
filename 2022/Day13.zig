@@ -23,13 +23,17 @@ const ValueList = union(enum) {
             },
         }
     }
-    fn parse(alloc: Allocator, s: []const u8, i: *usize) !Self {
+    fn parse(alloc: Allocator, s: []const u8) !Self {
+        var index: usize = 0;
+        return __parse(alloc, s, &index);
+    }
+    fn __parse(alloc: Allocator, s: []const u8, i: *usize) !Self {
         while (i.* < s.len and s[i.*] == ',') : (i.* += 1) {}
         if (s[i.*] == '[') {
             i.* += 1;
             var inner_list = try Self.initList(alloc);
             while (i.* < s.len and s[i.*] != ']') {
-                try inner_list.append(alloc, try parse(alloc, s, i));
+                try inner_list.append(alloc, try __parse(alloc, s, i));
                 while (i.* < s.len and (s[i.*] == ',')) : (i.* += 1) {}
             }
             i.* += 1;
@@ -85,13 +89,12 @@ fn comparer(alloc: Allocator, left: *ValueList, right: *ValueList) !?bool {
         var vl = ValueList{ .list = list };
         defer vl.deinit(alloc);
         return try comparer(alloc, &vl, right);
-    } else {
-        const list = try ValueList.initList(alloc);
-        try list.append(alloc, right.*);
-        var vl = ValueList{ .list = list };
-        defer vl.deinit(alloc);
-        return try comparer(alloc, left, &vl);
     }
+    const list = try ValueList.initList(alloc);
+    try list.append(alloc, right.*);
+    var vl = ValueList{ .list = list };
+    defer vl.deinit(alloc);
+    return try comparer(alloc, left, &vl);
 }
 fn bubbleSort(alloc: Allocator, arr: []ValueList) !void {
     const n = arr.len;
@@ -107,35 +110,28 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         for (list.items) |*l| l.deinit(alloc);
         list.deinit(alloc);
     }
-
-    var splitIter = std.mem.splitSequence(u8, data, "\n\n");
     var total_p1: usize = 0;
-    var i: usize = 1;
-    while (splitIter.next()) |item| : (i += 1) {
-        var rowIter = std.mem.splitScalar(u8, item, '\n');
-        var index: usize = 0;
-        var first = try ValueList.parse(alloc, rowIter.next().?, &index);
-        index = 0;
-        var second = try ValueList.parse(alloc, rowIter.next().?, &index);
-        if ((try comparer(alloc, &first, &second)).?) total_p1 += i;
-
-        try list.append(alloc, first);
-        try list.append(alloc, second);
+    {
+        var i: usize = 1;
+        var splitIter = std.mem.splitSequence(u8, data, "\n\n");
+        while (splitIter.next()) |item| : (i += 1) {
+            var rowIter = std.mem.splitScalar(u8, item, '\n');
+            var first = try ValueList.parse(alloc, rowIter.next().?);
+            var second = try ValueList.parse(alloc, rowIter.next().?);
+            if ((try comparer(alloc, &first, &second)).?) total_p1 += i;
+            try list.append(alloc, first);
+            try list.append(alloc, second);
+        }
+        try list.append(alloc, try ValueList.parse(alloc, "[[2]]"));
+        try list.append(alloc, try ValueList.parse(alloc, "[[6]]"));
+        try bubbleSort(alloc, list.items);
     }
-    var index: usize = 0;
-    try list.append(alloc, try ValueList.parse(alloc, "[[2]]", &index));
-    index = 0;
-    try list.append(alloc, try ValueList.parse(alloc, "[[6]]", &index));
-
-    try bubbleSort(alloc, list.items);
-
     var key_p2: usize = 1;
-    for (list.items, 1..) |*v, j| {
+    for (list.items, 1..) |*v, i| {
         const l = v.list.items;
         if (l.len == 1 and l[0] == .list) {
             const r = l[0].list.items;
-            if (r.len == 1 and r[0] == .value and (r[0].value == 2 or r[0].value == 6))
-                key_p2 *= j;
+            if (r.len == 1 and r[0] == .value and (r[0].value == 2 or r[0].value == 6)) key_p2 *= i;
         }
     }
     return .{ .p1 = total_p1, .p2 = key_p2 };
