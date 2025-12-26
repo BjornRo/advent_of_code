@@ -2,7 +2,8 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 
-const Map = std.AutoArrayHashMap(Point, Point);
+const Points = struct { Point, Point };
+const List = std.ArrayList(Points);
 const Point = struct {
     row: i64,
     col: i64,
@@ -32,8 +33,8 @@ pub fn main() !void {
 }
 
 fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
-    var sensors: Map = .init(alloc);
-    defer sensors.deinit();
+    var pairs: List = .empty;
+    defer pairs.deinit(alloc);
 
     var split_iter = std.mem.splitScalar(u8, data, '\n');
     while (split_iter.next()) |item| {
@@ -41,21 +42,18 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
         var col = row_iter.next().?;
         const sensor = Point{ .row = row_iter.next().?, .col = col };
         col = row_iter.next().?;
-        try sensors.put(sensor, .{ .row = row_iter.next().?, .col = col });
+        try pairs.append(alloc, .{ sensor, .{ .row = row_iter.next().?, .col = col } });
     }
-    return .{ .p1 = try part1(alloc, &sensors), .p2 = try part2(alloc, &sensors) };
+    return .{ .p1 = try part1(alloc, pairs.items), .p2 = try part2(alloc, pairs.items) };
 }
-fn part1(alloc: Allocator, sensors: *Map) !usize {
+fn part1(alloc: Allocator, pairs: []Points) !usize {
     var cols: std.AutoHashMap(i64, void) = .init(alloc);
     defer cols.deinit();
 
     const row: i64 = 2000000;
-    var iter = sensors.iterator();
-    while (iter.next()) |pair| {
-        const sensor = pair.key_ptr;
-        const beacon = pair.value_ptr;
-
-        const distance = sensor.manhattan(beacon.*);
+    for (pairs) |pair| {
+        const sensor, const beacon = pair;
+        const distance = sensor.manhattan(beacon);
         const drow: i64 = sensor.deltaRow(row);
         if (drow > distance) continue;
 
@@ -69,7 +67,7 @@ fn part1(alloc: Allocator, sensors: *Map) !usize {
     }
     return cols.count();
 }
-fn part2(alloc: Allocator, sensors: *Map) !i64 {
+fn part2(alloc: Allocator, pairs: []Points) !i64 {
     var intervals: std.ArrayList(Pair) = .empty;
     defer intervals.deinit(alloc);
 
@@ -77,7 +75,8 @@ fn part2(alloc: Allocator, sensors: *Map) !i64 {
     for (0..@intCast(max + 1)) |row| {
         intervals.clearRetainingCapacity();
 
-        for (sensors.keys(), sensors.values()) |sensor, beacon| {
+        for (pairs) |pair| {
+            const sensor, const beacon = pair;
             const drow = sensor.deltaRow(@intCast(row));
             const distance = sensor.manhattan(beacon);
             if (drow > distance) continue;
@@ -93,13 +92,14 @@ fn part2(alloc: Allocator, sensors: *Map) !i64 {
         if (res.len != 2 or res[1].@"0" - res[0].@"1" != 2) continue;
         const candidate_row = @divFloor(res[1].@"0" + res[0].@"1", 2);
         const irow: i64 = @intCast(row);
-        if (isCovered(sensors, irow - 1, candidate_row) and isCovered(sensors, irow + 1, candidate_row))
+        if (isCovered(pairs, irow - 1, candidate_row) and isCovered(pairs, irow + 1, candidate_row))
             return irow + 4000000 * candidate_row;
     }
     return -1;
 }
-fn isCovered(sensors: *Map, row: i64, col: i64) bool {
-    for (sensors.keys(), sensors.values()) |sensor, beacon| {
+fn isCovered(pairs: []Points, row: i64, col: i64) bool {
+    for (pairs) |pair| {
+        const sensor, const beacon = pair;
         const point_dist = sensor.manhattan(.{ .row = row, .col = col });
         if (point_dist == sensor.manhattan(beacon)) return true;
     }
