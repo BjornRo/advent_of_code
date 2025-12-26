@@ -111,6 +111,35 @@ pub fn NumberIter(comptime T: type) type {
     };
 }
 
+pub const HashMatrix = struct {
+    const Val = i32;
+    const Map = std.AutoHashMap(struct { Val, Val }, u8);
+    data: Map,
+    const Self = @This();
+    pub fn init(alloc: Allocator) Self {
+        return .{ .data = Map.init(alloc) };
+    }
+    pub fn deinit(self: *Self) void {
+        self.data.deinit();
+    }
+    pub fn get(self: *Self, row: Val, col: Val) ?u8 {
+        return self.data.get(.{ row, col });
+    }
+    pub fn set(self: *Self, row: Val, col: Val, value: u8) !void {
+        try self.data.put(.{ row, col }, value);
+    }
+    pub fn add(self: *Self, row: Val, col: Val, value: u8) !bool {
+        const res = try self.data.getOrPut(.{ row, col }, value);
+        return !res.found_existing;
+    }
+    pub fn del(self: *Self, row: Val, col: Val) void {
+        self.data.remove(.{ row, col });
+    }
+    pub fn contains(self: *Self, row: Val, col: Val) bool {
+        return self.data.contains(.{ row, col });
+    }
+};
+
 pub const Matrix = struct {
     data: []u8,
     rows: usize,
@@ -129,7 +158,7 @@ pub const Matrix = struct {
         const maxCols: isize = @intCast(self.cols);
         return 0 <= row and row < maxRows and 0 <= col and col < maxCols;
     }
-    pub fn empty(alloc: Allocator, rows: usize, cols: usize) !Matrix {
+    pub fn empty(alloc: Allocator, rows: usize, cols: usize) !Self {
         const data = try alloc.alloc(u8, rows * cols);
         @memset(data, 0);
         return .{ .data = data, .rows = rows, .cols = cols, .stride = cols };
