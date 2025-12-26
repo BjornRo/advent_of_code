@@ -4,14 +4,14 @@ const Allocator = std.mem.Allocator;
 const Deque = @import("deque.zig").Deque;
 
 const Point = struct {
-    row: u16 = 0,
-    col: u16 = 0,
+    row: u32 = 0,
+    col: u32 = 0,
     const Self = @This();
     fn unpack(self: Self) [2]@TypeOf(self.row) {
         return .{ self.row, self.col };
     }
     fn parse(s: []const u8) Self {
-        var iter: utils.NumberIter(u16) = .{ .string = s };
+        var iter: utils.NumberIter(u32) = .{ .string = s };
         const col = iter.next().?;
         const row = iter.next().?;
         return .{ .row = row, .col = col };
@@ -25,11 +25,9 @@ pub fn main() !void {
     const data = try utils.read(alloc, "in/d14.txt");
     defer alloc.free(data);
 
-    const result = try solve(alloc, data);
-    std.debug.print("Part 1: {d}\n", .{result.p1});
-    std.debug.print("Part 2: {d}\n", .{result.p2});
+    std.debug.print("Part 1: {d}\n", .{try solve(alloc, data, false)});
+    std.debug.print("Part 2: {d}\n", .{try solve(alloc, data, true) + 1});
 }
-
 fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: Point, list: []?Point } {
     var start: Point = .{ .row = 0, .col = 500 };
     var min: Point = .{
@@ -46,10 +44,10 @@ fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: P
             var row_iter = std.mem.splitSequence(u8, item, " -> ");
             while (row_iter.next()) |raw_dots| {
                 const point: Point = .parse(raw_dots);
-                max.row = @max(max.row, point.row + 1);
-                max.col = @max(max.col, point.col + 1);
-                min.row = @min(min.row, point.row - 4); // Give start extra space
-                min.col = @min(min.col, point.col);
+                max.row = @max(max.row, point.row + 1 + 2);
+                max.col = @max(max.col, point.col + 1 + 8 + 400);
+                min.row = 0;
+                min.col = @min(min.col, point.col - 5 - 400);
                 try list.append(alloc, point);
             }
             try list.append(alloc, null);
@@ -73,8 +71,7 @@ fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: P
         .list = list,
     };
 }
-
-fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
+fn solve(alloc: Allocator, data: []const u8, part2: bool) !usize {
     const parsed = try parse(alloc, data);
     defer alloc.free(parsed.list);
 
@@ -94,16 +91,17 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
                 null;
         }
     }
+    if (part2) for (0..matrix.cols) |c| matrix.set(matrix.rows - 1, c, '#');
 
     while (true) {
         var settled = true;
         const row, const col = parsed.start.unpack();
-        var drow: i32 = @intCast(row);
-        var dcol: i32 = @intCast(col);
+        var drow: i64 = @intCast(row);
+        var dcol: i64 = @intCast(col);
         while (true) : (drow += 1) {
             if (!matrix.inBounds(drow, dcol)) break;
             if (matrix.get(@intCast(drow), @intCast(dcol)) != 0) {
-                for ([2]i32{ -1, 1 }) |delta| {
+                for ([2]i64{ -1, 1 }) |delta| {
                     if (!matrix.inBounds(drow, dcol + delta)) break;
                     if (matrix.get(@intCast(drow), @intCast(dcol + delta)) == 0) {
                         dcol += delta;
@@ -117,15 +115,12 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
             }
         }
         if (settled) break;
-        // std.debug.print("{d},{d},{any}\n", .{ drow, dcol, settled });
-        // if (!matrix.inBounds(drow, dcol)) break;
+        if (part2)
+            if (drow == 0) break;
         matrix.set(@intCast(drow), @intCast(dcol), 'o');
-        // matrix.print(' ');
     }
 
-    // matrix.print(' ');
-
-    return .{ .p1 = std.mem.count(u8, matrix.data, "o"), .p2 = 2 };
+    return std.mem.count(u8, matrix.data, "o");
 }
 
 // var queue: Deque(struct { enum { Fill, Fall }, Point }) = try .init(alloc);
