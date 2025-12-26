@@ -129,13 +129,17 @@ pub const Matrix = struct {
         const maxCols: isize = @intCast(self.cols);
         return 0 <= row and row < maxRows and 0 <= col and col < maxCols;
     }
-    pub fn print(self: *Self, comptime empty: u8, comptime exists: u8) void {
+    pub fn empty(alloc: Allocator, rows: usize, cols: usize) !Matrix {
+        const data = try alloc.alloc(u8, rows * cols);
+        @memset(data, 0);
+        return .{ .data = data, .rows = rows, .cols = cols, .stride = cols };
+    }
+    pub fn print(self: *Self, comptime default: u8) void {
         for (0..self.rows) |i| {
-            for (0..self.cols) |j|
-                if (self.get(i, j) == exists)
-                    std.debug.print(&.{exists}, .{})
-                else
-                    std.debug.print(&.{empty}, .{});
+            for (0..self.cols) |j| {
+                const elem = self.get(i, j);
+                std.debug.print("{c}", .{if (elem != 0 and elem != default) elem else default});
+            }
             std.debug.print("\n", .{});
         }
     }

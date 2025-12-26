@@ -7,6 +7,9 @@ const Point = struct {
     row: u16 = 0,
     col: u16 = 0,
     const Self = @This();
+    fn unpack(self: Self) [2]@TypeOf(self.row) {
+        return .{ self.row, self.col };
+    }
     fn parse(s: []const u8) Self {
         var iter: utils.NumberIter(u16) = .{ .string = s };
         const col = iter.next().?;
@@ -78,12 +81,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     std.debug.print("{any}\n", .{parsed.grid_dim});
     std.debug.print("{any}\n", .{parsed.list});
 
-    var matrix: utils.Matrix = .{
-        .data = try alloc.alloc(u8, @as(u32, @intCast(parsed.grid_dim.row)) * @as(u32, @intCast(parsed.grid_dim.col))),
-        .rows = parsed.grid_dim.row,
-        .cols = parsed.grid_dim.col,
-        .stride = parsed.grid_dim.col,
-    };
+    var matrix = try utils.Matrix.empty(alloc, @intCast(parsed.grid_dim.row), @intCast(parsed.grid_dim.col));
     defer alloc.free(matrix.data);
     {
         var curr: ?Point = null;
@@ -99,7 +97,18 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
                 null;
         }
     }
-    matrix.print(' ', '#');
+
+    var queue: Deque(Point) = try .init(alloc);
+    defer queue.deinit();
+    try queue.pushBack(parsed.start);
+
+    while (queue.popFront()) |state| {
+        const row, const col = state.unpack();
+        _ = row * col;
+    }
+    std.debug.print("{d}", .{matrix.get(0, 0)});
+
+    matrix.print(' ');
 
     return .{ .p1 = 1, .p2 = 2 };
 }
