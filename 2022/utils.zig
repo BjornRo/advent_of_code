@@ -227,3 +227,19 @@ pub inline fn hashU64(key: u64) u64 {
     x ^= x >> 32;
     return x;
 }
+
+pub fn Repeat(comptime T: type) type {
+    return struct {
+        index: usize,
+        sequence: []const T,
+
+        const Self = @This();
+        pub fn next(self: *Self) T {
+            defer self.index = @mod(self.index + 1, self.sequence.len);
+            return self.sequence[self.index];
+        }
+        pub fn init(sequence: []const T) Self {
+            return .{ .index = 0, .sequence = sequence };
+        }
+    };
+}
