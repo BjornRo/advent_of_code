@@ -75,7 +75,7 @@ fn valver(graph: *Graph, node: u8, minutes: u8, valves: BitSet, memo: *Map) !u32
     try memo.put(key, max_pressure);
     return max_pressure;
 }
-fn valver2(alloc: Allocator, graph: *Graph, node1: u8) !u32 {
+fn valver2(alloc: Allocator, graph: *Graph, start: u8) !u32 {
     const State = struct { u8, u8, BitSet, u32 };
     var states: std.ArrayList(State) = .empty;
     var next_states: std.ArrayList(State) = .empty;
@@ -85,7 +85,7 @@ fn valver2(alloc: Allocator, graph: *Graph, node1: u8) !u32 {
     defer visited.deinit();
 
     var best_pressure: u32 = 0;
-    try states.append(alloc, .{ node1, node1, .initEmpty(), 0 });
+    try states.append(alloc, .{ start, start, .initEmpty(), 0 });
     for (0..26) |_| {
         defer {
             const tmp = states;
@@ -95,6 +95,7 @@ fn valver2(alloc: Allocator, graph: *Graph, node1: u8) !u32 {
         }
         for (states.items) |state| {
             const n1, const n2, const open_valves, const pressure = state;
+            if (n1 == start and n2 != start) continue;
             {
                 const vkey: Key = .{ n1, n2, open_valves.mask };
                 const res = try visited.getOrPut(vkey);
