@@ -3,12 +3,13 @@ const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 const Deque = @import("deque.zig").Deque;
 
+const Grid = utils.HashMatrix;
 pub fn main() !void {
     var da = std.heap.DebugAllocator(.{}).init;
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d17t.txt");
+    const data = try utils.read(alloc, "in/d17.txt");
     defer alloc.free(data);
 
     try part1(alloc, data);
@@ -50,13 +51,12 @@ const rocks: [5][]const []const u8 = .{
     },
 };
 
-fn overlaps(matrix: *utils.HashMatrix, rock: []const []const u8, left_pos: i32, height: i32) bool {
-    if (height <= 0) return true;
-    const delta_height = @as(i32, @intCast(rock.len)) + height - 1;
+fn overlaps(grid: *Grid, rock: []const []const u8, left_pos: i32, height: i32) bool {
+    const delta_height = @as(i32, @intCast(rock.len)) + height;
     for (rock, 0..) |row, i| {
         for (row, 0..) |col, j| {
-            if (col == '.') continue;
-            if (matrix.get(delta_height - @as(i32, @intCast(i)), left_pos + @as(i32, @intCast(j))) == '#')
+            if (col != '#') continue;
+            if (grid.get(delta_height - @as(i32, @intCast(i)), left_pos + @as(i32, @intCast(j))) == '#')
                 return true;
         }
     }
@@ -64,8 +64,8 @@ fn overlaps(matrix: *utils.HashMatrix, rock: []const []const u8, left_pos: i32, 
 }
 
 fn part1(alloc: Allocator, data: []const u8) !void {
-    var matrix = utils.HashMatrix.init(alloc);
-    defer matrix.deinit();
+    var grid = Grid.init(alloc);
+    defer grid.deinit();
 
     var rocks_iter = utils.Repeat([]const []const u8).init(&rocks);
     var input_iter = utils.Repeat(u8).init(data);
@@ -75,45 +75,55 @@ fn part1(alloc: Allocator, data: []const u8) !void {
     const OFFSET_DOWN = 3;
     var max_height: i32 = 0;
 
-    std.debug.print("{s}\n", .{data});
-    for (0..3) |_| {
+    for (0..2022) |_| {
         const rock = rocks_iter.next();
-        var rock_height: i32 = max_height + OFFSET_DOWN;
-        var rock_left_pos: i32 = OFFSET_LEFT;
-        std.debug.print("S: Left {d}, Height {d}\n", .{ rock_left_pos, rock_height });
+        var height: i32 = max_height + OFFSET_DOWN;
+        var left_pos: i32 = OFFSET_LEFT;
+        // std.debug.print("S: Left {d}, Height {d}\n", .{ left_pos, height });
         while (true) {
-            rock_left_pos += switch (input_iter.next()) {
-                '>' => if (@as(i32, @intCast(rock[0].len)) + rock_left_pos < WIDTH) 1 else 0,
-                else => if (rock_left_pos > 0) -1 else 0,
+            // >>>< <><> ><<< >><>>><<<>>><<<><<<>><>><<>>
+            const res: i8 = switch (input_iter.next()) {
+                '>' => if (@as(i32, @intCast(rock[0].len)) + left_pos < WIDTH) 1 else 0,
+                else => if (left_pos > 0) -1 else 0,
             };
 
-            std.debug.print("Left {d}, Height {d}\n", .{ rock_left_pos, rock_height });
-            if (overlaps(&matrix, rock, rock_left_pos, rock_height)) {
-                for (0..rock.len) |i| {
-                    for (0..rock[0].len) |j| {
-                        if (rock[i][j] != '#') continue;
-                        try matrix.set(rock_height + @as(i32, @intCast(rock.len - i)), rock_left_pos + @as(i32, @intCast(j)), '#');
-                    }
-                }
-                max_height = rock_height + rock_height - 1;
+            if (!overlaps(&grid, rock, left_pos + res, height)) left_pos += res;
+
+            // std.debug.print("Left {d}, Height {d}\n", .{ left_pos, height });
+            if (overlaps(&grid, rock, left_pos, height - 1) or height - 1 < 0) {
+                try fill(&grid, rock, height, left_pos);
+                max_height = @max(max_height, height + @as(i32, @intCast(rock.len)));
+                // std.debug.print("MH {d}\n", .{max_height});
                 break;
             }
-            rock_height -= 1;
+            height -= 1;
         }
-
-        for (0..20) |i| {
-            const ii = 20 - i;
-            for (0..WIDTH) |j| {
-                const c: u8 = if (matrix.contains(@intCast(ii), @intCast(j))) '#' else '.';
-                std.debug.print("{c}", .{c});
-            }
-            std.debug.print("\n", .{});
-        }
+        // p(&grid);
     }
+    std.debug.print("{d}\n", .{max_height});
 
     // for (0..5) |_| {
     //     std.debug.print("{any},{d}\n", .{ rocks_iter.next(), input_iter.next() });
     // }
 
     //
+}
+
+fn fill(grid: *Grid, rock: []const []const u8, height_pos: i32, left_pos: i32) !void {
+    for (0..rock.len) |i| for (0..rock[0].len) |j| {
+        if (rock[i][j] != '#') continue;
+        try grid.set(height_pos + @as(i32, @intCast(rock.len - i)), left_pos + @as(i32, @intCast(j)), '#');
+    };
+}
+
+fn p(m: *Grid) void {
+    const h = 30;
+    for (0..h) |i| {
+        const ii = h - i;
+        for (0..7) |j| {
+            const c: u8 = if (m.get(@intCast(ii), @intCast(j))) |v| v else ',';
+            std.debug.print("{c}", .{c});
+        }
+        std.debug.print("\n", .{});
+    }
 }
