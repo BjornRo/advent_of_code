@@ -216,3 +216,14 @@ pub fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
     const res: [16]T = a + b;
     return @bitCast(res);
 }
+
+pub inline fn hashU64(key: u64) u64 {
+    // https://nullprogram.com/blog/2018/07/31/
+    var x = key;
+    x ^= x >> 32;
+    x *%= 0xd6e8feb86659fd93;
+    x ^= x >> 32;
+    x *%= 0xd6e8feb86659fd93;
+    x ^= x >> 32;
+    return x;
+}
