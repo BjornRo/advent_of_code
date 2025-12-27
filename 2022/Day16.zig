@@ -117,7 +117,7 @@ fn valver2(alloc: Allocator, graph: *Graph, node1: u8) !u32 {
             }
             const n1_valve = graph.get(n1).?;
             const n2_valve = graph.get(n2).?;
-            if (n1_valve.flow > 0 and !open_valves.isSet(n1) and n2_valve.flow > 0 and !open_valves.isSet(n2)) {
+            if (n1_valve.flow > 0 and n2_valve.flow > 0 and !open_valves.isSet(n1) and !open_valves.isSet(n2)) {
                 var new_bitset = open_valves;
                 new_bitset.set(n1);
                 new_bitset.set(n2);
