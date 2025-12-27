@@ -108,6 +108,9 @@ pub fn NumberIter(comptime T: type) type {
             }
             return null;
         }
+        pub fn init(string: []const u8) @This() {
+            return .{ .index = 0, .string = string };
+        }
     };
 }
 
@@ -243,3 +246,48 @@ pub fn Repeat(comptime T: type) type {
         }
     };
 }
+
+// const UnionFind = struct {
+//     parent: []?usize,
+//     rank: []?usize,
+
+//     const Self = @This();
+//     fn find(self: Self, id: usize) usize {
+//         var p = self.parent[id] orelse id;
+//         if (p != id) {
+//             p = find(p);
+//             self.parent[id] = p;
+//         }
+//         return p;
+//     }
+//     fn @"union"(self: Self, id1: usize, id2: usize) void {
+//         const root1 = find(id1);
+//         const root2 = find(id2);
+//         if (root1 == root2) return;
+
+//         const r1 = self.rank[root1] orelse 0;
+//         const r2 = self.rank[root2] orelse 0;
+//         if (r1 < r2) {
+//             self.parent[root1] = root2;
+//         } else if (r1 > r2) {
+//             self.parent[root2] = root1;
+//         } else {
+//             self.parent[root2] = root1;
+//             self.rank[root1] = r1 + 1;
+//         }
+//     }
+//     fn init(alloc: Allocator, sequence: []Cube) !Self {
+//         const new: Self = .{
+//             .parent = try alloc.alloc(usize, sequence.len),
+//             .rank = try alloc.alloc(usize, sequence.len),
+//         };
+//         for (sequence) |e| {
+//             new.parent[e.id] = e.id;
+//             new.rank[e.id] = 0;
+//         }
+//     }
+//     fn deinit(self: Self, alloc: Allocator) void {
+//         alloc.free(self.parent);
+//         alloc.free(self.rank);
+//     }
+// };
