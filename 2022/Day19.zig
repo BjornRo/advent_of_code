@@ -3,36 +3,21 @@ const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 const Deque = @import("deque.zig").Deque;
 
-const Vec4 = @Vector(4, u8);
 const CT = u8;
-const Ore = CT;
-const Clay = CT;
-const Obsidian = CT;
-const BlueprintCosts = struct {
-    ore_bot: Ore,
-    clay_bot: Ore,
-    obsidian_bot: struct { ore: Ore, clay: Clay },
-    geode_bot: struct { ore: Ore, obsidian: Obsidian },
-};
+const Vec4 = @Vector(4, CT);
+const BlueprintCosts = struct { ore_bot: Vec4, clay_bot: Vec4, obsidian_bot: Vec4, geode_bot: Vec4 };
 const State = packed struct {
-    ore_bot: u8,
-    clay_bot: u8,
-    obsidian_bot: u8,
-    geode_bot: u8,
-    ore: u8,
-    clay: u8,
-    obsidian: u8,
-    geode: u8,
+    bots: Vec4,
+    resources: Vec4,
     const Self = @This();
-    fn unpack(self: Self) [8]u8 {
-        return .{ self.ore_bot, self.clay_bot, self.obsidian_bot, self.geode_bot, self.ore, self.clay, self.obsidian, self.geode };
-    }
     const HashCtx = struct {
         pub fn hash(_: @This(), key: State) u64 {
             return utils.hashU64(@bitCast(key));
         }
         pub fn eql(_: @This(), a: State, b: State) bool {
-            return a == b;
+            const _a: u64 = @bitCast(a);
+            const _b: u64 = @bitCast(b);
+            return _a == _b;
         }
     };
 };
@@ -58,24 +43,19 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         const index = std.mem.indexOfScalar(u8, item, ':').?;
         var num_iter = utils.NumberIter(CT).init(item[index..]);
         try blueprints.append(alloc, .{
-            .ore_bot = num_iter.next().?,
-            .clay_bot = num_iter.next().?,
-            .obsidian_bot = .{ .ore = num_iter.next().?, .clay = num_iter.next().? },
-            .geode_bot = .{ .ore = num_iter.next().?, .obsidian = num_iter.next().? },
+            .ore_bot = .{ num_iter.next().?, 0, 0, 0 },
+            .clay_bot = .{ num_iter.next().?, 0, 0, 0 },
+            .obsidian_bot = .{ num_iter.next().?, num_iter.next().?, 0, 0 },
+            .geode_bot = .{ 0, num_iter.next().?, num_iter.next().?, 0 },
         });
     }
 
     var total_1: usize = 0;
-    for (blueprints.items, 1..) |blueprint, i|
-        total_1 += i * try oreStatemachine(alloc, blueprint, 24);
-
+    for (blueprints.items, 1..) |blueprint, i| total_1 += i * try oreStatemachine(alloc, blueprint, 24);
     var total_2: usize = 1;
-    for (blueprints.items[0..3]) |blueprint|
-        total_2 *= try oreStatemachine(alloc, blueprint, 32);
-
+    for (blueprints.items[0..3]) |blueprint| total_2 *= try oreStatemachine(alloc, blueprint, 32);
     return .{ .p1 = total_1, .p2 = total_2 };
 }
-
 fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usize) !usize {
     var states: std.ArrayList(State) = .empty;
     var next_states: std.ArrayList(State) = .empty;
@@ -84,86 +64,42 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
     var visited: std.HashMap(State, void, State.HashCtx, 90) = .init(alloc);
     defer visited.deinit();
 
-    try states.append(alloc, .{
-        .ore_bot = 1,
-        .clay_bot = 0,
-        .obsidian_bot = 0,
-        .geode_bot = 0,
-        .ore = 0,
-        .clay = 0,
-        .obsidian = 0,
-        .geode = 0,
-    });
+    try states.append(alloc, .{ .bots = .{ 1, 0, 0, 0 }, .resources = .{ 0, 0, 0, 0 } });
     var max_geodes: u16 = 0;
     for (0..generations) |_| {
         defer {
-            // std.debug.print("{d}: {d},{d}\n", .{ k, states.items.len, next_states.items.len });
             const tmp = states;
             states = next_states;
             next_states = tmp;
             next_states.clearRetainingCapacity();
         }
         for (states.items) |state| {
-            const ore_bot, const clay_bot, const obsidian_bot, const geode_bot, const ore, const clay, const obsidian, const geode = state.unpack();
+            const ore, const clay, const obsidian, const geode = state.resources;
             if (geode < max_geodes) continue;
-            max_geodes = @max(max_geodes, geode);
-
             const res = try visited.getOrPut(state);
             if (res.found_existing) continue;
+            max_geodes = @max(max_geodes, geode);
 
-            try next_states.append(alloc, .{
-                .ore_bot = ore_bot,
-                .clay_bot = clay_bot,
-                .obsidian_bot = obsidian_bot,
-                .geode_bot = geode_bot,
-                .ore = ore + ore_bot,
-                .clay = clay + clay_bot,
-                .obsidian = obsidian + obsidian_bot,
-                .geode = geode + geode_bot,
+            try next_states.append(alloc, .{ .bots = state.bots, .resources = state.bots + state.resources });
+            if (ore >= blueprint.ore_bot[0]) try next_states.append(alloc, .{
+                .bots = state.bots + Vec4{ 1, 0, 0, 0 },
+                .resources = state.resources + state.bots - blueprint.ore_bot,
             });
-            if (ore >= blueprint.ore_bot) try next_states.append(alloc, .{
-                .ore_bot = ore_bot + 1,
-                .clay_bot = clay_bot,
-                .obsidian_bot = obsidian_bot,
-                .geode_bot = geode_bot,
-                .ore = ore - blueprint.ore_bot + ore_bot,
-                .clay = clay + clay_bot,
-                .obsidian = obsidian + obsidian_bot,
-                .geode = geode + geode_bot,
+            if (ore >= blueprint.clay_bot[0]) try next_states.append(alloc, .{
+                .bots = state.bots + Vec4{ 0, 1, 0, 0 },
+                .resources = state.resources + state.bots - blueprint.clay_bot,
             });
-            if (ore >= blueprint.clay_bot) try next_states.append(alloc, .{
-                .ore_bot = ore_bot,
-                .clay_bot = clay_bot + 1,
-                .obsidian_bot = obsidian_bot,
-                .geode_bot = geode_bot,
-                .ore = ore - blueprint.clay_bot + ore_bot,
-                .clay = clay + clay_bot,
-                .obsidian = obsidian + obsidian_bot,
-                .geode = geode + geode_bot,
+            if (ore >= blueprint.obsidian_bot[0] and clay >= blueprint.obsidian_bot[1]) try next_states.append(alloc, .{
+                .bots = state.bots + Vec4{ 0, 0, 1, 0 },
+                .resources = state.resources + state.bots - blueprint.obsidian_bot,
             });
-            if (ore >= blueprint.obsidian_bot.ore and clay >= blueprint.obsidian_bot.clay) try next_states.append(alloc, .{
-                .ore_bot = ore_bot,
-                .clay_bot = clay_bot,
-                .obsidian_bot = obsidian_bot + 1,
-                .geode_bot = geode_bot,
-                .ore = ore - blueprint.obsidian_bot.ore + ore_bot,
-                .clay = clay - blueprint.obsidian_bot.clay + clay_bot,
-                .obsidian = obsidian + obsidian_bot,
-                .geode = geode + geode_bot,
-            });
-            if (ore >= blueprint.geode_bot.ore and obsidian >= blueprint.geode_bot.obsidian) try next_states.append(alloc, .{
-                .ore_bot = ore_bot,
-                .clay_bot = clay_bot,
-                .obsidian_bot = obsidian_bot,
-                .geode_bot = geode_bot + 1,
-                .ore = ore - blueprint.geode_bot.ore + ore_bot,
-                .clay = clay + clay_bot,
-                .obsidian = obsidian - blueprint.geode_bot.obsidian + obsidian_bot,
-                .geode = geode + geode_bot,
+            if (ore >= blueprint.geode_bot[0] and obsidian >= blueprint.geode_bot[2]) try next_states.append(alloc, .{
+                .bots = state.bots + Vec4{ 0, 0, 0, 1 },
+                .resources = state.resources + state.bots - blueprint.geode_bot,
             });
         }
     }
     var max_geode: u16 = 0;
-    for (states.items) |state| max_geode = @max(max_geode, state.geode);
+    for (states.items) |state| max_geode = @max(max_geode, state.resources[3]);
     return max_geode;
 }
