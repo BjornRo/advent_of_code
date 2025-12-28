@@ -83,7 +83,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     const left = remaining % cycle_len;
 
     var total_rocks = cycles * (memo.get(k + cycle_len).?.sum - memo.get(k).?.sum) + memo.get(k - 1).?.sum;
-    for (0..left) |f| total_rocks += memo.get(f + k).?.delta;
+    for (0..left) |i| total_rocks += memo.get(i + k).?.delta;
     return .{ .p1 = memo.get(2021).?.sum, .p2 = total_rocks };
 }
 
