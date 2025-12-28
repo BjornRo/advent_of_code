@@ -42,12 +42,23 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         });
     }
 
-    var total: usize = 0;
-    for (blueprints.items, 1..) |blueprint, i| {
-        total += i * try oreStatemachine(alloc, blueprint);
+    // var total: usize = 0;
+    // for (blueprints.items, 1..) |blueprint, i| {
+    //     total += i * try oreStatemachine(alloc, blueprint);
+    // }
+
+    var list: std.ArrayList(usize) = .empty;
+    defer list.deinit(alloc);
+
+    for (blueprints.items) |blueprint| {
+        try list.append(alloc, try oreStatemachine(alloc, blueprint));
     }
 
-    return .{ .p1 = total, .p2 = 2 };
+    // std.mem.sortUnstable(usize, list.items, {}, std.sort.desc(usize));
+
+    std.debug.print("{any}\n", .{list.items});
+
+    return .{ .p1 = 1, .p2 = 2 };
 }
 
 fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts) !usize {
@@ -82,10 +93,8 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts) !usize {
         .obsidian = 0,
         .geode = 0,
     });
-    std.debug.print("{any}\n", .{blueprint});
     var max_geodes: u16 = 0;
-    const iters = 24;
-    for (0..iters) |k| {
+    for (0..32) |k| {
         defer {
             const tmp = states;
             std.debug.print("{d}: {d},{d}\n", .{ k, states.items.len, next_states.items.len });
@@ -95,13 +104,8 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts) !usize {
         }
         for (states.items) |state| {
             const ore_bot, const clay_bot, const obsidian_bot, const geode_bot, const ore, const clay, const obsidian, const geode = state.unpack();
-            if (k > 12 and 1 + geode < max_geodes) continue;
+            if (k > 12 and geode < max_geodes) continue;
             max_geodes = @max(max_geodes, geode);
-
-            // if (geode_bot >= 4) {
-            //     std.debug.print("{any}\n", .{state});
-            //     break;
-            // }
 
             const res = try visited.getOrPut(state);
             if (res.found_existing) continue;
