@@ -89,11 +89,12 @@ fn PermutationIterator(comptime T: type) type {
 }
 
 pub fn firstNumber(comptime T: type, start: usize, str: []const u8) ?struct { end_index: usize, value: T } {
+    const b = @typeInfo(T).int.signedness == .signed;
     var index: usize = start;
-    while (index < str.len) : (index += 1) if ('0' <= str[index] and str[index] <= '9') break;
+    while (index < str.len) : (index += 1) if ('0' <= str[index] and str[index] <= '9' or (b and str[index] == '-')) break;
     if (index >= str.len) return null;
     var end = index + 1;
-    while (end < str.len) : (end += 1) if (!('0' <= str[end] and str[end] <= '9')) break;
+    while (end < str.len) : (end += 1) if (!('0' <= str[end] and str[end] <= '9' or (b and str[end] == '-'))) break;
     return .{ .end_index = end, .value = std.fmt.parseInt(T, str[index..end], 10) catch unreachable };
 }
 
