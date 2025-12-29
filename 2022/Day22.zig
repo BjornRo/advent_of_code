@@ -5,17 +5,16 @@ const Deque = @import("deque.zig").Deque;
 
 const CT = i32;
 const Complex = std.math.complex.Complex(CT);
-const Instruction = union(enum) {
-    value: u8,
-    rotation: enum { Right, Left },
-};
+const Instruction = union(enum) { value: u8, rotation: enum { Right, Left } };
+const leftRotation = Complex.init(0, 1);
+const rightRotation = Complex.init(0, -1);
 
 pub fn main() !void {
     var da = std.heap.DebugAllocator(.{}).init;
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d22t.txt");
+    const data = try utils.read(alloc, "in/d22.txt");
     defer alloc.free(data);
 
     const result = try solve(alloc, data);
@@ -23,7 +22,7 @@ pub fn main() !void {
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
 
-fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
+fn solve(alloc: Allocator, data: []u8) !struct { p1: CT, p2: usize } {
     const split_index = std.mem.indexOf(u8, data, "\n\n").?;
     const raw_instructions = data[split_index + 2 ..];
 
@@ -41,25 +40,36 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
     };
     defer alloc.free(instructions);
 
-    var map = utils.arrayToMatrix(data[0..split_index]);
+    var map = blk: {
+        var cols: usize = 0;
+        var rows: usize = 1;
+        var col_start: usize = 0;
+        for (data[0..split_index], 0..) |c, i|
+            if (c == '\n') {
+                rows += 1;
+                cols = @max(cols, i - col_start);
+                col_start = i + 1;
+            };
+        var map = try utils.Matrix.empty(alloc, rows + 2, cols + 2);
+        @memset(map.data, ' ');
+        var row_iter = std.mem.splitScalar(u8, data[0..split_index], '\n');
+        rows = 1;
+        while (row_iter.next()) |row| : (rows += 1) for (row, 0..) |c, i| map.set(rows, i + 1, c);
+        break :blk map;
+    };
+    defer alloc.free(map.data);
     return .{ .p1 = try part1(alloc, &map, instructions), .p2 = 2 };
 }
-const leftRotation = Complex.init(0, 1);
-const rightRotation = Complex.init(0, -1);
-
-fn part1(alloc: Allocator, map: *utils.Matrix, instructions: []Instruction) !usize {
+fn part1(alloc: Allocator, map: *utils.Matrix, instructions: []Instruction) !CT {
     var visited: std.AutoHashMap(Complex, Complex) = .init(alloc);
     defer visited.deinit();
 
     var position: Complex = for (0..map.cols) |i| {
-        if (map.get(0, i) == '.') break .init(0, @intCast(i));
+        if (map.get(1, i) == '.') break .init(1, @intCast(i));
     } else unreachable;
 
     var direction = Complex.init(0, 1); // Right
-
-    direction.re = 0;
-    position.re = 0;
-
+    try visited.put(position, direction);
     for (instructions) |ins| {
         switch (ins) {
             .rotation => |r| direction = direction.mul(switch (r) {
@@ -67,37 +77,32 @@ fn part1(alloc: Allocator, map: *utils.Matrix, instructions: []Instruction) !usi
                 .Right => rightRotation,
             }),
             .value => |v| {
-                try visited.put(position, direction);
                 for (0..v) |_| {
                     const next_position = position.add(direction);
-                    if (!map.inBounds(next_position.re, next_position.im)) {
-                        position.re = @mod(position.re, @as(CT, @intCast(map.rows)));
-                        position.im = @mod(position.im, @as(CT, @intCast(map.cols)));
-                        map.set(@intCast(position.re), @intCast(position.im), 'o');
-                    } else switch (map.get(@intCast(next_position.re), @intCast(next_position.im))) {
+                    switch (map.get(@intCast(next_position.re), @intCast(next_position.im))) {
                         ' ' => {
                             var frontier = position;
                             while (true) {
                                 frontier = frontier.sub(direction);
-                                if (!map.inBounds(frontier.re, frontier.im)) break;
                                 const elem = map.get(@intCast(frontier.re), @intCast(frontier.im));
                                 if (elem == ' ') break;
                             }
-                            position = frontier.add(direction);
-                            map.set(@intCast(position.re), @intCast(position.im), 'o');
+                            frontier = frontier.add(direction);
+                            if (map.get(@intCast(frontier.re), @intCast(frontier.im)) == '#') break;
+                            position = frontier;
                         },
-                        '.' => {
-                            position = next_position;
-                            map.set(@intCast(position.re), @intCast(position.im), 'o');
-                        },
-                        else => {}, // "#", do nothing
+                        '.' => position = next_position,
+                        else => break,
                     }
+                    try visited.put(position, direction);
                 }
             },
         }
     }
-    map.print('x');
+    var set_iter = visited.keyIterator();
+    while (set_iter.next()) |p| map.set(@intCast(p.re), @intCast(p.im), 'o');
+    const score: CT = if (direction.re == 0) @as(CT, if (direction.im == 1) 0 else 2) else if (direction.im == 1) 1 else 3;
     std.debug.print("{any}\n", .{position});
     std.debug.print("{any}\n", .{direction});
-    return 1;
+    return 1000 * position.re + 4 * position.im + score;
 }
