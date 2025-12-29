@@ -8,15 +8,12 @@ const BlueprintCosts = struct { ore_bot: Vec4, clay_bot: Vec4, obsidian_bot: Vec
 const State = packed struct {
     bots: Vec4,
     minerals: Vec4,
-    const Self = @This();
     const HashCtx = struct {
         pub fn hash(_: @This(), key: State) u64 {
             return utils.hashU64(@bitCast(key));
         }
         pub fn eql(_: @This(), a: State, b: State) bool {
-            const _a: u64 = @bitCast(a);
-            const _b: u64 = @bitCast(b);
-            return _a == _b;
+            return a == b;
         }
     };
 };
@@ -32,15 +29,13 @@ pub fn main() !void {
     std.debug.print("Part 1: {d}\n", .{result.p1});
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
-
 fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     var blueprints: std.ArrayList(BlueprintCosts) = .empty;
     defer blueprints.deinit(alloc);
 
     var split_iter = std.mem.splitScalar(u8, data, '\n');
     while (split_iter.next()) |item| {
-        const index = std.mem.indexOfScalar(u8, item, ':').?;
-        var num_iter = utils.NumberIter(CT).init(item[index + 10 ..]);
+        var num_iter = utils.NumberIter(CT).init(item[std.mem.indexOfScalar(u8, item, ':').? + 10 ..]);
         try blueprints.append(alloc, .{
             .ore_bot = .{ num_iter.next().?, 0, 0, 0 },
             .clay_bot = .{ num_iter.next().?, 0, 0, 0 },
@@ -63,7 +58,7 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
     defer next.deinit(alloc);
     defer visited.deinit();
 
-    try states.append(alloc, .{ .bots = .{ 1, 0, 0, 0 }, .minerals = .{ 0, 0, 0, 0 } });
+    try states.append(alloc, .{ .bots = .{ 1, 0, 0, 0 }, .minerals = @splat(0) });
     var max_geodes: u8 = 0;
     for (0..generations) |_| {
         defer {
@@ -72,9 +67,7 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
         }
         for (states.items) |st| {
             const ore, const clay, const obsidian, const geode = st.minerals;
-            if (geode < max_geodes) continue;
-            const res = try visited.getOrPut(st);
-            if (res.found_existing) continue;
+            if (geode < max_geodes or (try visited.getOrPut(st)).found_existing) continue;
             max_geodes = @max(max_geodes, geode);
 
             const new_res = st.bots + st.minerals;
@@ -89,7 +82,7 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
             try next.append(alloc, .{ .bots = st.bots, .minerals = new_res });
         }
     }
-    var max_geode: u8 = 0;
-    for (states.items) |state| max_geode = @max(max_geode, state.minerals[3]);
-    return max_geode;
+    max_geodes = 0;
+    for (states.items) |state| max_geodes = @max(max_geodes, state.minerals[3]);
+    return max_geodes;
 }

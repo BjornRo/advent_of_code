@@ -40,8 +40,8 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     var cycle_len: usize = 0;
     var start_cycle: ?usize = null;
 
-    var memo: std.AutoHashMap(usize, struct { sum: usize, delta: usize }) = .init(alloc);
-    defer memo.deinit();
+    var memo: std.ArrayList(struct { sum: usize, delta: usize }) = .empty;
+    defer memo.deinit(alloc);
     var rocks_iter = utils.Repeat([]const []const u8).init(&rocks);
     var input_iter = utils.Repeat(u8).init(data);
     var last_max: i32 = 0;
@@ -67,7 +67,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
             }
             height -= 1;
         }
-        try memo.put(k, .{ .sum = @intCast(max_height), .delta = @intCast(max_height - last_max) });
+        try memo.append(alloc, .{ .sum = @intCast(max_height), .delta = @intCast(max_height - last_max) });
 
         var surf = std.bit_set.IntegerBitSet(7).initEmpty();
         for (0..7) |i| if (grid.get(max_height, @intCast(i)) != null) surf.set(i);
@@ -82,9 +82,9 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     const cycles = remaining / cycle_len;
     const left = remaining % cycle_len;
 
-    var total_rocks = cycles * (memo.get(k + cycle_len).?.sum - memo.get(k).?.sum) + memo.get(k - 1).?.sum;
-    for (0..left) |i| total_rocks += memo.get(i + k).?.delta;
-    return .{ .p1 = memo.get(2021).?.sum, .p2 = total_rocks };
+    var total_rocks = cycles * (memo.items[k + cycle_len].sum - memo.items[k].sum) + memo.items[k - 1].sum;
+    for (0..left) |i| total_rocks += memo.items[i + k].delta;
+    return .{ .p1 = memo.items[2021].sum, .p2 = total_rocks };
 }
 
 fn p(m: *Grid) void {
