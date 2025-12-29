@@ -114,31 +114,8 @@ fn solve(alloc: Allocator, data: []const u8, part2: bool) !usize {
                 }
             }
         }
-        if (settled) break;
-        if (part2)
-            if (drow == 0) break;
+        if (settled or (part2 and drow == 0)) break;
         matrix.set(@intCast(drow), @intCast(dcol), 'o');
     }
-
     return std.mem.count(u8, matrix.data, "o");
 }
-
-// var queue: Deque(struct { enum { Fill, Fall }, Point }) = try .init(alloc);
-// defer queue.deinit();
-// try queue.pushBack(.{ .Fall, parsed.start });
-
-// outer: while (queue.popFront()) |curr| {
-//     const state, const point = curr;
-//     const row, const col = point.unpack();
-//     if (state == .Fall) {
-//         var drow = row + 1;
-//         while (true) {
-//             if (!matrix.inBounds(drow, col)) continue :outer;
-//             if (matrix.get(drow, col) != 0) break;
-//             drow += 1;
-//         }
-//         matrix.set(drow, col, 'o');
-//         //
-//     }
-//     break;
-// }
