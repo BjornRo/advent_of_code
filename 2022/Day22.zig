@@ -14,7 +14,7 @@ pub fn main() !void {
     const alloc = da.allocator();
     defer _ = da.deinit();
 
-    const data = try utils.read(alloc, "in/d22.txt");
+    const data = try utils.read(alloc, "in/d22t.txt");
     defer alloc.free(data);
 
     const result = try solve(alloc, data);
@@ -60,9 +60,48 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: CT, p2: CT } {
         break :blk map;
     };
     defer alloc.free(map.data);
-    return .{ .p1 = try part2(map, instructions), .p2 = try part1(map, instructions) };
+    return .{ .p1 = try part1(map, instructions), .p2 = try part2(alloc, map, instructions) };
 }
-fn part2(map: utils.Matrix, instructions: []Instruction) !CT {
+
+fn part2(alloc: Allocator, map: utils.Matrix, instructions: []Instruction) !CT {
+    {
+        // _ = alloc;
+        // const cube: [6]usize = undefined;
+        var dim = map.rows;
+        for (1..map.rows - 1) |i| {
+            const row_start = i * map.stride;
+            const row = map.data[row_start + 1 .. row_start + map.stride - 1];
+            const delta = std.mem.lastIndexOfAny(u8, row, ".#").? - std.mem.indexOfAny(u8, row, ".#").? + 1;
+            if (delta > dim) break;
+            dim = delta;
+        }
+        const Face = struct {
+            grid: utils.Matrix,
+            top_left_row: usize,
+            top_left_col: usize,
+        };
+        var cube: [6]Face = undefined;
+        var id: usize = 0;
+        for (0..(map.rows - 2) / dim) |i| {
+            for (0..(map.cols - 2) / dim) |j| {
+                const row = i * dim + 1;
+                const col = j * dim + 1;
+                if (map.get(row, col) != ' ') {
+                    var block = try utils.Matrix.empty(alloc, dim + 2, dim + 2);
+                    @memset(block.data, ' ');
+                    for (0..dim) |dr| for (0..dim) |dc| block.set(dr + 1, dc + 1, map.get(row + dr, col + dc));
+                    cube[id] = .{ .grid = block, .top_left_row = i, .top_left_col = j };
+                    block.print(' ');
+                    id += 1;
+                }
+            }
+        }
+        defer for (cube) |c| alloc.free(c.grid.data);
+        std.debug.print("{any}\n", .{cube[0]});
+        std.debug.print("{any}\n", .{cube[1]});
+        std.debug.print("{any}\n", .{cube[2]});
+        std.debug.print("{any}\n", .{cube[3]});
+    }
     var position: Complex = for (0..map.cols) |i| (if (map.get(1, i) == '.') break .init(1, @intCast(i))) else unreachable;
 
     var direction = Complex.init(0, 1); // Right
@@ -92,8 +131,8 @@ fn part2(map: utils.Matrix, instructions: []Instruction) !CT {
             },
         }
     }
-    std.debug.print("{any}\n", .{position});
-    std.debug.print("{any}\n", .{direction});
+    // std.debug.print("{any}\n", .{position});
+    // std.debug.print("{any}\n", .{direction});
     const score: CT = if (direction.re == 0) @as(CT, if (direction.im == 1) 0 else 2) else if (direction.im == 1) 1 else 3;
     return 1000 * position.re + 4 * position.im + score;
 }
