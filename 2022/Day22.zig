@@ -291,9 +291,9 @@ fn part2(alloc: Allocator, map: utils.Matrix, instructions: []Instruction) !CT {
                             } else if (dir == .Down and next_dir == .Left) {
                                 col = dim - 2;
                                 row = col;
-                            } else if (dir == .Right and next_dir == .Up) { // this case fails
-                                col = row;
-                                row = dim - 2;
+                                // } else if (dir == .Right and next_dir == .Up) { // this case fails
+                                //     col = row;
+                                //     row = dim - 2;
                             } else if (dir == .Right and next_dir == .Left) {
                                 row = dim - row - 1;
                                 col = dim - 2;

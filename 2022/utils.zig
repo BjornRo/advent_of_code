@@ -209,12 +209,11 @@ pub fn getNextPositions(row: anytype, col: anytype) [4][2]@TypeOf(row, col) {
     const res: [8]T = a + b;
     return @bitCast(res);
 }
+pub fn getCross(comptime T: type) [4][2]T {
+    return @bitCast(.{ 1, 0, 0, 1, -1, 0, 0, -1 });
+}
 
 pub fn getKernel3x3(comptime T: type, row: T, col: T) [8][2]T {
-    comptime switch (@typeInfo(T)) {
-        .Int, .ComptimeInt => {},
-        else => unreachable,
-    };
     const a = @Vector(16, T){ row, col, row, col, row, col, row, col, row, col, row, col, row, col, row, col };
     const b = @Vector(16, T){ 1, 0, 0, 1, -1, 0, 0, -1, -1, -1, -1, 1, 1, -1, 1, 1 };
     const res: [16]T = a + b;
@@ -244,6 +243,16 @@ pub fn Repeat(comptime T: type) type {
         }
         pub fn init(sequence: []const T) Self {
             return .{ .index = 0, .sequence = sequence };
+        }
+    };
+}
+
+pub fn Bounds(comptime T: type) type {
+    return struct {
+        rows: T,
+        cols: T,
+        fn within(self: @This(), row: T, col: T) bool {
+            return 0 <= row and row < self.rows and 0 <= col and col < self.cols;
         }
     };
 }
