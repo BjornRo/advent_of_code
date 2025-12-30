@@ -167,7 +167,7 @@ pub const Matrix = struct {
         @memset(data, 0);
         return .{ .data = data, .rows = rows, .cols = cols, .stride = cols };
     }
-    pub fn print(self: *Self, comptime default: u8) void {
+    pub fn print(self: Self, comptime default: u8) void {
         for (0..self.rows) |i| {
             for (0..self.cols) |j| {
                 const elem = self.get(i, j);

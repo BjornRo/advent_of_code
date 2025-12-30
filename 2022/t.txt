@@ -1,0 +1,33 @@
+PS C:\Users\bjorn\Documents\git_repos\advent_of_code\2022> zig run .\Day22.zig        
+0: .{ .up = 5, .down = 2, .left = 3, .right = 1 }
+0: .{ .Normal = { 0, 0, 1 }, .Up = { 0, -1, 0 }, .Right = { 1, 0, 0 } }
+1: .{ .up = 5, .down = 2, .left = 0, .right = 4 }
+1: .{ .Normal = { -1, 0, 0 }, .Up = { 0, -1, 0 }, .Right = { 0, 0, 1 } }
+2: .{ .up = 0, .down = 4, .left = 3, .right = 1 }
+2: .{ .Normal = { 0, 1, 0 }, .Up = { 0, 0, 1 }, .Right = { 1, 0, 0 } }
+3: .{ .up = 2, .down = 5, .left = 0, .right = 4 }
+3: .{ .Normal = { 1, 0, 0 }, .Up = { 0, 1, 0 }, .Right = { 0, 0, 1 } }
+4: .{ .up = 2, .down = 5, .left = 3, .right = 1 }
+4: .{ .Normal = { 0, 0, -1 }, .Up = { 0, 1, 0 }, .Right = { 1, 0, 0 } }
+5: .{ .up = 3, .down = 1, .left = 0, .right = 4 }
+5: .{ .Normal = { 0, -1, 0 }, .Up = { 1, 0, 0 }, .Right = { 0, 0, 1 } }
+ 01
+ 2
+34
+5
+
+0: .{ .up = 1, .down = 3, .left = 2, .right = 5 }
+0: .{ .Normal = { 0, 0, 1 }, .Up = { 0, -1, 0 }, .Right = { 1, 0, 0 } }
+1: .{ .up = 0, .down = 4, .left = 5, .right = 2 }
+1: .{ .Normal = { 0, -1, 0 }, .Up = { 0, 0, 1 }, .Right = { -1, 0, 0 } }
+2: .{ .up = 0, .down = 4, .left = 1, .right = 3 }
+2: .{ .Normal = { 1, 0, 0 }, .Up = { 0, 0, 1 }, .Right = { 0, -1, 0 } }
+3: .{ .up = 0, .down = 4, .left = 2, .right = 5 }
+3: .{ .Normal = { 0, 1, 0 }, .Up = { 0, 0, 1 }, .Right = { 1, 0, 0 } }
+4: .{ .up = 3, .down = 1, .left = 2, .right = 5 }
+4: .{ .Normal = { 0, 0, -1 }, .Up = { 0, 1, 0 }, .Right = { 1, 0, 0 } }
+5: .{ .up = 3, .down = 1, .left = 4, .right = 0 }
+5: .{ .Normal = { -1, 0, 0 }, .Up = { 0, 1, 0 }, .Right = { 0, 0, -1 } }
+  0
+123
+  45
