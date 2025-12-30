@@ -162,6 +162,7 @@ fn cubeConvert(alloc: Allocator, map: utils.Matrix) !struct { [6]utils.Matrix, [
     for (0..6) |i| {
         _, const u, const r = orientations[i].?.unpack();
         var c = &neighbors[i];
+        // check neg here
         for ([4]*usize{ &c.up, &c.down, &c.left, &c.right }, [4]Vec3{ u, u * neg, r, r * neg }) |f, vec|
             for (0..6) |j| {
                 if (i == j) continue;
@@ -171,9 +172,11 @@ fn cubeConvert(alloc: Allocator, map: utils.Matrix) !struct { [6]utils.Matrix, [
     }
     var new_orientations: [6]Orientation = undefined;
     var new_face: [6]utils.Matrix = undefined;
-    for (0..orientations.len) |i| {
+    for (0..6) |i| {
         new_face[i] = cube[i].grid;
         new_orientations[i] = orientations[i].?;
+        // std.debug.print("{d}: {any}\n", .{ i + 1, orientations[i] });
+        // std.debug.print("{d}: {any}\n", .{ i + 1, neighbors[i] });
     }
     return .{ new_face, neighbors, new_orientations };
 }
@@ -186,6 +189,23 @@ fn rotate(ori: Orientation, dir: Direction) Orientation {
         .Right => .{ .Normal = r * neg, .Up = u, .Right = n },
     };
 }
+fn getDir(c: Complex) Direction {
+    if (c.re == 0) (if (c.im == -1) return .Left else return .Right);
+    return if (c.re == -1) .Up else .Down;
+}
+fn dirToCompex(dir: Direction) Complex {
+    return switch (dir) {
+        .Up => .init(-1, 0),
+        .Down => .init(1, 0),
+        .Left => .init(0, -1),
+        .Right => .init(0, 1),
+    };
+}
+fn dot(a: Vec3, b: Vec3) CT {
+    const ax, const ay, const az = a;
+    const bx, const by, const bz = b;
+    return ax * bx + ay * by + az * bz;
+}
 fn part2(alloc: Allocator, map: utils.Matrix, instructions: []Instruction) !CT {
     const face, const neighbors, const orientation = try cubeConvert(alloc, map);
     defer for (face) |f| alloc.free(f.data);
@@ -194,7 +214,7 @@ fn part2(alloc: Allocator, map: utils.Matrix, instructions: []Instruction) !CT {
     var position: Complex = for (0..face[id].cols) |i| (if (face[id].get(1, i) == '.') break .init(1, @intCast(i))) else unreachable;
 
     var direction = Complex.init(0, 1); // Right
-    for (instructions) |ins| {
+    for (instructions[0..3]) |ins| {
         switch (ins) {
             .rotation => |r| direction = direction.mul(switch (r) {
                 .Left => leftRotation,
@@ -202,76 +222,88 @@ fn part2(alloc: Allocator, map: utils.Matrix, instructions: []Instruction) !CT {
             }),
             .value => |v| for (0..v) |_| {
                 const next_position = position.add(direction);
+                std.debug.print("{any}\n", .{next_position});
                 switch (face[id].get(@intCast(next_position.re), @intCast(next_position.im))) {
                     '.' => position = next_position,
                     '#' => break,
                     else => {
-                        const neighbor = neighbors[id];
-                        const next_id: struct { usize, CT, Vec3 } = if (direction.re == 0)
-                            (if (direction.im == -1)
-                                (.{ neighbor.left, position.re, orientation[id].Right })
+                        std.debug.print("new face\n", .{});
+                        const dir = getDir(direction);
+                        const next_id = switch (dir) {
+                            .Up => neighbors[id].up,
+                            .Down => neighbors[id].down,
+                            .Left => neighbors[id].left,
+                            .Right => neighbors[id].right,
+                        };
+                        const new_dir: Complex = blk: {
+                            const vec = switch (dir) {
+                                .Up => orientation[id].Up,
+                                .Down => orientation[id].Up * neg,
+                                .Left => orientation[id].Right * neg,
+                                .Right => orientation[id].Right,
+                            };
+                            const dot_up = dot(vec, orientation[next_id].Up);
+                            const dot_right = dot(vec, orientation[next_id].Right);
+                            break :blk if (dot_up == 1)
+                                dirToCompex(.Up)
+                            else if (dot_up == -1)
+                                dirToCompex(.Down)
+                            else if (dot_right == -1)
+                                dirToCompex(.Left)
                             else
-                                .{ neighbor.right, position.re, orientation[id].Right * neg })
-                        else
-                            (if (direction.re == -1)
-                                .{ neighbor.up, position.im, orientation[id].Up }
-                            else
-                                .{ neighbor.down, position.im, orientation[id].Up * neg });
-
-                        for ([4]Vec3{
-                            orientation[next_id.@"0"].Up,
-                            orientation[next_id.@"0"].Up * neg,
-                            orientation[next_id.@"0"].Right,
-                            orientation[next_id.@"0"].Right * neg,
-                        }) |vec| std.debug.print("{any}\n{any}\n\n", .{ vec, next_id.@"2" });
-                        const rotations: usize = for ([4]Vec3{
-                            orientation[next_id.@"0"].Up,
-                            orientation[next_id.@"0"].Up * neg,
-                            orientation[next_id.@"0"].Right,
-                            orientation[next_id.@"0"].Right * neg,
-                        }, 0..) |vec, i| (if (std.simd.countTrues(vec == next_id.@"2") == 3) break i) else unreachable;
-
-                        const dim: CT = @intCast(face[0].rows);
-                        var frontier = position;
-                        var new_dir = direction;
-                        switch (rotations) {
-                            0 => frontier = if (position.re != 0) Complex.init(next_id.@"1", 0) else Complex.init(0, next_id.@"1"),
-                            1 => {
-                                frontier = if (position.re != 0) Complex.init(dim - next_id.@"1", 0) else Complex.init(0, dim - next_id.@"1");
-                                new_dir = direction.mul(leftRotation);
-                            },
-                            2 => {
-                                frontier = if (position.re != 0)
-                                    Complex.init(dim - next_id.@"1", dim)
-                                else
-                                    Complex.init(dim, dim - next_id.@"1");
-                                new_dir = direction.mul(.{ .re = -1, .im = 0 });
-                            },
-                            else => {
-                                frontier = if (position.re != 0)
-                                    Complex.init(next_id.@"1", dim)
-                                else
-                                    Complex.init(dim, next_id.@"1");
-                                new_dir = direction.mul(rightRotation);
-                            },
-                        }
+                                dirToCompex(.Right);
+                        };
+                        var frontier: Complex = blk: {
+                            const dim: CT = @intCast(face[0].rows);
+                            var row = position.re;
+                            var col = position.im;
+                            switch (dir) {
+                                .Up, .Down => {
+                                    if (dot(orientation[id].Right, orientation[next_id].Right) == -1) {
+                                        col = dim - 1 - col;
+                                        row = 1;
+                                    }
+                                },
+                                .Left, .Right => {
+                                    if (dot(orientation[id].Up, orientation[next_id].Up) == -1) {
+                                        row = dim - 1 - row;
+                                        col = 1;
+                                    }
+                                },
+                            }
+                            break :blk .{ .re = row, .im = col };
+                        };
+                        std.debug.print("{any}f\n", .{frontier});
+                        // 0: .{ .Normal = { 0, 0, 1 }, .Up = { 0, -1, 0 }, .Right = { 1, 0, 0 } }
+                        // 0: .{ .up = 1, .down = 3, .left = 2, .right = 5 }
+                        // 1: .{ .Normal = { 0, -1, 0 }, .Up = { 0, 0, 1 }, .Right = { -1, 0, 0 } }
+                        // 1: .{ .up = 0, .down = 4, .left = 5, .right = 2 }
+                        // 2: .{ .Normal = { 1, 0, 0 }, .Up = { 0, 0, 1 }, .Right = { 0, -1, 0 } }
+                        // 2: .{ .up = 0, .down = 4, .left = 1, .right = 3 }
+                        // 3: .{ .Normal = { 0, 1, 0 }, .Up = { 0, 0, 1 }, .Right = { 1, 0, 0 } }
+                        // 3: .{ .up = 0, .down = 4, .left = 2, .right = 5 }
+                        // 4: .{ .Normal = { 0, 0, -1 }, .Up = { 0, 1, 0 }, .Right = { 1, 0, 0 } }
+                        // 4: .{ .up = 3, .down = 1, .left = 2, .right = 5 }
+                        // 5: .{ .Normal = { -1, 0, 0 }, .Up = { 0, 1, 0 }, .Right = { 0, 0, -1 } }
+                        // 5: .{ .up = 3, .down = 1, .left = 4, .right = 0 }
                         while (true) {
                             frontier = frontier.sub(new_dir);
-                            const elem = face[next_id.@"0"].get(@intCast(frontier.re), @intCast(frontier.im));
+                            const elem = face[next_id].get(@intCast(frontier.re), @intCast(frontier.im));
                             if (elem == ' ') break;
                         }
                         frontier = frontier.add(new_dir);
-                        if (face[next_id.@"0"].get(@intCast(frontier.re), @intCast(frontier.im)) == '#') break;
+                        if (face[next_id].get(@intCast(frontier.re), @intCast(frontier.im)) == '#') break;
                         direction = new_dir;
                         position = frontier;
-                        id = next_id.@"0";
+                        id = next_id;
                     },
                 }
             },
         }
     }
-    // std.debug.print("{any}\n", .{position});
-    // std.debug.print("{any}\n", .{direction});
+    std.debug.print("{any}\n", .{id});
+    std.debug.print("{any}\n", .{position});
+    std.debug.print("{any}\n", .{direction});
     const score: CT = if (direction.re == 0) @as(CT, if (direction.im == 1) 0 else 2) else if (direction.im == 1) 1 else 3;
     return 1000 * position.re + 4 * position.im + score;
 }
