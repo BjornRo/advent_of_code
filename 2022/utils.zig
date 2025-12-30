@@ -251,7 +251,7 @@ pub fn Bounds(comptime T: type) type {
     return struct {
         rows: T,
         cols: T,
-        fn within(self: @This(), row: T, col: T) bool {
+        pub fn within(self: @This(), row: T, col: T) bool {
             return 0 <= row and row < self.rows and 0 <= col and col < self.cols;
         }
     };
