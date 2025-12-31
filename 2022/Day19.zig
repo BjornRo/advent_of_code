@@ -59,7 +59,8 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
     defer visited.deinit();
 
     try states.append(alloc, .{ .bots = .{ 1, 0, 0, 0 }, .minerals = @splat(0) });
-    var max_geodes: u8 = 0;
+    var max_geode: u8 = 0;
+    var max_obsidian: u8 = 0;
     for (0..generations) |_| {
         defer {
             std.mem.swap(@TypeOf(states), &states, &next);
@@ -67,22 +68,27 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
         }
         for (states.items) |st| {
             const ore, const clay, const obsidian, const geode = st.minerals;
-            if (geode < max_geodes or (try visited.getOrPut(st)).found_existing) continue;
-            max_geodes = @max(max_geodes, geode);
+            if (geode < max_geode or (try visited.getOrPut(st)).found_existing) continue;
+            max_geode = @max(max_geode, geode);
+            max_obsidian = @max(max_obsidian, obsidian);
 
             const new_res = st.bots + st.minerals;
+            if (ore >= blueprint.geode_bot[0] and obsidian >= blueprint.geode_bot[2]) {
+                try next.append(alloc, .{ .bots = st.bots + Vec4{ 0, 0, 0, 1 }, .minerals = new_res - blueprint.geode_bot });
+                continue;
+            }
+            if (ore >= blueprint.obsidian_bot[0] and clay >= blueprint.obsidian_bot[1]) {
+                try next.append(alloc, .{ .bots = st.bots + Vec4{ 0, 0, 1, 0 }, .minerals = new_res - blueprint.obsidian_bot });
+                continue;
+            }
             if (ore >= blueprint.ore_bot[0])
                 try next.append(alloc, .{ .bots = st.bots + Vec4{ 1, 0, 0, 0 }, .minerals = new_res - blueprint.ore_bot });
             if (ore >= blueprint.clay_bot[0])
                 try next.append(alloc, .{ .bots = st.bots + Vec4{ 0, 1, 0, 0 }, .minerals = new_res - blueprint.clay_bot });
-            if (ore >= blueprint.obsidian_bot[0] and clay >= blueprint.obsidian_bot[1])
-                try next.append(alloc, .{ .bots = st.bots + Vec4{ 0, 0, 1, 0 }, .minerals = new_res - blueprint.obsidian_bot });
-            if (ore >= blueprint.geode_bot[0] and obsidian >= blueprint.geode_bot[2])
-                try next.append(alloc, .{ .bots = st.bots + Vec4{ 0, 0, 0, 1 }, .minerals = new_res - blueprint.geode_bot });
             try next.append(alloc, .{ .bots = st.bots, .minerals = new_res });
         }
     }
-    max_geodes = 0;
-    for (states.items) |state| max_geodes = @max(max_geodes, state.minerals[3]);
-    return max_geodes;
+    max_geode = 0;
+    for (states.items) |state| max_geode = @max(max_geode, state.minerals[3]);
+    return max_geode;
 }
