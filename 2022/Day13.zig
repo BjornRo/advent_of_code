@@ -69,40 +69,35 @@ pub fn main() !void {
     std.debug.print("Part 1: {d}\n", .{result.p1});
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
-fn comparer(alloc: Allocator, left: *ValueList, right: *ValueList) !?bool {
-    if (left.* == .value and right.* == .value) {
+fn comparer(alloc: Allocator, left: ValueList, right: ValueList) !?bool {
+    if (left == .value and right == .value) {
         if (left.value > right.value) return false;
         if (left.value < right.value) return true;
         return null;
-    } else if (left.* == .list and right.* == .list) {
+    } else if (left == .list and right == .list) {
         const l = left.list.items;
         const r = right.list.items;
         for (0..@max(l.len, r.len)) |i| {
             if (i >= l.len) return true;
             if (i >= r.len) return false;
-            if (try comparer(alloc, &l[i], &r[i])) |res| return res;
+            if (try comparer(alloc, l[i], r[i])) |res| return res;
         }
         return null;
-    } else if (left.* == .value) {
+    } else if (left == .value) {
         const list = try ValueList.initList(alloc);
-        try list.append(alloc, left.*);
+        try list.append(alloc, left);
         var vl = ValueList{ .list = list };
         defer vl.deinit(alloc);
-        return try comparer(alloc, &vl, right);
+        return try comparer(alloc, vl, right);
     }
     const list = try ValueList.initList(alloc);
-    try list.append(alloc, right.*);
+    try list.append(alloc, right);
     var vl = ValueList{ .list = list };
     defer vl.deinit(alloc);
-    return try comparer(alloc, left, &vl);
+    return try comparer(alloc, left, vl);
 }
-fn bubbleSort(alloc: Allocator, arr: []ValueList) !void {
-    const n = arr.len;
-    for (0..n) |i| for (0..n - i - 1) |j| {
-        const a = &arr[j];
-        const b = &arr[j + 1];
-        if (try comparer(alloc, a, b)) |res| if (!res) std.mem.swap(ValueList, a, b);
-    };
+fn cmp(alloc: Allocator, left: ValueList, right: ValueList) bool {
+    return (comparer(alloc, left, right) catch unreachable).?;
 }
 fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
     var list: std.ArrayList(ValueList) = .empty;
@@ -116,15 +111,15 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         var splitIter = std.mem.splitSequence(u8, data, "\n\n");
         while (splitIter.next()) |item| : (i += 1) {
             var rowIter = std.mem.splitScalar(u8, item, '\n');
-            var first = try ValueList.parse(alloc, rowIter.next().?);
-            var second = try ValueList.parse(alloc, rowIter.next().?);
-            if ((try comparer(alloc, &first, &second)).?) total_p1 += i;
+            const first = try ValueList.parse(alloc, rowIter.next().?);
+            const second = try ValueList.parse(alloc, rowIter.next().?);
+            if ((try comparer(alloc, first, second)).?) total_p1 += i;
             try list.append(alloc, first);
             try list.append(alloc, second);
         }
         try list.append(alloc, try ValueList.parse(alloc, "[[2]]"));
         try list.append(alloc, try ValueList.parse(alloc, "[[6]]"));
-        try bubbleSort(alloc, list.items);
+        std.mem.sortUnstable(ValueList, list.items, alloc, cmp);
     }
     var key_p2: usize = 1;
     for (list.items, 1..) |*v, i| {
