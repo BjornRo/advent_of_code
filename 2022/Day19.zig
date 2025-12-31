@@ -60,7 +60,6 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
 
     try states.append(alloc, .{ .bots = .{ 1, 0, 0, 0 }, .minerals = @splat(0) });
     var max_geode: u8 = 0;
-    var max_obsidian: u8 = 0;
     for (0..generations) |_| {
         defer {
             std.mem.swap(@TypeOf(states), &states, &next);
@@ -70,7 +69,6 @@ fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usi
             const ore, const clay, const obsidian, const geode = st.minerals;
             if (geode < max_geode or (try visited.getOrPut(st)).found_existing) continue;
             max_geode = @max(max_geode, geode);
-            max_obsidian = @max(max_obsidian, obsidian);
 
             const new_res = st.bots + st.minerals;
             if (ore >= blueprint.geode_bot[0] and obsidian >= blueprint.geode_bot[2]) {
