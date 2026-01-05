@@ -1,12 +1,19 @@
 const std = @import("std");
 const utils = @import("utils.zig");
-const Allocator = std.mem.Allocator;
 
-const Set = std.AutoHashMap(struct { isize, isize }, void);
+const Vec2 = @Vector(2, i16);
+const Set = std.AutoHashMap(Vec2, void);
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = if (@import("builtin").mode == .Debug)
+        .{ debug_allocator.allocator(), true }
+    else
+        .{ std.heap.smp_allocator, false };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d09.txt");
     defer alloc.free(data);
@@ -15,59 +22,23 @@ pub fn main() !void {
     std.debug.print("Part 2: {d}\n", .{try solve(alloc, data, 10)});
 }
 const Node = struct {
-    row: isize = 0,
-    col: isize = 0,
-    parent: ?*Self,
-    child: ?*Self,
+    pos: Vec2 = .{ 0, 0 },
+    idx: u8,
 
     const Self = @This();
-    fn init(alloc: Allocator, parent: ?*Self, child: ?*Self) !*Self {
-        var new = try alloc.create(Self);
-        new.parent = parent;
-        new.child = child;
-        return new;
+    fn follow(self: *Self, rope: []Self, i: u8) void {
+        const diff = rope[i].pos - self.pos;
+        if (@abs(diff[0]) > 1 or @abs(diff[1]) > 1) self.pos += std.math.sign(diff);
     }
-    fn deinit(self: *Self, alloc: Allocator) void {
-        if (self.child) |c| c.deinit(alloc);
-        alloc.destroy(self);
-    }
-    fn follow(self: *Self, p: *Self) void {
-        const dr = p.row - self.row;
-        const dc = p.col - self.col;
-        if (@abs(dr) > 1 or @abs(dc) > 1) {
-            self.row += std.math.sign(dr);
-            self.col += std.math.sign(dc);
-        }
-    }
-    fn right(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| self.follow(p) else self.col += 1;
-        if (self.child) |c| try c.right(visited) else try visited.put(.{ self.row, self.col }, {});
-    }
-    fn left(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| self.follow(p) else self.col -= 1;
-        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
-    }
-    fn up(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| self.follow(p) else self.row -= 1;
-        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
-    }
-    fn down(self: *Self, visited: *Set) !void {
-        if (self.parent) |p| self.follow(p) else self.row += 1;
-        if (self.child) |c| try c.left(visited) else try visited.put(.{ self.row, self.col }, {});
+    fn move(self: *Self, vis: *Set, rope: []Self, offset: Vec2) !void {
+        if (self.idx != 0) self.follow(rope, self.idx - 1) else self.pos += offset;
+        if (self.idx + 1 == rope.len) try vis.put(self.pos, {}) else try rope[self.idx + 1].move(vis, rope, offset);
     }
 };
-fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
-    const head = blk: {
-        const head = try Node.init(alloc, null, null);
-        var curr: ?*Node = head;
-        for (0..tail_len - 1) |_| {
-            const next = try Node.init(alloc, curr, null);
-            if (curr) |c| c.child = next;
-            curr = next;
-        }
-        break :blk head;
-    };
-    defer head.deinit(alloc);
+fn solve(alloc: std.mem.Allocator, data: []const u8, tail_len: u8) !usize {
+    var rope = try alloc.alloc(Node, tail_len);
+    defer alloc.free(rope);
+    for (0..tail_len) |i| rope[i] = .{ .idx = @truncate(i) };
 
     var visited = Set.init(alloc);
     defer visited.deinit();
@@ -76,12 +47,13 @@ fn solve(alloc: Allocator, data: []const u8, tail_len: usize) !usize {
     while (splitIter.next()) |item| {
         var rowIter = std.mem.splitScalar(u8, item, ' ');
         const dir = rowIter.next().?[0];
-        for (0..try std.fmt.parseUnsigned(u8, rowIter.next().?, 10)) |_| switch (dir) {
-            'R' => try head.right(&visited),
-            'L' => try head.left(&visited),
-            'U' => try head.up(&visited),
-            else => try head.down(&visited),
-        };
+        for (0..try std.fmt.parseUnsigned(u8, rowIter.next().?, 10)) |_|
+            try rope[0].move(&visited, rope, switch (dir) {
+                'R' => .{ 0, 1 },
+                'L' => .{ 0, -1 },
+                'U' => .{ -1, 0 },
+                else => .{ 1, 0 },
+            });
     }
     return visited.count();
 }
