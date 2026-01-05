@@ -45,15 +45,13 @@ fn solve(alloc: std.mem.Allocator, data: []const u8, tail_len: u8) !usize {
 
     var splitIter = std.mem.splitScalar(u8, data, '\n');
     while (splitIter.next()) |item| {
-        var rowIter = std.mem.splitScalar(u8, item, ' ');
-        const dir = rowIter.next().?[0];
-        for (0..try std.fmt.parseUnsigned(u8, rowIter.next().?, 10)) |_|
-            try rope[0].move(&visited, rope, switch (dir) {
-                'R' => .{ 0, 1 },
-                'L' => .{ 0, -1 },
-                'U' => .{ -1, 0 },
-                else => .{ 1, 0 },
-            });
+        const dir: Vec2 = switch (item[0]) {
+            'R' => .{ 0, 1 },
+            'L' => .{ 0, -1 },
+            'U' => .{ -1, 0 },
+            else => .{ 1, 0 },
+        };
+        for (0..try std.fmt.parseUnsigned(u8, item[2..], 10)) |_| try rope[0].move(&visited, rope, dir);
     }
     return visited.count();
 }
