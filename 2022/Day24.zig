@@ -41,12 +41,14 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
         };
         try blizzards.append(alloc, .{ .row = @intCast(i), .col = @intCast(j), .direction = dir });
     };
-    const result = try solver(alloc, &grid, blizzards.items, false);
+    const rows: u16 = @truncate(grid.rows - 1);
+    const cols: u16 = @truncate(grid.cols - 1);
+    const result = try solver(alloc, rows, cols, blizzards.items, false);
     return .{
         .p1 = result,
         .p2 = result +
-            try solver(alloc, &grid, blizzards.items, true) +
-            try solver(alloc, &grid, blizzards.items, false),
+            try solver(alloc, rows, cols, blizzards.items, true) +
+            try solver(alloc, rows, cols, blizzards.items, false),
     };
 }
 inline fn getCross(comptime T: type, row: T, col: T) [5][2]T {
@@ -75,18 +77,18 @@ inline fn updateBlizzards(map: *utils.Matrix, blizzards: []Blizzard) void {
         map.set(@intCast(b.row), @intCast(b.col), 1);
     }
 }
-fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end: bool) !usize {
-    var end: Pos = .{ .row = @intCast(grid.rows - 1), .col = @intCast(grid.cols - 2) };
+fn solver(alloc: Allocator, rows: u16, cols: u16, blizzards: []Blizzard, swap_end: bool) !usize {
+    var end: Pos = .{ .row = @intCast(rows), .col = @intCast(cols - 1) };
     var start: Pos = .{ .row = 0, .col = 1 };
     if (swap_end) std.mem.swap(Pos, &start, &end);
 
-    const elems = (grid.rows - 6) * (grid.cols - 6) - blizzards.len / 2;
+    const elems = (rows - 4) * (cols - 4) - blizzards.len / 2;
     var states: std.ArrayList(Pos) = try .initCapacity(alloc, elems);
     var next_states: @TypeOf(states) = try .initCapacity(alloc, elems);
     defer states.deinit(alloc);
     defer next_states.deinit(alloc);
 
-    var map = try utils.Matrix.empty(alloc, grid.rows, grid.cols);
+    var map = try utils.Matrix.empty(alloc, rows + 1, cols + 1);
     defer alloc.free(map.data);
 
     try states.append(alloc, start);
@@ -99,10 +101,9 @@ fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end
         updateBlizzards(&map, blizzards);
         for (states.items) |state| for (getCross(CT, state.row, state.col)) |delta| {
             if (delta[0] == end.row and delta[1] == end.col) return i;
-            if (!grid.inBounds(delta[0], delta[1])) continue;
-            const row: usize = @intCast(delta[0]);
-            const col: usize = @intCast(delta[1]);
-            if (grid.get(row, col) == '#') continue;
+            if (delta[0] <= 0 or delta[0] >= rows or delta[1] <= 0 or delta[1] >= cols) continue;
+            const row: u16 = @intCast(delta[0]);
+            const col: u16 = @intCast(delta[1]);
             const tile = map.get(row, col);
             if (tile >= 1) continue;
             map.set(row, col, tile | 2);
