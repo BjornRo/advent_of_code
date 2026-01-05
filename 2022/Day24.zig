@@ -49,7 +49,7 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
             try solver(alloc, &grid, blizzards.items, false),
     };
 }
-pub fn getCross(comptime T: type, row: T, col: T) [5][2]T {
+inline fn getCross(comptime T: type, row: T, col: T) [5][2]T {
     return @bitCast([10]T{ row + 1, col, row, col + 1, row - 1, col, row, col - 1, row, col });
 }
 inline fn updateBlizzards(map: *utils.Matrix, blizzards: []Blizzard) void {
