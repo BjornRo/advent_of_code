@@ -31,7 +31,7 @@ const Node = struct {
         if (@abs(diff[0]) > 1 or @abs(diff[1]) > 1) self.pos += std.math.sign(diff);
     }
     fn move(self: *Self, vis: *Set, rope: []Self, offset: Vec2) !void {
-        if (self.idx != 0) self.follow(rope) else self.pos += offset;
+        if (self.idx == 0) self.pos += offset else self.follow(rope);
         if (self.idx + 1 == rope.len) try vis.put(self.pos, {}) else try rope[self.idx + 1].move(vis, rope, offset);
     }
 };
