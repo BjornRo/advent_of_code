@@ -89,7 +89,7 @@ fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end
     defer alloc.free(map.data);
 
     try states.append(alloc, start);
-    for (0..1000) |i| {
+    for (1..1000) |i| {
         defer {
             std.mem.swap(@TypeOf(states), &states, &next_states);
             next_states.clearRetainingCapacity();
@@ -97,7 +97,7 @@ fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end
         }
         updateBlizzards(&map, blizzards);
         for (states.items) |state| for (getCross(CT, state.row, state.col)) |delta| {
-            if (delta[0] == end.row and delta[1] == end.col) return i + 1;
+            if (delta[0] == end.row and delta[1] == end.col) return i;
             if (!grid.inBounds(delta[0], delta[1])) continue;
             const row: usize = @intCast(delta[0]);
             const col: usize = @intCast(delta[1]);
