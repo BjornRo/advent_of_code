@@ -1,11 +1,16 @@
 const std = @import("std");
 const utils = @import("utils.zig");
-const Allocator = std.mem.Allocator;
-
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = if (@import("builtin").mode == .Debug)
+        .{ debug_allocator.allocator(), true }
+    else
+        .{ std.heap.smp_allocator, false };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d01.txt");
     defer alloc.free(data);
@@ -15,22 +20,20 @@ pub fn main() !void {
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
 
-fn solve(allocator: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
-    var calories = std.ArrayList(usize){};
+fn solve(allocator: std.mem.Allocator, data: []const u8) !struct { p1: u32, p2: u32 } {
+    var calories: std.ArrayList(u32) = .empty;
     defer calories.deinit(allocator);
 
     var splitIter = std.mem.splitScalar(u8, data, '\n');
-    var subSum: usize = 0;
+    var subSum: u32 = 0;
     while (splitIter.next()) |item| {
         if (item.len == 0) {
             try calories.append(allocator, subSum);
             subSum = 0;
-            continue;
-        }
-        subSum += try std.fmt.parseUnsigned(usize, item, 10);
+        } else subSum += try std.fmt.parseUnsigned(u32, item, 10);
     }
-    if (subSum != 0) try calories.append(allocator, subSum);
+    try calories.append(allocator, subSum);
 
-    std.mem.sortUnstable(usize, calories.items, {}, comptime std.sort.desc(usize));
-    return .{ .p1 = calories.items[0], .p2 = utils.sum(calories.items[0..3]) };
+    std.mem.sortUnstable(u32, calories.items, {}, comptime std.sort.desc(u32));
+    return .{ .p1 = calories.items[0], .p2 = @reduce(.Add, @as(@Vector(3, u32), calories.items[0..3].*)) };
 }
