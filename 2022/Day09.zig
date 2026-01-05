@@ -26,12 +26,12 @@ const Node = struct {
     idx: u8,
 
     const Self = @This();
-    fn follow(self: *Self, rope: []Self, i: u8) void {
-        const diff = rope[i].pos - self.pos;
+    fn follow(self: *Self, rope: []Self) void {
+        const diff = rope[self.idx - 1].pos - self.pos;
         if (@abs(diff[0]) > 1 or @abs(diff[1]) > 1) self.pos += std.math.sign(diff);
     }
     fn move(self: *Self, vis: *Set, rope: []Self, offset: Vec2) !void {
-        if (self.idx != 0) self.follow(rope, self.idx - 1) else self.pos += offset;
+        if (self.idx != 0) self.follow(rope) else self.pos += offset;
         if (self.idx + 1 == rope.len) try vis.put(self.pos, {}) else try rope[self.idx + 1].move(vis, rope, offset);
     }
 };
