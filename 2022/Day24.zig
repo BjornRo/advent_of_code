@@ -41,14 +41,18 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
         };
         try blizzards.append(alloc, .{ .row = @intCast(i), .col = @intCast(j), .direction = dir });
     };
+
     const rows: u16 = @truncate(grid.rows - 1);
     const cols: u16 = @truncate(grid.cols - 1);
-    const result = try solver(alloc, rows, cols, blizzards.items, false);
+    var map = try utils.Matrix.empty(alloc, grid.rows, grid.cols);
+    defer alloc.free(map.data);
+
+    const result = try solver(alloc, &map, rows, cols, blizzards.items, false);
     return .{
         .p1 = result,
         .p2 = result +
-            try solver(alloc, rows, cols, blizzards.items, true) +
-            try solver(alloc, rows, cols, blizzards.items, false),
+            try solver(alloc, &map, rows, cols, blizzards.items, true) +
+            try solver(alloc, &map, rows, cols, blizzards.items, false),
     };
 }
 inline fn getCross(comptime T: type, row: T, col: T) [5][2]T {
@@ -57,27 +61,15 @@ inline fn getCross(comptime T: type, row: T, col: T) [5][2]T {
 inline fn updateBlizzards(map: *utils.Matrix, blizzards: []Blizzard) void {
     for (blizzards) |*b| {
         switch (b.direction) {
-            .N => {
-                b.row -= 1;
-                if (b.row == 0) b.row = @intCast(map.rows - 2);
-            },
-            .S => {
-                b.row += 1;
-                if (b.row == map.rows - 1) b.row = 1;
-            },
-            .W => {
-                b.col -= 1;
-                if (b.col == 0) b.col = @intCast(map.cols - 2);
-            },
-            .E => {
-                b.col += 1;
-                if (b.col == map.cols - 1) b.col = 1;
-            },
+            .N => b.row = if (b.row == 1) @intCast(map.rows - 2) else b.row - 1,
+            .S => b.row = if (b.row == map.rows - 2) 1 else b.row + 1,
+            .W => b.col = if (b.col == 1) @intCast(map.cols - 2) else b.col - 1,
+            .E => b.col = if (b.col == map.cols - 2) 1 else b.col + 1,
         }
         map.set(@intCast(b.row), @intCast(b.col), 1);
     }
 }
-fn solver(alloc: Allocator, rows: u16, cols: u16, blizzards: []Blizzard, swap_end: bool) !usize {
+fn solver(alloc: Allocator, map: *utils.Matrix, rows: u16, cols: u16, blizzards: []Blizzard, swap_end: bool) !usize {
     var end: Pos = .{ .row = @intCast(rows), .col = @intCast(cols - 1) };
     var start: Pos = .{ .row = 0, .col = 1 };
     if (swap_end) std.mem.swap(Pos, &start, &end);
@@ -88,27 +80,20 @@ fn solver(alloc: Allocator, rows: u16, cols: u16, blizzards: []Blizzard, swap_en
     defer states.deinit(alloc);
     defer next_states.deinit(alloc);
 
-    var map = try utils.Matrix.empty(alloc, rows + 1, cols + 1);
-    defer alloc.free(map.data);
-
     try states.append(alloc, start);
     for (1..1000) |i| {
-        defer {
-            std.mem.swap(@TypeOf(states), &states, &next_states);
-            next_states.clearRetainingCapacity();
-            @memset(map.data, 0);
-        }
-        updateBlizzards(&map, blizzards);
+        defer @memset(map.data, 0);
+        updateBlizzards(map, blizzards);
         for (states.items) |state| for (getCross(CT, state.row, state.col)) |delta| {
             if (delta[0] == end.row and delta[1] == end.col) return i;
             if (delta[0] <= 0 or delta[0] >= rows or delta[1] <= 0 or delta[1] >= cols) continue;
-            const row: u16 = @intCast(delta[0]);
-            const col: u16 = @intCast(delta[1]);
-            const tile = map.get(row, col);
+            const tile = map.get(@intCast(delta[0]), @intCast(delta[1]));
             if (tile >= 1) continue;
-            map.set(row, col, tile | 2);
+            map.set(@intCast(delta[0]), @intCast(delta[1]), tile | 2);
             next_states.appendAssumeCapacity(.{ .row = delta[0], .col = delta[1] });
         };
+        std.mem.swap(@TypeOf(states), &states, &next_states);
+        next_states.clearRetainingCapacity();
     }
     return 0;
 }
