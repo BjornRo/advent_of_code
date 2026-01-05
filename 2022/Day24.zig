@@ -80,8 +80,9 @@ fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end
     var start: Pos = .{ .row = 0, .col = 1 };
     if (swap_end) std.mem.swap(Pos, &start, &end);
 
-    var states: std.ArrayList(Pos) = .empty;
-    var next_states: @TypeOf(states) = .empty;
+    const elems = (grid.rows - 6) * (grid.cols - 6) - blizzards.len / 2;
+    var states: std.ArrayList(Pos) = try .initCapacity(alloc, elems);
+    var next_states: @TypeOf(states) = try .initCapacity(alloc, elems);
     defer states.deinit(alloc);
     defer next_states.deinit(alloc);
 
@@ -105,7 +106,7 @@ fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end
             const tile = map.get(row, col);
             if (tile >= 1) continue;
             map.set(row, col, tile | 2);
-            try next_states.append(alloc, .{ .row = delta[0], .col = delta[1] });
+            next_states.appendAssumeCapacity(.{ .row = delta[0], .col = delta[1] });
         };
     }
     return 0;
