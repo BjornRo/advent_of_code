@@ -6,10 +6,17 @@ const CT = i16;
 const Pos = struct { row: CT, col: CT };
 const Direction = enum { N, S, E, W };
 const Blizzard = struct { row: CT, col: CT, direction: Direction };
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = if (@import("builtin").mode == .Debug)
+        .{ debug_allocator.allocator(), true }
+    else
+        .{ std.heap.smp_allocator, false };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d24.txt");
     defer alloc.free(data);
@@ -25,50 +32,50 @@ fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
 
     for (1..grid.rows - 1) |i| for (1..grid.cols - 1) |j| {
         const elem = grid.get(i, j);
-        if (elem != '.') {
-            const dir: Direction = switch (elem) {
-                '^' => .N,
-                'v' => .S,
-                '<' => .W,
-                else => .E,
-            };
-            try blizzards.append(alloc, .{ .row = @intCast(i), .col = @intCast(j), .direction = dir });
-        }
+        if (elem == '.') continue;
+        const dir: Direction = switch (elem) {
+            '^' => .N,
+            'v' => .S,
+            '<' => .W,
+            else => .E,
+        };
+        try blizzards.append(alloc, .{ .row = @intCast(i), .col = @intCast(j), .direction = dir });
     };
-    const result = try solver(alloc, grid, blizzards.items, false);
+    const result = try solver(alloc, &grid, blizzards.items, false);
     return .{
         .p1 = result,
-        .p2 = result + 2 +
-            try solver(alloc, grid, blizzards.items, true) +
-            try solver(alloc, grid, blizzards.items, false),
+        .p2 = result +
+            try solver(alloc, &grid, blizzards.items, true) +
+            try solver(alloc, &grid, blizzards.items, false),
     };
 }
 pub fn getCross(comptime T: type, row: T, col: T) [5][2]T {
     return @bitCast([10]T{ row + 1, col, row, col + 1, row - 1, col, row, col - 1, row, col });
 }
-fn updateBlizzards(blizzards: []Blizzard, row: CT, col: CT) void {
+inline fn updateBlizzards(map: *utils.Matrix, blizzards: []Blizzard) void {
     for (blizzards) |*b| {
         switch (b.direction) {
             .N => {
                 b.row -= 1;
-                if (b.row == 0) b.row = row - 2;
+                if (b.row == 0) b.row = @intCast(map.rows - 2);
             },
             .S => {
                 b.row += 1;
-                if (b.row == row - 1) b.row = 1;
+                if (b.row == map.rows - 1) b.row = 1;
             },
             .W => {
                 b.col -= 1;
-                if (b.col == 0) b.col = col - 2;
+                if (b.col == 0) b.col = @intCast(map.cols - 2);
             },
             .E => {
                 b.col += 1;
-                if (b.col == col - 1) b.col = 1;
+                if (b.col == map.cols - 1) b.col = 1;
             },
         }
+        map.set(@intCast(b.row), @intCast(b.col), 1);
     }
 }
-fn solver(alloc: Allocator, grid: utils.Matrix, blizzards: []Blizzard, swap_end: bool) !usize {
+fn solver(alloc: Allocator, grid: *utils.Matrix, blizzards: []Blizzard, swap_end: bool) !usize {
     var end: Pos = .{ .row = @intCast(grid.rows - 1), .col = @intCast(grid.cols - 2) };
     var start: Pos = .{ .row = 0, .col = 1 };
     if (swap_end) std.mem.swap(Pos, &start, &end);
@@ -78,31 +85,28 @@ fn solver(alloc: Allocator, grid: utils.Matrix, blizzards: []Blizzard, swap_end:
     defer states.deinit(alloc);
     defer next_states.deinit(alloc);
 
-    var visited: std.AutoHashMap(Pos, void) = .init(alloc);
-    defer visited.deinit();
+    var map = try utils.Matrix.empty(alloc, grid.rows, grid.cols);
+    defer alloc.free(map.data);
 
     try states.append(alloc, start);
     for (0..1000) |i| {
         defer {
             std.mem.swap(@TypeOf(states), &states, &next_states);
             next_states.clearRetainingCapacity();
-            visited.clearRetainingCapacity();
+            @memset(map.data, 0);
         }
-        updateBlizzards(blizzards, @intCast(grid.rows), @intCast(grid.cols));
-        for (states.items) |state| {
-            if (std.meta.eql(state, end)) return i;
-            if ((try visited.getOrPut(state)).found_existing) continue;
-            for (getCross(CT, state.row, state.col)) |delta| {
-                const row = delta[0];
-                const col = delta[1];
-                if (grid.inBounds(row, col)) {
-                    if (grid.get(@intCast(row), @intCast(col)) == '#') continue;
-                    for (blizzards) |b| {
-                        if (b.row == row and b.col == col) break;
-                    } else try next_states.append(alloc, .{ .row = row, .col = col });
-                }
-            }
-        }
+        updateBlizzards(&map, blizzards);
+        for (states.items) |state| for (getCross(CT, state.row, state.col)) |delta| {
+            if (delta[0] == end.row and delta[1] == end.col) return i + 1;
+            if (!grid.inBounds(delta[0], delta[1])) continue;
+            const row: usize = @intCast(delta[0]);
+            const col: usize = @intCast(delta[1]);
+            if (grid.get(row, col) == '#') continue;
+            const tile = map.get(row, col);
+            if (tile >= 1) continue;
+            map.set(row, col, tile | 2);
+            try next_states.append(alloc, .{ .row = delta[0], .col = delta[1] });
+        };
     }
     return 0;
 }
