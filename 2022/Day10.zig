@@ -24,20 +24,20 @@ pub fn main() !void {
     std.debug.print("Part 2:\n", .{});
     for (result.p2) |row| std.debug.print("{s}\n", .{row});
 }
-fn solve(alloc: std.mem.Allocator, data: []const u8) !struct { p1: isize, p2: CRT } {
+fn solve(alloc: std.mem.Allocator, data: []const u8) !struct { p1: i16, p2: CRT } {
     var rows = std.mem.splitScalar(u8, data, '\n');
-    var program: std.ArrayList(?isize) = .empty;
+    var program: std.ArrayList(?i16) = .empty;
     defer program.deinit(alloc);
-    while (rows.next()) |item| try program.append(alloc, if (utils.firstNumber(isize, 0, item)) |v| v.value else null);
+    while (rows.next()) |item| try program.append(alloc, if (utils.firstNumber(i16, 0, item)) |v| v.value else null);
 
-    var __part1: [7]isize = .{ -1, 220, 180, 140, 100, 60, 20 };
-    var p1cycles: std.ArrayList(isize) = .fromOwnedSlice(&__part1);
+    var __part1: [7]i16 = .{ -1, 220, 180, 140, 100, 60, 20 };
+    var p1cycles: std.ArrayList(i16) = .fromOwnedSlice(&__part1);
     var buf: [WIDTH * HEIGHT]u8 = undefined;
     var screen: std.ArrayList(u8) = .initBuffer(&buf);
 
-    var total_p1: isize = 0;
-    var cycles: isize = 0;
-    var reg: isize = 1;
+    var total_p1: i16 = 0;
+    var cycles: i16 = 0;
+    var reg: i16 = 1;
     while (cycles < WIDTH * HEIGHT) for (program.items) |op| {
         screen.appendAssumeCapacity(if (@abs(@mod(cycles, WIDTH) - reg) <= 1) '#' else ' ');
         cycles += 1;
