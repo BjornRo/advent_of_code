@@ -35,11 +35,10 @@ fn convert(row: []const u8) isize {
     return total;
 }
 fn toSnafu(alloc: Allocator, value: isize) ![]u8 {
-    var val = value;
-
     var list: std.ArrayList(u8) = .empty;
     defer list.deinit(alloc);
 
+    var val = value;
     while (val != 0) {
         const n: u8 = @intCast(@mod(val, 5));
         var fac: isize = n;
