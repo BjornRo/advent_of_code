@@ -16,10 +16,10 @@ const HashCtx = struct {
 const GraphValue = struct { flow: u12, valves: BitSet };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    const alloc, const is_debug = if (@import("builtin").mode == .Debug)
-        .{ debug_allocator.allocator(), true }
-    else
-        .{ std.heap.smp_allocator, false };
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
     const start = std.time.microTimestamp();
     defer {
         std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
@@ -45,7 +45,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
             while (split_iter.next()) |*e| : (k += 1) {
                 const i = if (std.mem.lastIndexOf(u8, e.*, "valve ")) |i| i else std.mem.lastIndexOf(u8, e.*, "valves ").? + 1;
                 const key = e.*[6..8][0..2].*;
-                try parsing_step.append(alloc, .{ .key = key, .flow = utils.firstNumber(u12, 10, e.*).?.value, .neighbors = e.*[i + 6 ..] });
+                try parsing_step.append(alloc, .{ .key = key, .flow = utils.firstNumber(u12, 10, e.*).value.?, .neighbors = e.*[i + 6 ..] });
                 try map.put(key, k);
             }
         }
