@@ -19,10 +19,17 @@ const Point = struct {
     }
 };
 const Pair = struct { i64, i64 };
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d15.txt");
     defer alloc.free(data);
@@ -54,7 +61,7 @@ fn part1(alloc: Allocator, pairs: []Points) !usize {
     for (pairs) |pair| {
         const sensor, const beacon = pair;
         const distance = sensor.manhattan(beacon);
-        const drow: i64 = sensor.deltaRow(row);
+        const drow = sensor.deltaRow(row);
         if (drow > distance) continue;
 
         const delta = distance - drow;
@@ -68,12 +75,15 @@ fn part1(alloc: Allocator, pairs: []Points) !usize {
     return cols.count();
 }
 fn part2(alloc: Allocator, pairs: []Points) !i64 {
-    var intervals: std.ArrayList(Pair) = .empty;
+    var intervals: std.ArrayList(Pair) = try .initCapacity(alloc, 20);
+    var merged: std.ArrayList(Pair) = try .initCapacity(alloc, 20);
     defer intervals.deinit(alloc);
+    defer merged.deinit(alloc);
 
     const max: i64 = 4000000;
     for (0..@intCast(max + 1)) |row| {
         intervals.clearRetainingCapacity();
+        merged.clearRetainingCapacity();
 
         for (pairs) |pair| {
             const sensor, const beacon = pair;
@@ -82,18 +92,17 @@ fn part2(alloc: Allocator, pairs: []Points) !i64 {
             if (drow > distance) continue;
 
             const delta = distance - drow;
-            try intervals.append(alloc, .{
+            intervals.appendAssumeCapacity(.{
                 @max(0, sensor.col - delta),
                 @min(max, sensor.col + delta),
             });
         }
-        const res = try mergeIntervals(alloc, intervals.items);
-        defer alloc.free(res);
-        if (res.len != 2 or res[1].@"0" - res[0].@"1" != 2) continue;
-        const candidate_row = @divFloor(res[1].@"0" + res[0].@"1", 2);
+        mergeIntervals(&merged, intervals.items);
+        if (merged.items.len != 2 or merged.items[1].@"0" - merged.items[0].@"1" != 2) continue;
+        const candidate_row = @divFloor(merged.items[1].@"0" + merged.items[0].@"1", 2);
         const irow: i64 = @intCast(row);
         if (isCovered(pairs, irow - 1, candidate_row) and isCovered(pairs, irow + 1, candidate_row))
-            return irow + 4000000 * candidate_row;
+            return irow + max * candidate_row;
     }
     return -1;
 }
@@ -108,20 +117,16 @@ fn isCovered(pairs: []Points, row: i64, col: i64) bool {
 fn compare(_: void, lhs: Pair, rhs: Pair) bool {
     return lhs.@"0" < rhs.@"0";
 }
-fn mergeIntervals(alloc: Allocator, intervals: []Pair) ![]Pair {
-    std.mem.sortUnstable(Pair, intervals, {}, compare);
-
-    var merged: std.ArrayList(Pair) = .empty;
-    defer merged.deinit(alloc);
+fn mergeIntervals(list: *std.ArrayList(Pair), intervals: []Pair) void {
+    std.mem.sort(Pair, intervals, {}, compare);
 
     var current = intervals[0];
     for (intervals[1..]) |ival|
         if (ival.@"0" <= current.@"1" + 1) {
             current.@"1" = @max(current.@"1", ival.@"1");
         } else {
-            try merged.append(alloc, current);
+            list.appendAssumeCapacity(current);
             current = ival;
         };
-    try merged.append(alloc, current);
-    return merged.toOwnedSlice(alloc);
+    list.appendAssumeCapacity(current);
 }
