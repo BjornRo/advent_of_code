@@ -1,6 +1,5 @@
 const std = @import("std");
 const utils = @import("utils.zig");
-const Allocator = std.mem.Allocator;
 
 const WIDTH = 40;
 const HEIGHT = 6;
@@ -25,7 +24,7 @@ pub fn main() !void {
     std.debug.print("Part 2:\n", .{});
     for (result.p2) |row| std.debug.print("{s}\n", .{row});
 }
-fn solve(alloc: Allocator, data: []const u8) !struct { p1: isize, p2: CRT } {
+fn solve(alloc: std.mem.Allocator, data: []const u8) !struct { p1: isize, p2: CRT } {
     var rows = std.mem.splitScalar(u8, data, '\n');
     var program: std.ArrayList(?isize) = .empty;
     defer program.deinit(alloc);
