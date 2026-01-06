@@ -1,26 +1,32 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
-const Deque = @import("deque.zig").Deque;
 
 const Point = struct {
-    row: u32 = 0,
-    col: u32 = 0,
+    row: u16 = 0,
+    col: u16 = 0,
     const Self = @This();
     fn unpack(self: Self) [2]@TypeOf(self.row) {
         return .{ self.row, self.col };
     }
     fn parse(s: []const u8) Self {
-        var iter: utils.NumberIter(u32) = .{ .string = s };
+        var iter: utils.NumberIter(@TypeOf((Self{}).row)) = .{ .string = s };
         const col = iter.next().?;
         const row = iter.next().?;
         return .{ .row = row, .col = col };
     }
 };
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d14.txt");
     defer alloc.free(data);
@@ -29,11 +35,7 @@ pub fn main() !void {
     std.debug.print("Part 2: {d}\n", .{try solve(alloc, data, true) + 1});
 }
 fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: Point, list: []?Point } {
-    var start: Point = .{ .row = 0, .col = 500 };
-    var min: Point = .{
-        .row = std.math.maxInt(@TypeOf((Point{}).row)),
-        .col = std.math.maxInt(@TypeOf((Point{}).row)),
-    };
+    var min: Point = .{ .row = std.math.maxInt(@TypeOf((Point{}).row)), .col = std.math.maxInt(@TypeOf((Point{}).row)) };
     var max: Point = .{ .row = 0, .col = 0 };
 
     const list = blk: {
@@ -56,7 +58,6 @@ fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: P
         break :blk try list.toOwnedSlice(alloc);
     };
 
-    start.col -= min.col;
     for (list) |*p|
         if (p.*) |*point| {
             point.col -= min.col;
@@ -67,7 +68,7 @@ fn parse(alloc: Allocator, data: []const u8) !struct { grid_dim: Point, start: P
             .row = max.row - min.row,
             .col = max.col - min.col,
         },
-        .start = start,
+        .start = .{ .row = 0, .col = 500 - min.col },
         .list = list,
     };
 }
@@ -96,12 +97,12 @@ fn solve(alloc: Allocator, data: []const u8, part2: bool) !usize {
     while (true) {
         var settled = true;
         const row, const col = parsed.start.unpack();
-        var drow: i64 = @intCast(row);
-        var dcol: i64 = @intCast(col);
+        var drow: i16 = @intCast(row);
+        var dcol: i16 = @intCast(col);
         while (true) : (drow += 1) {
             if (!matrix.inBounds(drow, dcol)) break;
             if (matrix.get(@intCast(drow), @intCast(dcol)) != 0) {
-                for ([2]i64{ -1, 1 }) |delta| {
+                for ([2]i16{ -1, 1 }) |delta| {
                     if (!matrix.inBounds(drow, dcol + delta)) break;
                     if (matrix.get(@intCast(drow), @intCast(dcol + delta)) == 0) {
                         dcol += delta;
@@ -117,5 +118,15 @@ fn solve(alloc: Allocator, data: []const u8, part2: bool) !usize {
         if (settled or (part2 and drow == 0)) break;
         matrix.set(@intCast(drow), @intCast(dcol), 'o');
     }
-    return std.mem.count(u8, matrix.data, "o");
+    const len = std.simd.suggestVectorLength(u8).?;
+    const Vec = @Vector(len, u8);
+    const needles: Vec = @splat('o');
+    var count: u32 = 0;
+    var i: u32 = 0;
+    while (i + len <= matrix.data.len) : (i += len)
+        count += @popCount(@as(std.meta.Int(.unsigned, len), @bitCast(@as(Vec, matrix.data[i..][0..len].*) == needles)));
+    while (i < matrix.data.len) : (i += 1) {
+        if (matrix.data[i] == 'o') count += 1;
+    }
+    return count;
 }
