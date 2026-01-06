@@ -5,23 +5,13 @@ const Allocator = std.mem.Allocator;
 const List = std.ArrayList(ValueList);
 const ValueList = union(enum) {
     value: u8,
-    list: *List,
+    list: List,
 
     const Self = @This();
-    fn initList(alloc: Allocator) !*List {
-        const list = try alloc.create(List);
-        list.* = .empty;
-        return list;
-    }
     fn deinit(self: *Self, alloc: Allocator) void {
-        switch (self.*) {
-            .value => {},
-            .list => |l| {
-                for (l.items) |*item| item.deinit(alloc);
-                l.deinit(alloc);
-                alloc.destroy(l);
-            },
-        }
+        if (self.* == .value) return;
+        for (self.list.items) |*item| item.deinit(alloc);
+        self.list.deinit(alloc);
     }
     fn parse(alloc: Allocator, s: []const u8) !Self {
         var index: usize = 0;
@@ -31,21 +21,21 @@ const ValueList = union(enum) {
         while (i.* < s.len and s[i.*] == ',') : (i.* += 1) {}
         if (s[i.*] == '[') {
             i.* += 1;
-            var inner_list = try Self.initList(alloc);
+            var new: Self = .{ .list = .empty };
             while (i.* < s.len and s[i.*] != ']') {
-                try inner_list.append(alloc, try __parse(alloc, s, i));
+                try new.list.append(alloc, try __parse(alloc, s, i));
                 while (i.* < s.len and (s[i.*] == ',')) : (i.* += 1) {}
             }
             i.* += 1;
-            return Self{ .list = inner_list };
+            return new;
         }
         const start = i.*;
         while (i.* < s.len and s[i.*] >= '0' and s[i.*] <= '9') : (i.* += 1) {}
         const num = std.fmt.parseInt(u8, s[start..i.*], 10) catch unreachable;
         return Self{ .value = num };
     }
-    fn print(self: *Self, depth: usize) void {
-        if (self.* == .value) std.debug.print("{}", .{self.value}) else {
+    fn print(self: Self, depth: usize) void {
+        if (self == .value) std.debug.print("{}", .{self.value}) else {
             const items = self.list.items;
             std.debug.print("[", .{});
             for (items, 0..) |*item, i| {
@@ -57,10 +47,17 @@ const ValueList = union(enum) {
         if (depth == 0) std.debug.print("\n", .{});
     }
 };
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d13.txt");
     defer alloc.free(data);
@@ -84,15 +81,13 @@ fn comparer(alloc: Allocator, left: ValueList, right: ValueList) !?bool {
         }
         return null;
     } else if (left == .value) {
-        const list = try ValueList.initList(alloc);
-        try list.append(alloc, left);
-        var vl = ValueList{ .list = list };
+        var vl = ValueList{ .list = .empty };
+        try vl.list.append(alloc, left);
         defer vl.deinit(alloc);
         return try comparer(alloc, vl, right);
     }
-    const list = try ValueList.initList(alloc);
-    try list.append(alloc, right);
-    var vl = ValueList{ .list = list };
+    var vl = ValueList{ .list = .empty };
+    try vl.list.append(alloc, right);
     defer vl.deinit(alloc);
     return try comparer(alloc, left, vl);
 }
@@ -111,11 +106,9 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
         var splitIter = std.mem.splitSequence(u8, data, "\n\n");
         while (splitIter.next()) |item| : (i += 1) {
             var rowIter = std.mem.splitScalar(u8, item, '\n');
-            const first = try ValueList.parse(alloc, rowIter.next().?);
-            const second = try ValueList.parse(alloc, rowIter.next().?);
-            if ((try comparer(alloc, first, second)).?) total_p1 += i;
-            try list.append(alloc, first);
-            try list.append(alloc, second);
+            try list.append(alloc, try ValueList.parse(alloc, rowIter.next().?));
+            try list.append(alloc, try ValueList.parse(alloc, rowIter.next().?));
+            if ((try comparer(alloc, list.items[list.items.len - 2], list.getLast())).?) total_p1 += i;
         }
         try list.append(alloc, try ValueList.parse(alloc, "[[2]]"));
         try list.append(alloc, try ValueList.parse(alloc, "[[6]]"));

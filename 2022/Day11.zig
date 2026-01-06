@@ -6,11 +6,11 @@ const Allocator = std.mem.Allocator;
 const Entity = struct {
     items: Deque(i64),
     op: enum { Add, Mul },
-    cons: ?i64,
-    @"test": i64,
-    rtrue: usize,
-    rfalse: usize,
-    inspect: usize,
+    cons: ?i8,
+    @"test": i8,
+    rtrue: u8,
+    rfalse: u8,
+    inspect: u32,
 
     const Self = @This();
     fn throw(self: *Self, modulo: ?i64) ?struct { index: usize, value: i64 } {
@@ -33,44 +33,46 @@ const Entity = struct {
         }
         return null;
     }
-    fn init(alloc: Allocator, raw_str: []const u8) !*Self {
-        var new = try alloc.create(Self);
+    fn init(alloc: Allocator, raw_str: []const u8) !Self {
+        var new: Self = undefined;
         new.inspect = 0;
-        new.items = try .init(alloc);
         var row_iter = std.mem.splitScalar(u8, raw_str, '\n');
         _ = row_iter.next();
-        var item_iter = utils.NumberIter(i64){ .string = row_iter.next().? };
+        new.items = try .init(alloc);
+        var item_iter = utils.NumberIter(@TypeOf(new.items.buf[0])){ .string = row_iter.next().? };
         while (item_iter.next()) |value| try new.items.pushBack(value);
         const op_row = row_iter.next().?;
         new.op = if (std.mem.containsAtLeastScalar(u8, op_row, 1, '+')) .Add else .Mul;
-        new.cons = if (utils.firstNumber(i64, 0, op_row)) |s| s.value else null;
-        new.@"test" = utils.firstNumber(i64, 0, row_iter.next().?).?.value;
-        new.rtrue = utils.firstNumber(usize, 0, row_iter.next().?).?.value;
-        new.rfalse = utils.firstNumber(usize, 0, row_iter.next().?).?.value;
+        new.cons = utils.firstNumber(@TypeOf(new.cons.?), 0, op_row).value;
+        new.@"test" = utils.firstNumber(@TypeOf(new.@"test"), 0, row_iter.next().?).value.?;
+        new.rtrue = utils.firstNumber(@TypeOf(new.rtrue), 0, row_iter.next().?).value.?;
+        new.rfalse = utils.firstNumber(@TypeOf(new.rfalse), 0, row_iter.next().?).value.?;
         return new;
     }
-    fn deinit(self: *Self, alloc: Allocator) void {
-        self.items.deinit();
-        alloc.destroy(self);
-    }
 };
-
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    var da = std.heap.DebugAllocator(.{}).init;
-    const alloc = da.allocator();
-    defer _ = da.deinit();
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
+    const start = std.time.microTimestamp();
+    defer {
+        std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
+        if (is_debug) _ = debug_allocator.deinit();
+    }
 
     const data = try utils.read(alloc, "in/d11.txt");
     defer alloc.free(data);
 
-    std.debug.print("Part 1: {d}\n", .{try solve_p1(alloc, data, false)});
-    std.debug.print("Part 2: {d}\n", .{try solve_p1(alloc, data, true)});
+    std.debug.print("Part 1: {d}\n", .{try solver(alloc, data, false)});
+    std.debug.print("Part 2: {d}\n", .{try solver(alloc, data, true)});
 }
 
-fn solve_p1(alloc: Allocator, data: []const u8, p2: bool) !usize {
-    var monkeys: std.ArrayList(*Entity) = .empty;
+fn solver(alloc: Allocator, data: []const u8, p2: bool) !usize {
+    var monkeys: std.ArrayList(Entity) = .empty;
     defer {
-        for (monkeys.items) |m| m.deinit(alloc);
+        for (monkeys.items) |m| m.items.deinit();
         monkeys.deinit(alloc);
     }
 
@@ -83,10 +85,8 @@ fn solve_p1(alloc: Allocator, data: []const u8, p2: bool) !usize {
         for (monkeys.items) |m| modulo.? *= m.@"test";
     }
 
-    for (0..if (p2) 10000 else 20) |_|
-        for (monkeys.items) |m|
-            while (m.throw(modulo)) |res|
-                try monkeys.items[res.index].items.pushBack(res.value);
+    for (0..if (p2) 10000 else 20) |_| for (monkeys.items) |*m| while (m.throw(modulo)) |res|
+        try monkeys.items[res.index].items.pushBack(res.value);
 
     var max1: usize = 0;
     var max2: usize = 0;

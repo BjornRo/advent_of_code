@@ -88,11 +88,11 @@ fn PermutationIterator(comptime T: type) type {
     };
 }
 
-pub fn firstNumber(comptime T: type, start: usize, str: []const u8) ?struct { end_index: usize, value: T } {
+pub fn firstNumber(comptime T: type, start: usize, str: []const u8) struct { end_index: usize, value: ?T } {
     const b = @typeInfo(T).int.signedness == .signed;
     var index: usize = start;
     while (index < str.len) : (index += 1) if ('0' <= str[index] and str[index] <= '9' or (b and str[index] == '-')) break;
-    if (index >= str.len) return null;
+    if (index >= str.len) return .{ .end_index = index, .value = null };
     var end = index + 1;
     while (end < str.len) : (end += 1) if (!('0' <= str[end] and str[end] <= '9' or (b and str[end] == '-'))) break;
     return .{ .end_index = end, .value = std.fmt.parseInt(T, str[index..end], 10) catch unreachable };
@@ -103,11 +103,9 @@ pub fn NumberIter(comptime T: type) type {
         index: usize = 0,
         string: []const u8,
         pub fn next(self: *@This()) ?T {
-            if (firstNumber(T, self.index, self.string)) |res| {
-                self.index = res.end_index;
-                return res.value;
-            }
-            return null;
+            const res = firstNumber(T, self.index, self.string);
+            self.index = res.end_index;
+            return res.value;
         }
         pub fn init(string: []const u8) @This() {
             return .{ .index = 0, .string = string };
