@@ -1,6 +1,8 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
+
+const Vec2 = @Vector(2, i8);
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
     const alloc, const is_debug = switch (@import("builtin").mode) {
@@ -20,78 +22,57 @@ pub fn main() !void {
     std.debug.print("Part 1: {d}\n", .{result.p1});
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
-fn scenic(grid: [][]const u8, row: usize, col: usize) usize {
-    const value = grid[row][col];
-    var up: usize = 0;
-    var down: usize = 0;
-    var left: usize = 0;
-    var right: usize = 0;
-    for (0..row) |i| {
-        up += 1;
-        const rj = row - i - 1;
-        if (grid[rj][col] >= value) break;
+fn scenic(grid: *const utils.Matrix, row: usize, col: usize) usize {
+    var product: u32 = 1;
+    for ([4]Vec2{ .{ 0, -1 }, .{ 0, 1 }, .{ 1, 0 }, .{ -1, 0 } }) |dir| {
+        var steps: u32 = 0;
+        var frontier: Vec2 = .{ @intCast(row), @intCast(col) };
+        while (true) {
+            frontier += dir;
+            if (0 > frontier[0] or frontier[0] >= grid.rows or 0 > frontier[1] or frontier[1] >= grid.cols) break;
+            steps += 1;
+            if (grid.get(@intCast(frontier[0]), @intCast(frontier[1])) >= grid.get(row, col)) break;
+        }
+        product *= steps;
     }
-    for (row + 1..grid.len) |i| {
-        down += 1;
-        if (grid[i][col] >= value) break;
-    }
-    for (0..col) |i| {
-        left += 1;
-        const lj = col - i - 1;
-        if (grid[row][lj] >= value) break;
-    }
-    for (col + 1..grid[0].len) |j| {
-        right += 1;
-        if (grid[row][j] >= value) break;
-    }
-    return up * down * left * right;
+    return product;
 }
-fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
-    var matrix: std.ArrayList([]const u8) = .empty;
-    defer matrix.deinit(alloc);
-    var splitIter = std.mem.splitScalar(u8, data, '\n');
-    while (splitIter.next()) |item| try matrix.append(alloc, item);
+fn solve(alloc: Allocator, data: []u8) !struct { p1: usize, p2: usize } {
+    const grid = utils.arrayToMatrix(data);
 
-    var map = std.AutoHashMap(struct { row: usize, col: usize }, void).init(alloc);
+    var map = std.AutoHashMap(struct { usize, usize }, void).init(alloc);
     defer map.deinit();
-
-    const grid = matrix.items;
-    const rows = grid[0].len;
-    const cols = grid[0].len;
-    for (1..rows - 1) |row| {
-        var curr = grid[row][0];
-        for (1..cols - 1) |col| {
-            if (grid[row][col] <= curr) continue;
-            try map.put(.{ .row = row, .col = col }, {});
-            curr = grid[row][col];
+    const Start = [2]struct { usize, Vec2 };
+    for (1..grid.rows - 1) |i| {
+        for (Start{ .{ 0, Vec2{ 0, 1 } }, .{ grid.cols - 1, Vec2{ 0, -1 } } }) |e| {
+            var curr = grid.get(i, e[0]);
+            var frontier: Vec2 = .{ @intCast(i), @intCast(e[0]) };
+            while (true) {
+                frontier += e[1];
+                if (0 > frontier[1] or frontier[1] >= grid.cols) break;
+                const elem = grid.get(i, @intCast(frontier[1]));
+                if (elem <= curr) continue;
+                curr = elem;
+                try map.put(.{ i, @intCast(frontier[1]) }, {});
+            }
         }
-        curr = grid[row][cols - 1];
-        for (1..cols - 1) |j| {
-            const rcol = cols - 1 - j;
-            if (grid[row][rcol] <= curr) continue;
-            try map.put(.{ .row = row, .col = rcol }, {});
-            curr = grid[row][rcol];
-        }
-    }
-    for (1..cols - 1) |col| {
-        var curr = grid[0][col];
-        for (1..rows - 1) |row| {
-            if (grid[row][col] <= curr) continue;
-            try map.put(.{ .row = row, .col = col }, {});
-            curr = grid[row][col];
-        }
-        curr = grid[rows - 1][col];
-        for (1..rows - 1) |row| {
-            const rrow = rows - 1 - row;
-            if (grid[rrow][col] <= curr) continue;
-            try map.put(.{ .row = rrow, .col = col }, {});
-            curr = grid[rrow][col];
+        for (Start{ .{ 0, Vec2{ 1, 0 } }, .{ grid.rows - 1, Vec2{ -1, 0 } } }) |e| {
+            var curr = grid.get(e[0], i);
+            var frontier: Vec2 = .{ @intCast(e[0]), @intCast(i) };
+            while (true) {
+                frontier += e[1];
+                if (0 > frontier[0] or frontier[0] >= grid.rows) break;
+                const elem = grid.get(@intCast(frontier[0]), i);
+                if (elem <= curr) continue;
+                curr = elem;
+                try map.put(.{ @intCast(frontier[0]), i }, {});
+            }
         }
     }
     var total: usize = 0;
-    for (0..rows) |i| for (0..cols) |j| {
-        const result = scenic(grid, i, j);
+    for (0..grid.rows) |i| for (0..grid.cols) |j| {
+        const result = scenic(&grid, i, j);
         if (result > total) total = result;
     };
-    return .{ .p1 = rows * 2 + cols * 2 - 4 + map.count(), .p2 = total };
+    return .{ .p1 = grid.rows * 2 + grid.cols * 2 - 4 + map.count(), .p2 = total };
 }
