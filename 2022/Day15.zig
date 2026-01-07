@@ -83,7 +83,7 @@ inline fn isCovered(pairs: []const Pairs, row: i32, col: i32) bool {
 }
 fn part2(pairs: []const Pairs, buffer: *List, intervals: *List) usize {
     const max: i64 = 4_000_000;
-    for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| {
+    for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| { // change to 0.. for more correctness
         genIntervals(pairs, @intCast(row), buffer, intervals);
         if (intervals.items.len != 2 or intervals.items[1].a - intervals.items[0].b != 2) continue;
         const candidate_row = @divFloor(intervals.items[1].a + intervals.items[0].b, 2);
