@@ -1,21 +1,22 @@
 const std = @import("std");
 const utils = @import("utils.zig");
-const Allocator = std.mem.Allocator;
 
-const Points = struct { Point, Point };
-const List = std.ArrayList(Points);
+const Pairs = struct { Point, Point };
+const List = std.ArrayList(Point);
 const Point = struct {
-    row: i32,
-    col: i32,
+    a: i32,
+    b: i32,
     const Self = @This();
     inline fn manhattan(self: Self, o: Self) i32 {
-        return self.deltaRow(o.row) + @as(i32, @intCast(@abs(self.col - o.col)));
+        return self.deltaRow(o.a) + @as(i32, @intCast(@abs(self.b - o.b)));
     }
     inline fn deltaRow(self: Self, row: i32) i32 {
-        return @intCast(@abs(self.row - row));
+        return @intCast(@abs(self.a - row));
+    }
+    fn compare(_: void, lhs: Point, rhs: Point) bool {
+        return lhs.a < rhs.a;
     }
 };
-const Pair = struct { i32, i32 };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
     const alloc, const is_debug = switch (@import("builtin").mode) {
@@ -35,85 +36,60 @@ pub fn main() !void {
     std.debug.print("Part 1: {d}\n", .{result.p1});
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
-
-fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
-    var pairs: List = .empty;
+fn solve(alloc: std.mem.Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
+    var pairs: std.ArrayList(Pairs) = .empty;
     defer pairs.deinit(alloc);
 
     var split_iter = std.mem.splitScalar(u8, data, '\n');
     while (split_iter.next()) |item| {
         var row_iter = utils.NumberIter(i32){ .string = item };
         var col = row_iter.next().?;
-        const sensor = Point{ .row = row_iter.next().?, .col = col };
+        const sensor: Point = .{ .a = row_iter.next().?, .b = col };
         col = row_iter.next().?;
-        try pairs.append(alloc, .{ sensor, .{ .row = row_iter.next().?, .col = col } });
+        try pairs.append(alloc, .{ sensor, .{ .a = row_iter.next().?, .b = col } });
     }
-    return .{ .p1 = try part1(alloc, pairs.items), .p2 = try part2(alloc, pairs.items) };
-}
-fn part1(alloc: Allocator, pairs: []Points) !usize {
-    var intervals: std.ArrayList(Pair) = .empty;
+    var buffer: List = try .initCapacity(alloc, pairs.items.len);
+    var intervals: List = try .initCapacity(alloc, pairs.items.len);
+    defer buffer.deinit(alloc);
     defer intervals.deinit(alloc);
+    return .{ .p1 = part1(pairs.items, &buffer, &intervals), .p2 = part2(pairs.items, &buffer, &intervals) };
+}
+inline fn genIntervals(pairs: []const Pairs, row: i32, buffer: *List, intervals: *List) void {
+    buffer.clearRetainingCapacity();
+    intervals.clearRetainingCapacity();
     for (pairs) |pair| {
-        const sensor, const beacon = pair;
-        const distance = sensor.manhattan(beacon);
-        const drow = sensor.deltaRow(2_000_000);
-        if (drow > distance) continue;
-
-        const delta = distance - drow;
-        try intervals.append(alloc, .{ sensor.col - delta, sensor.col + delta });
+        const delta = pair.@"0".manhattan(pair.@"1") - pair.@"0".deltaRow(row);
+        if (0 <= delta) buffer.appendAssumeCapacity(.{ .a = pair.@"0".b - delta, .b = pair.@"0".b + delta });
     }
-    var result: std.ArrayList(Pair) = try .initCapacity(alloc, intervals.items.len);
-    defer result.deinit(alloc);
-    std.mem.sort(Pair, intervals.items, {}, compare);
-    mergeIntervals(&result, intervals.items);
-    return @abs(result.items[0].@"1" - result.items[0].@"0");
+    std.mem.sort(Point, buffer.items, {}, Point.compare);
+    var current = buffer.items[0];
+    for (buffer.items[1..]) |ival|
+        if (ival.a <= current.b + 1) {
+            current.b = @max(current.b, ival.b);
+        } else {
+            intervals.appendAssumeCapacity(current);
+            current = ival;
+        };
+    intervals.appendAssumeCapacity(current);
 }
-fn part2(alloc: Allocator, pairs: []Points) !i64 {
-    var intervals: std.ArrayList(Pair) = try .initCapacity(alloc, 20);
-    var merged: std.ArrayList(Pair) = try .initCapacity(alloc, 20);
-    defer intervals.deinit(alloc);
-    defer merged.deinit(alloc);
-
-    const max: i64 = 4_000_000;
-    for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| {
-        intervals.clearRetainingCapacity();
-        merged.clearRetainingCapacity();
-
-        for (pairs) |pair| {
-            const sensor, const beacon = pair;
-            const drow = sensor.deltaRow(@intCast(row));
-            const distance = sensor.manhattan(beacon);
-            if (drow > distance) continue;
-
-            const delta = distance - drow;
-            intervals.appendAssumeCapacity(.{ sensor.col - delta, sensor.col + delta });
-        }
-        std.mem.sort(Pair, intervals.items, {}, compare);
-        mergeIntervals(&merged, intervals.items);
-        if (merged.items.len != 2 or merged.items[1].@"0" - merged.items[0].@"1" != 2) continue;
-        const candidate_row = @divFloor(merged.items[1].@"0" + merged.items[0].@"1", 2);
-        const irow: i32 = @intCast(row);
-        if (isCovered(pairs, irow - 1, candidate_row) and isCovered(pairs, irow + 1, candidate_row))
-            return irow + max * candidate_row;
-    }
-    return -1;
+fn part1(pairs: []const Pairs, buffer: *List, intervals: *List) usize {
+    genIntervals(pairs, 2_000_000, buffer, intervals);
+    return @abs(intervals.items[0].b - intervals.items[0].a);
 }
-inline fn isCovered(pairs: []Points, row: i32, col: i32) bool {
-    const candidate: Point = .{ .row = row, .col = col };
+inline fn isCovered(pairs: []const Pairs, row: i32, col: i32) bool {
+    const candidate: Point = .{ .a = row, .b = col };
     for (pairs) |pair| if (pair.@"0".manhattan(candidate) == pair.@"0".manhattan(pair.@"1")) return true;
     return false;
 }
-fn compare(_: void, lhs: Pair, rhs: Pair) bool {
-    return lhs.@"0" < rhs.@"0";
-}
-inline fn mergeIntervals(list: *std.ArrayList(Pair), intervals: []const Pair) void {
-    var current = intervals[0];
-    for (intervals[1..]) |ival|
-        if (ival.@"0" <= current.@"1" + 1) {
-            current.@"1" = @max(current.@"1", ival.@"1");
-        } else {
-            list.appendAssumeCapacity(current);
-            current = ival;
-        };
-    list.appendAssumeCapacity(current);
+fn part2(pairs: []const Pairs, buffer: *List, intervals: *List) usize {
+    const max: i64 = 4_000_000;
+    for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| {
+        genIntervals(pairs, @intCast(row), buffer, intervals);
+        if (intervals.items.len != 2 or intervals.items[1].a - intervals.items[0].b != 2) continue;
+        const candidate_row = @divFloor(intervals.items[1].a + intervals.items[0].b, 2);
+        const irow: i32 = @intCast(row);
+        if (isCovered(pairs, irow - 1, candidate_row) and isCovered(pairs, irow + 1, candidate_row))
+            return @intCast(irow + max * candidate_row);
+    }
+    return 0;
 }
