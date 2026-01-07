@@ -51,24 +51,22 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
     return .{ .p1 = try part1(alloc, pairs.items), .p2 = try part2(alloc, pairs.items) };
 }
 fn part1(alloc: Allocator, pairs: []Points) !usize {
-    var cols: std.HashMapUnmanaged(u32, void, utils.HashIntCtx(u32), 80) = .empty;
-    defer cols.deinit(alloc);
-
-    const row: i32 = 2000000;
+    var intervals: std.ArrayList(Pair) = .empty;
+    defer intervals.deinit(alloc);
     for (pairs) |pair| {
         const sensor, const beacon = pair;
         const distance = sensor.manhattan(beacon);
-        const drow = sensor.deltaRow(row);
+        const drow = sensor.deltaRow(2_000_000);
         if (drow > distance) continue;
 
         const delta = distance - drow;
-        for (0..@intCast(delta * 2 + 1)) |i| {
-            const val = sensor.col - delta + @as(i32, @intCast(i));
-            if (beacon.row == row and beacon.col == val) continue;
-            _ = try cols.getOrPut(alloc, @intCast(val));
-        }
+        try intervals.append(alloc, .{ sensor.col - delta, sensor.col + delta });
     }
-    return cols.count();
+    var result: std.ArrayList(Pair) = try .initCapacity(alloc, intervals.items.len);
+    defer result.deinit(alloc);
+    std.mem.sort(Pair, intervals.items, {}, compare);
+    mergeIntervals(&result, intervals.items);
+    return @abs(result.items[0].@"1" - result.items[0].@"0");
 }
 fn part2(alloc: Allocator, pairs: []Points) !i64 {
     var intervals: std.ArrayList(Pair) = try .initCapacity(alloc, 20);
@@ -76,7 +74,7 @@ fn part2(alloc: Allocator, pairs: []Points) !i64 {
     defer intervals.deinit(alloc);
     defer merged.deinit(alloc);
 
-    const max: i64 = 4000000;
+    const max: i64 = 4_000_000;
     for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| {
         intervals.clearRetainingCapacity();
         merged.clearRetainingCapacity();
@@ -88,7 +86,7 @@ fn part2(alloc: Allocator, pairs: []Points) !i64 {
             if (drow > distance) continue;
 
             const delta = distance - drow;
-            intervals.appendAssumeCapacity(.{ @max(0, sensor.col - delta), @min(max, sensor.col + delta) });
+            intervals.appendAssumeCapacity(.{ sensor.col - delta, sensor.col + delta });
         }
         std.mem.sort(Pair, intervals.items, {}, compare);
         mergeIntervals(&merged, intervals.items);
