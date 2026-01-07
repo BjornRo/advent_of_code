@@ -228,7 +228,19 @@ pub inline fn hashU64(key: u64) u64 {
     x ^= x >> 32;
     return x;
 }
-
+pub fn HashIntCtx(comptime T: type) type {
+    return struct {
+        pub inline fn hash(_: @This(), k: T) u64 {
+            return hashU64(switch (@typeInfo(T)) {
+                .int => @intCast(k),
+                else => @bitCast(k),
+            });
+        }
+        pub inline fn eql(_: @This(), a: T, b: T) bool {
+            return a == b;
+        }
+    };
+}
 pub fn Repeat(comptime T: type) type {
     return struct {
         index: usize,

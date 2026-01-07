@@ -2,17 +2,9 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
 
-const Map = std.HashMap(Entry, u12, HashCtx, 90);
-const BitSet = std.bit_set.IntegerBitSet(50);
-const Entry = packed struct { node: u6, minutes: u6, valves: u50, __padding: u2 = 0 };
-const HashCtx = struct {
-    pub fn hash(_: @This(), key: Entry) u64 {
-        return utils.hashU64(@bitCast(key));
-    }
-    pub fn eql(_: @This(), a: Entry, b: Entry) bool {
-        return a.node == b.node and a.minutes == b.minutes and a.valves == b.valves;
-    }
-};
+const Map = std.HashMap(Entry, u12, utils.HashIntCtx(Entry), 90);
+const Entry = packed struct { node: u6, minutes: u6, valves: u52 };
+const BitSet = std.bit_set.IntegerBitSet(52);
 const GraphValue = struct { flow: u12, valves: BitSet };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
@@ -65,7 +57,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
 }
 fn valver(graph: []GraphValue, node: u6, minutes: u6, valves: BitSet, memo: *Map) !u12 {
     if (minutes <= 0) return 0;
-    const key: Entry = .{ .node = node, .minutes = minutes, .valves = @truncate(valves.mask) };
+    const key: Entry = .{ .node = node, .minutes = minutes, .valves = valves.mask };
     if (memo.get(key)) |val| return val;
 
     var max_pressure: u12 = 0;

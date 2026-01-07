@@ -5,18 +5,7 @@ const Allocator = std.mem.Allocator;
 const CT = u8;
 const Vec4 = @Vector(4, CT);
 const BlueprintCosts = struct { ore_bot: Vec4, clay_bot: Vec4, obsidian_bot: Vec4, geode_bot: Vec4 };
-const State = packed struct {
-    bots: Vec4,
-    minerals: Vec4,
-    const HashCtx = struct {
-        pub fn hash(_: @This(), key: State) u64 {
-            return utils.hashU64(@bitCast(key));
-        }
-        pub fn eql(_: @This(), a: State, b: State) bool {
-            return a == b;
-        }
-    };
-};
+const State = packed struct { bots: Vec4, minerals: Vec4 };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
     const alloc, const is_debug = if (@import("builtin").mode == .Debug)
@@ -60,7 +49,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: usize } {
 fn oreStatemachine(alloc: Allocator, blueprint: BlueprintCosts, generations: usize) !usize {
     var states: std.ArrayList(State) = .empty;
     var next: @TypeOf(states) = .empty;
-    var visited: std.HashMap(State, void, State.HashCtx, 90) = .init(alloc);
+    var visited: std.HashMap(State, void, utils.HashIntCtx(State), 90) = .init(alloc);
     defer states.deinit(alloc);
     defer next.deinit(alloc);
     defer visited.deinit();

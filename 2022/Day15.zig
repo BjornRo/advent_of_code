@@ -51,15 +51,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
     return .{ .p1 = try part1(alloc, pairs.items), .p2 = try part2(alloc, pairs.items) };
 }
 fn part1(alloc: Allocator, pairs: []Points) !usize {
-    const H = struct {
-        pub inline fn hash(_: @This(), k: u32) u64 {
-            return utils.hashU64(k);
-        }
-        pub inline fn eql(_: @This(), a: u32, b: u32) bool {
-            return a == b;
-        }
-    };
-    var cols: std.HashMapUnmanaged(u32, void, H, 80) = .empty;
+    var cols: std.HashMapUnmanaged(u32, void, utils.HashIntCtx(u32), 80) = .empty;
     defer cols.deinit(alloc);
 
     const row: i32 = 2000000;
