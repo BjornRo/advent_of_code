@@ -229,23 +229,6 @@ pub inline fn hashU64(key: u64) u64 {
     return x;
 }
 
-pub inline fn hash32(key: u32) u32 {
-    var x = key;
-    x = ((x >> 16) ^ x) *% 0x45d9f3b;
-    x = ((x >> 16) ^ x) *% 0x45d9f3b;
-    x = (x >> 16) ^ x;
-    return x;
-}
-pub inline fn hash32_2(key: u32) u32 {
-    var x = key;
-    x ^= x >> 15;
-    x *%= 0x2c1b3c6d;
-    x ^= x >> 12;
-    x *%= 0x297a2d39;
-    x ^= x >> 15;
-    return x;
-}
-
 pub fn Repeat(comptime T: type) type {
     return struct {
         index: usize,

@@ -52,15 +52,15 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
 }
 fn part1(alloc: Allocator, pairs: []Points) !usize {
     const H = struct {
-        pub fn hash(_: @This(), k: u32) u32 {
-            return utils.hash32(k);
+        pub inline fn hash(_: @This(), k: u32) u64 {
+            return utils.hashU64(k);
         }
-        pub fn eql(_: @This(), a: u32, b: u32) bool {
+        pub inline fn eql(_: @This(), a: u32, b: u32) bool {
             return a == b;
         }
     };
-    var cols: std.HashMap(u32, void, H, 80) = .init(alloc);
-    defer cols.deinit();
+    var cols: std.HashMapUnmanaged(u32, void, H, 80) = .empty;
+    defer cols.deinit(alloc);
 
     const row: i32 = 2000000;
     for (pairs) |pair| {
@@ -73,7 +73,7 @@ fn part1(alloc: Allocator, pairs: []Points) !usize {
         for (0..@intCast(delta * 2 + 1)) |i| {
             const val = sensor.col - delta + @as(i32, @intCast(i));
             if (beacon.row == row and beacon.col == val) continue;
-            _ = try cols.getOrPut(@intCast(val));
+            _ = try cols.getOrPut(alloc, @intCast(val));
         }
     }
     return cols.count();
