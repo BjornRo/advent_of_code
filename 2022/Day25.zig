@@ -9,12 +9,12 @@ pub fn main() !void {
 
     const data = try utils.read(alloc, "in/d25.txt");
     defer alloc.free(data);
-    const res = try solve(alloc, data);
-    defer alloc.free(res);
-    std.debug.print("Part 1: {s}\n", .{res});
+    var res = try solve(alloc, data);
+    defer res.deinit(alloc);
+    std.debug.print("Part 1: {s}\n", .{res.items});
 }
 
-fn solve(alloc: Allocator, data: []const u8) ![]u8 {
+fn solve(alloc: Allocator, data: []const u8) !std.ArrayList(u8) {
     var total: isize = 0;
     var split_iter = std.mem.splitScalar(u8, data, '\n');
     while (split_iter.next()) |item| total += convert(item);
@@ -34,25 +34,14 @@ fn convert(row: []const u8) isize {
     }
     return total;
 }
-fn toSnafu(alloc: Allocator, value: isize) ![]u8 {
+fn toSnafu(alloc: Allocator, value: isize) !std.ArrayList(u8) {
     var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(alloc);
-
     var val = value;
     while (val != 0) {
-        const n: u8 = @intCast(@mod(val, 5));
-        var fac: isize = n;
-        if (n == 3) {
-            fac -= 5;
-            try list.append(alloc, '=');
-        } else if (n == 4) {
-            fac -= 5;
-            try list.append(alloc, '-');
-        } else {
-            try list.append(alloc, '0' + n);
-        }
-        val = @divFloor(val - fac, 5);
+        const n: i8 = @intCast(@mod(val, 5));
+        try list.append(alloc, if (n >= 3) (if (n == 3) '=' else '-') else '0' + @as(u8, @intCast(n)));
+        val = @divFloor(val - if (n >= 3) n - 5 else n, 5);
     }
     std.mem.reverse(u8, list.items);
-    return list.toOwnedSlice(alloc);
+    return list;
 }

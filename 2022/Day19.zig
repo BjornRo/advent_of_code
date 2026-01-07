@@ -8,10 +8,10 @@ const BlueprintCosts = struct { ore_bot: Vec4, clay_bot: Vec4, obsidian_bot: Vec
 const State = packed struct { bots: Vec4, minerals: Vec4 };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
-    const alloc, const is_debug = if (@import("builtin").mode == .Debug)
-        .{ debug_allocator.allocator(), true }
-    else
-        .{ std.heap.smp_allocator, false };
+    const alloc, const is_debug = switch (@import("builtin").mode) {
+        .Debug => .{ debug_allocator.allocator(), true },
+        else => .{ std.heap.smp_allocator, false },
+    };
     const start = std.time.microTimestamp();
     defer {
         std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
