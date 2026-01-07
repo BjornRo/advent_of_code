@@ -1,8 +1,8 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
-const Pairs = struct { Point, i32 };
 const List = std.ArrayList(Point);
+const Pairs = struct { Point, i32 };
 const Point = struct {
     a: i32,
     b: i32,
@@ -13,7 +13,7 @@ const Point = struct {
     inline fn deltaRow(self: Self, row: i32) i32 {
         return @intCast(@abs(self.a - row));
     }
-    fn compare(_: void, lhs: Point, rhs: Point) bool {
+    fn compare(_: void, lhs: Self, rhs: Self) bool {
         return lhs.a < rhs.a;
     }
 };
