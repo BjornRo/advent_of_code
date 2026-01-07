@@ -5,20 +5,17 @@ const Allocator = std.mem.Allocator;
 const Points = struct { Point, Point };
 const List = std.ArrayList(Points);
 const Point = struct {
-    row: i64,
-    col: i64,
+    row: i32,
+    col: i32,
     const Self = @This();
-    fn manhattan(self: Self, o: Self) i64 {
-        return @intCast(self.deltaRow(o.row) + self.deltaCol(o.col));
+    inline fn manhattan(self: Self, o: Self) i32 {
+        return self.deltaRow(o.row) + @as(i32, @intCast(@abs(self.col - o.col)));
     }
-    fn deltaRow(self: Self, row: i64) i64 {
+    inline fn deltaRow(self: Self, row: i32) i32 {
         return @intCast(@abs(self.row - row));
     }
-    fn deltaCol(self: Self, col: i64) i64 {
-        return @intCast(@abs(self.col - col));
-    }
 };
-const Pair = struct { i64, i64 };
+const Pair = struct { i32, i32 };
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 pub fn main() !void {
     const alloc, const is_debug = switch (@import("builtin").mode) {
@@ -45,7 +42,7 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
 
     var split_iter = std.mem.splitScalar(u8, data, '\n');
     while (split_iter.next()) |item| {
-        var row_iter = utils.NumberIter(i64){ .string = item };
+        var row_iter = utils.NumberIter(i32){ .string = item };
         var col = row_iter.next().?;
         const sensor = Point{ .row = row_iter.next().?, .col = col };
         col = row_iter.next().?;
@@ -54,10 +51,18 @@ fn solve(alloc: Allocator, data: []const u8) !struct { p1: usize, p2: i64 } {
     return .{ .p1 = try part1(alloc, pairs.items), .p2 = try part2(alloc, pairs.items) };
 }
 fn part1(alloc: Allocator, pairs: []Points) !usize {
-    var cols: std.AutoHashMap(i64, void) = .init(alloc);
+    const H = struct {
+        pub fn hash(_: @This(), k: u32) u32 {
+            return utils.hash32(k);
+        }
+        pub fn eql(_: @This(), a: u32, b: u32) bool {
+            return a == b;
+        }
+    };
+    var cols: std.HashMap(u32, void, H, 80) = .init(alloc);
     defer cols.deinit();
 
-    const row: i64 = 2000000;
+    const row: i32 = 2000000;
     for (pairs) |pair| {
         const sensor, const beacon = pair;
         const distance = sensor.manhattan(beacon);
@@ -65,11 +70,10 @@ fn part1(alloc: Allocator, pairs: []Points) !usize {
         if (drow > distance) continue;
 
         const delta = distance - drow;
-
         for (0..@intCast(delta * 2 + 1)) |i| {
-            const val = sensor.col - delta + @as(i64, @intCast(i));
+            const val = sensor.col - delta + @as(i32, @intCast(i));
             if (beacon.row == row and beacon.col == val) continue;
-            try cols.put(val, {});
+            _ = try cols.getOrPut(@intCast(val));
         }
     }
     return cols.count();
@@ -81,7 +85,7 @@ fn part2(alloc: Allocator, pairs: []Points) !i64 {
     defer merged.deinit(alloc);
 
     const max: i64 = 4000000;
-    for (0..@intCast(max + 1)) |row| {
+    for (@intCast(@divFloor(max, 2))..@intCast(max + 1)) |row| {
         intervals.clearRetainingCapacity();
         merged.clearRetainingCapacity();
 
@@ -92,34 +96,27 @@ fn part2(alloc: Allocator, pairs: []Points) !i64 {
             if (drow > distance) continue;
 
             const delta = distance - drow;
-            intervals.appendAssumeCapacity(.{
-                @max(0, sensor.col - delta),
-                @min(max, sensor.col + delta),
-            });
+            intervals.appendAssumeCapacity(.{ @max(0, sensor.col - delta), @min(max, sensor.col + delta) });
         }
+        std.mem.sort(Pair, intervals.items, {}, compare);
         mergeIntervals(&merged, intervals.items);
         if (merged.items.len != 2 or merged.items[1].@"0" - merged.items[0].@"1" != 2) continue;
         const candidate_row = @divFloor(merged.items[1].@"0" + merged.items[0].@"1", 2);
-        const irow: i64 = @intCast(row);
+        const irow: i32 = @intCast(row);
         if (isCovered(pairs, irow - 1, candidate_row) and isCovered(pairs, irow + 1, candidate_row))
             return irow + max * candidate_row;
     }
     return -1;
 }
-fn isCovered(pairs: []Points, row: i64, col: i64) bool {
-    for (pairs) |pair| {
-        const sensor, const beacon = pair;
-        const point_dist = sensor.manhattan(.{ .row = row, .col = col });
-        if (point_dist == sensor.manhattan(beacon)) return true;
-    }
+inline fn isCovered(pairs: []Points, row: i32, col: i32) bool {
+    const candidate: Point = .{ .row = row, .col = col };
+    for (pairs) |pair| if (pair.@"0".manhattan(candidate) == pair.@"0".manhattan(pair.@"1")) return true;
     return false;
 }
 fn compare(_: void, lhs: Pair, rhs: Pair) bool {
     return lhs.@"0" < rhs.@"0";
 }
-fn mergeIntervals(list: *std.ArrayList(Pair), intervals: []Pair) void {
-    std.mem.sort(Pair, intervals, {}, compare);
-
+inline fn mergeIntervals(list: *std.ArrayList(Pair), intervals: []const Pair) void {
     var current = intervals[0];
     for (intervals[1..]) |ival|
         if (ival.@"0" <= current.@"1" + 1) {
