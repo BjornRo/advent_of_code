@@ -1,7 +1,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
-const Pairs = struct { Point, Point };
+const Pairs = struct { Point, i32 };
 const List = std.ArrayList(Point);
 const Point = struct {
     a: i32,
@@ -46,7 +46,7 @@ fn solve(alloc: std.mem.Allocator, data: []const u8) !struct { p1: usize, p2: us
         var col = row_iter.next().?;
         const sensor: Point = .{ .a = row_iter.next().?, .b = col };
         col = row_iter.next().?;
-        try pairs.append(alloc, .{ sensor, .{ .a = row_iter.next().?, .b = col } });
+        try pairs.append(alloc, .{ sensor, sensor.manhattan(.{ .a = row_iter.next().?, .b = col }) });
     }
     var buffer: List = try .initCapacity(alloc, pairs.items.len);
     var intervals: List = try .initCapacity(alloc, pairs.items.len);
@@ -58,7 +58,7 @@ inline fn genIntervals(pairs: []const Pairs, row: i32, buffer: *List, intervals:
     buffer.clearRetainingCapacity();
     intervals.clearRetainingCapacity();
     for (pairs) |pair| {
-        const delta = pair.@"0".manhattan(pair.@"1") - pair.@"0".deltaRow(row);
+        const delta = pair.@"1" - pair.@"0".deltaRow(row);
         if (0 <= delta) buffer.appendAssumeCapacity(.{ .a = pair.@"0".b - delta, .b = pair.@"0".b + delta });
     }
     std.mem.sort(Point, buffer.items, {}, Point.compare);
@@ -78,7 +78,7 @@ fn part1(pairs: []const Pairs, buffer: *List, intervals: *List) usize {
 }
 inline fn isCovered(pairs: []const Pairs, row: i32, col: i32) bool {
     const candidate: Point = .{ .a = row, .b = col };
-    for (pairs) |pair| if (pair.@"0".manhattan(candidate) == pair.@"0".manhattan(pair.@"1")) return true;
+    for (pairs) |pair| if (pair.@"0".manhattan(candidate) == pair.@"1") return true;
     return false;
 }
 fn part2(pairs: []const Pairs, buffer: *List, intervals: *List) usize {
