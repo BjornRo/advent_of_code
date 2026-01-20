@@ -5,21 +5,24 @@ pub fn main() !void {
     const start = std.time.microTimestamp();
     defer std.debug.print("Time: {any}s\n", .{@as(f64, @floatFromInt(std.time.microTimestamp() - start)) / 1000_000});
 
-    const alloc = std.heap.smp_allocator;
+    var buf: [20000]u8 = undefined;
+    var fba: std.heap.FixedBufferAllocator = .init(&buf);
+    const alloc = fba.allocator();
+
     const data = try utils.read(alloc, "in/d03.txt");
     defer alloc.free(data);
 
-    const result = try solve(data);
+    const result = solve(data);
     std.debug.print("Part 1: {d}\n", .{result.p1});
     std.debug.print("Part 2: {d}\n", .{result.p2});
 }
 fn mapper(char: u8) u16 {
     return switch (char) {
-        'a'...'z' => char - 96,
-        else => char - 38,
+        'a'...'z' => char - ('a' - 1),
+        else => char - '&',
     };
 }
-fn solve(data: []const u8) !struct { p1: u16, p2: u16 } {
+fn solve(data: []const u8) struct { p1: u16, p2: u16 } {
     var total1: u16 = 0;
     var total2: u16 = 0;
     var buf: [3][]const u8 = undefined;
